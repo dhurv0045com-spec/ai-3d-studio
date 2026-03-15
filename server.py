@@ -1,3 +1,15 @@
+import requests as _requests
+def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    for key in GEMINI_KEYS:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
+            payload = {"system_instruction": {"parts": [{"text": system_prompt}]}, "contents": [{"parts": [{"text": user_prompt}]}], "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}}
+            r = _requests.post(url, json=payload, timeout=90)
+            result = r.json()
+            return result["candidates"][0]["content"]["parts"][0]["text"]
+        except:
+            continue
+    return None
 COLOR_MAP = {'red': (1,0,0), 'blue': (0,0,1), 'green': (0,1,0), 'yellow': (1,1,0), 'white': (1,1,1), 'black': (0,0,0), 'orange': (1,0.5,0), 'purple': (0.5,0,0.5), 'pink': (1,0.5,0.5), 'gray': (0.5,0.5,0.5)}
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
@@ -4848,4 +4860,5 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+
 

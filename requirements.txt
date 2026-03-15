@@ -19,7 +19,7 @@ numpy>=1.24.0
 # Shap-E dependencies (optional - only needed if shapee_installed.flag exists)
 # Uncomment if you want Shap-E AI generation:
 # torch>=2.0.0
-# pyyaml>=6.0
+ pyyaml>=6.0
 # ipywidgets>=8.0.0
 # trimesh>=3.20.0
 

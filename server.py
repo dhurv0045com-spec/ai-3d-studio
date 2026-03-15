@@ -1,3 +1,4 @@
+COLOR_MAP = {'red': (1,0,0), 'blue': (0,0,1), 'green': (0,1,0), 'yellow': (1,1,0), 'white': (1,1,1), 'black': (0,0,0), 'orange': (1,0.5,0), 'purple': (0.5,0,0.5), 'pink': (1,0.5,0.5), 'gray': (0.5,0.5,0.5)}
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
@@ -4847,3 +4848,4 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+

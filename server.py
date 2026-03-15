@@ -1794,7 +1794,6 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
         log_gen("[MODEL_B] REJECT: missing import bpy. Raw: " + script_raw[:200])
         return False
     if "export_scene.gltf" not in script:
-        log_gen("[MODEL_B] REJECT: missing gltf export")
         return False
     if len(script) < 200:
         log_gen("[MODEL_B] REJECT: script too short (" + str(len(script)) + " chars)")

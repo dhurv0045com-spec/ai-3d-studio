@@ -233,20 +233,6 @@ def run_blender_script(script_text, output_path):
     except Exception:
         return False
 import subprocess, tempfile, os as _os
-def run_blender_script(script_content, output_path=None):
-    try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-            f.write(script_content)
-            script_path = f.name
-        output_path = script_path.replace('.py', '.glb')
-        cmd = [BLENDER_EXE, '--background', '--python', script_path]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        if _os.path.exists(output_path):
-            return output_path
-        return None
-    except Exception as e:
-        print(f"Blender error: {e}")
-        return None
 import requests as _requests
 def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
     for key in GEMINI_KEYS:

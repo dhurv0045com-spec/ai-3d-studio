@@ -802,7 +802,8 @@ def startup_health_check():
             str(sys.version_info.minor) + "." + str(sys.version_info.micro))
 
     # Blender
-    if os.path.exists(BLENDER_EXE):
+    log_gen("[DEBUG] BLENDER_EXE=" + str(BLENDER_EXE) + " exists=" + str(os.path.exists(BLENDER_EXE)))
+        if os.path.exists(BLENDER_EXE):
         log_srv("[STARTUP] Blender: FOUND - " + BLENDER_EXE)
     else:
         log_srv("[STARTUP] WARNING: Blender NOT FOUND - AI Blender stage disabled")
@@ -3565,6 +3566,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 4: Stage B - Gemini + Blender (AI reads full prompt)
         # ------------------------------------------------------------------
         set_state(progress=40, step="stage_b_gemini_blender")
+        log_gen("[DEBUG] BLENDER_EXE=" + str(BLENDER_EXE) + " exists=" + str(os.path.exists(BLENDER_EXE)))
         if os.path.exists(BLENDER_EXE):
             log_gen("[MODEL_B] attempting Gemini+Blender with full prompt...")
             set_state(progress=60, step="blender_running")

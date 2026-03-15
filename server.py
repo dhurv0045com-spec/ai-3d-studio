@@ -4047,7 +4047,7 @@ def _tray_on_quit(icon, item):
     os._exit(0)
 
 
-def  start_tray()  
+def start_tray():  
     """Start the system tray icon in a background thread."""
     try:
         import pystray

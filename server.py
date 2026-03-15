@@ -4459,7 +4459,7 @@ if __name__ == "__main__":
     setup_dirs()
 
     print(f"Server log: {SERVER_LOG}")
-port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 8080))
     print("Listening on http://0.0.0.0:" + str(port))
 
     # Start system tray

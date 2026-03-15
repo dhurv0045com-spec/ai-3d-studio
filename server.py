@@ -4047,7 +4047,7 @@ def _tray_on_quit(icon, item):
     os._exit(0)
 
 
-def start_tray():
+def  start_tray()  # Windows only - disabled on Railway:
     """Start the system tray icon in a background thread."""
     try:
         import pystray
@@ -4459,10 +4459,11 @@ if __name__ == "__main__":
     setup_dirs()
 
     print(f"Server log: {SERVER_LOG}")
+port = int(os.environ.get("PORT", 8080))
     print("Listening on http://0.0.0.0:" + str(port))
 
     # Start system tray
-    start_tray()
+    # start_tray()  # Windows only - disabled on Railway
 
     # Run Flask
     port = int(os.environ.get("PORT", 5000))

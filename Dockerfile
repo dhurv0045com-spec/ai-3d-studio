@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+﻿FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
@@ -36,10 +36,3 @@ COPY . .
 
 EXPOSE 8080
 CMD ["python", "server.py"]
-```
-
-**Ctrl+S**, close Notepad. Then run:
-```
-git add Dockerfile
-git commit -m "Fix Dockerfile - clean version"
-git push

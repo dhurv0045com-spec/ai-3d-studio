@@ -1,7 +1,7 @@
-# ============================================================
+# ========================================================
 # AI 3D Studio - Dockerfile for Railway.app deployment
 # Includes Blender 4.2 headless + Python 3.11 + all deps
-# ============================================================
+# ========================================================
 
 FROM python:3.11-slim
 
@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxxf86vm1 \
     libxfixes3 \
     libxrender1 \
-    libgl1-mesa-glx \
+    libgl1 \
     libglu1-mesa \
     libsm6 \
     libice6 \
@@ -22,7 +22,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6 \
     libfontconfig1 \
     libgomp1 \
-    ca-certificates \
+    libegl1 \
+    libxkbcommon0 \
+    libdbus-1-3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -34,8 +36,8 @@ RUN wget -q \
     -O /tmp/blender.tar.xz \
     && mkdir -p /app/blender \
     && tar -xf /tmp/blender.tar.xz \
-       --strip-components=1 \
-       -C /app/blender \
+    --strip-components=1 \
+    -C /app/blender \
     && rm /tmp/blender.tar.xz \
     && chmod +x /app/blender/blender \
     && echo "Blender installed: $(/app/blender/blender --version | head -1)"
@@ -50,26 +52,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all project files
 COPY . .
 
-# Create all required directories
-RUN mkdir -p \
-    models/cache \
-    models/presets \
-    models/scripts \
-    logs \
-    static \
-    storage/users/user/default \
-    storage/users/user/vehicles \
-    storage/users/user/creatures \
-    storage/users/user/buildings \
-    storage/users/user/misc
+# Expose port
+EXPOSE 8080
 
-# Create required empty JSON files if they don't exist
-RUN [ -f history.json ]  || echo "[]"  > history.json
-RUN [ -f folders.json ]  || echo '["default","vehicles","creatures","buildings","misc"]' > folders.json
-RUN [ -f state.json ]    || echo '{"status":"idle","progress":0,"log":[]}' > state.json
-
-# Railway sets PORT env var automatically
-EXPOSE 5000
-
-# Start the server
+# Start the Flask server
 CMD ["python", "server.py"]

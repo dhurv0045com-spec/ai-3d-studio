@@ -38,8 +38,8 @@ EXPOSE 8080
 CMD ["python", "server.py"]
 ```
 
-Press **Ctrl+S**, close Notepad, then run in PowerShell:
+**Ctrl+S**, close Notepad. Then run:
 ```
 git add Dockerfile
-git commit -m "Remove libxxf86vm1 and fix all packages"
+git commit -m "Fix Dockerfile - clean version"
 git push

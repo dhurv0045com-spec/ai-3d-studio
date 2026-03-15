@@ -3414,7 +3414,7 @@ def ping():
         "blender_found":        os.path.exists(BLENDER_EXE),
         "cloudinary_enabled":   CLOUDINARY_ENABLED,
         "cloudinary_cloud":     CLOUDINARY_CLOUD,
-        "model_count":          len(load_history()),
+        "model_count":        0,
     })
 
 

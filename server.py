@@ -1,6 +1,5 @@
 import subprocess, tempfile, os as _os
-
-def run_blender_script(script_content):
+def run_blender_script(script_content, output_path=None):
     try:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
             f.write(script_content)

@@ -1,0 +1,132 @@
+============================================================
+  AI 3D Studio Diagnostics - 2026-03-14 17:41:12
+============================================================
+============================================================
+  AI 3D Studio - System Diagnostics v5.0
+  2026-03-14 17:40:57
+  Project: C:\Users\user\Desktop\ai-3d-project
+============================================================
+
+============================================================
+  SECTION 1 - ENVIRONMENT
+============================================================
+[17:40:57]   Python version     : 3.13.7  [PASS]
+[17:40:57]   OS                 : Windows 10  [INFO]
+[17:40:57]   Architecture       : AMD64  [INFO]
+[17:40:57]   Disk free          : 13.9 GB  [PASS]
+[17:40:57]   RAM available      : psutil not installed  [SKIP]
+[17:40:57]   Project dir        : C:\Users\user\Desktop\ai-3d-project  [PASS]
+[17:40:57] 
+[17:40:57]   Required directories:
+[17:40:57]     models                                 [PASS]
+[17:40:57]     models/cache                           [PASS]
+[17:40:57]     models/presets                         [PASS]
+[17:40:57]     models/scripts                         [WARN]
+[17:40:57]     logs                                   [PASS]
+[17:40:57]     static                                 [PASS]
+[17:40:57]     storage                                [PASS]
+[17:40:57]     storage/users                          [PASS]
+[17:40:57]     storage/users/user                     [PASS]
+[17:40:57]     storage/users/user/default             [PASS]
+[17:40:57]     storage/users/user/vehicles            [PASS]
+[17:40:57]     storage/users/user/creatures           [PASS]
+[17:40:57]     storage/users/user/buildings           [PASS]
+[17:40:57]     Run install.bat to create missing directories
+[17:40:57] 
+[17:40:57]   Required JSON files:
+[17:40:57]     history.json         exists=True  valid=True   [PASS]
+[17:40:57]     folders.json         exists=True  valid=True   [PASS]
+[17:40:57]     settings.json        exists=True  valid=True   [PASS]
+[17:40:57]     state.json           exists=True  valid=True   [PASS]
+
+============================================================
+  SECTION 2 - DEPENDENCIES
+============================================================
+[17:40:57]   requests     2.32.5        [PASS] REQUIRED
+[17:40:57]   flask        3.1.2         [PASS] REQUIRED
+[17:40:57]   flask_cors   6.0.2         [PASS] REQUIRED
+[17:40:57]   PIL          12.1.1        [PASS] REQUIRED
+[17:40:57]   pystray      installed     [PASS] REQUIRED
+[17:40:57]   urllib3      2.6.3         [PASS] REQUIRED
+[17:40:57]   yaml         6.0.3         [PASS] OPTIONAL
+[17:41:00]   ipywidgets   8.1.8         [PASS] OPTIONAL
+[17:41:07]   torch        2.10.0+cpu    [PASS] OPTIONAL
+[17:41:07]   shap_e       installed     [PASS] OPTIONAL
+
+============================================================
+  SECTION 3 - BLENDER
+============================================================
+[17:41:07]   Blender path       : C:\Program Files\Blender Foundation\Blender 5.0\blender.exe  [PASS]
+[17:41:08]   Blender version    : Blender 5.0.1  [INFO]
+
+============================================================
+  SECTION 4 - GEMINI API KEYS (all 10)
+============================================================
+
+  Name       Key Prefix     Status     Detail
+  --------------------------------------------------------
+  default    AIzaSyAtIvYM0-R1... FAIL       QUOTA EXCEEDED (429)
+  django     AIzaSyCAb4OBP1Yr... FAIL       QUOTA EXCEEDED (429)
+  waltz      AIzaSyCw0ADc4GOp... FAIL       QUOTA EXCEEDED (429)
+  panther    AIzaSyBOwoj4wV0t... FAIL       HTTP 400
+  B2         AIzaSyB96tpp2Vmz... FAIL       HTTP 400
+  blackbird  AIzaSyDl3j8nne99... FAIL       HTTP 400
+  daru       AIzaSyC3mUx6kyGd... FAIL       QUOTA EXCEEDED (429)
+  vikrant    AIzaSyB5dli5AOps... FAIL       QUOTA EXCEEDED (429)
+  kang       AIzaSyCAupuJnceO... FAIL       QUOTA EXCEEDED (429)
+  decagon    AIzaSyBjCVzVcKWZ... FAIL       QUOTA EXCEEDED (429)
+
+  Total keys    : 10
+  Working keys  : 0
+  Failed keys   : 10
+
+  CRITICAL: No Gemini keys are working.
+  Get free keys at: https://aistudio.google.com/app/apikey
+  Without working keys all generation falls back to preset shapes.
+
+============================================================
+  SECTION 5 - SERVER ENDPOINT TEST
+============================================================
+[17:41:12]   /ping      Health check             [PASS] 121ms
+[17:41:12]   /status    Generation status        [PASS] 6ms
+[17:41:12]   /folders   Folder list              [PASS] 5ms
+[17:41:12]   /history   History list             [PASS] 3ms
+
+============================================================
+  SECTION 6 - GENERATION PIPELINE
+============================================================
+[17:41:12]   shapee_installed.flag : False  [WARN]
+[17:41:12]     Create with: type nul > shapee_installed.flag
+[17:41:12]   Shap-E packages       : yaml/torch/ipywidgets installed  [INFO]
+[17:41:12]   Preset GLBs cached    : 1  [INFO]
+[17:41:12]   Script library        : directory missing  [WARN]
+[17:41:12]   Cache                 : 1 entries, 1.0 MB  [INFO]
+
+============================================================
+  SECTION 7 - FILE INTEGRITY
+============================================================
+[17:41:12]   server.py                        163941 bytes  [PASS]
+[17:41:12]   static/index.html                158868 bytes  [PASS]
+[17:41:12]   tray_launcher.pyw                 19445 bytes  [PASS]
+[17:41:12]   settings.json                      2267 bytes  [PASS]
+[17:41:12]   history.json                          2 bytes  [PASS]
+[17:41:12]   folders.json                         57 bytes  [PASS]
+[17:41:12]   shapee_installed.flag           MISSING  [WARN]
+
+============================================================
+  DIAGNOSTIC SUMMARY
+============================================================
+  Environment       : PASS
+  Dependencies      : PASS
+  Blender           : PASS
+  Gemini API        : FAIL
+  Server            : PASS
+  Pipeline          : WARN
+  Files             : PASS
+
+  Overall Status: CRITICAL - fix the FAIL items above before using the app
+
+  Steps to fix:
+    3. Get free Gemini keys at https://aistudio.google.com/app/apikey
+       Add them to settings.json under ai.gemini_keys
+============================================================

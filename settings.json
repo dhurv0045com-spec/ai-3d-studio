@@ -1,0 +1,94 @@
+{
+  "_version": "5.0.0",
+  "_description": "AI 3D Studio Configuration",
+  "_last_updated": "auto",
+
+  "ai": {
+    "provider": "gemini",
+    "model": "gemini-2.0-flash",
+    "temperature": 0.2,
+    "max_tokens": 4000,
+    "timeout_seconds": 90,
+    "gemini_keys": [
+      "AIzaSyAtIvYM0-R1tqA9FayG0xIDeogkRruiIL8",
+      "AIzaSyCAb4OBP1YrJtJ-jz7iiUJA9rx95LsUqns",
+      "AIzaSyCw0ADc4GOpyegypb4Rr9Mc1s061tjNxeo",
+      "AIzaSyBOwoj4wV0tyHaJAWbNlBzNcEXfcnGRhil",
+      "AIzaSyB96tpp2Vmzkwwlt3oVdJtfpZa8uLvqGll",
+      "AIzaSyDl3j8nne99ClsSQUJ13QMCSgD4G4AVDyY",
+      "AIzaSyC3mUx6kyGdSR-Gb7g7whUtcYnyBQtdGF8",
+      "AIzaSyB5dli5AOpsnpMwamY78iAOUPahxdm1pO0",
+      "AIzaSyCAupuJnceO7f5v7BtZ4HWeEyTKp7MWrWA",
+      "AIzaSyBjCVzVcKWZZLFHGizeSnYSM98fHgLy1ug"
+    ]
+  },
+
+  "generation": {
+    "default_style": "realistic",
+    "default_complexity": 3,
+    "default_folder": "default",
+    "auto_save": true,
+    "min_quality_score": 4,
+    "max_retries": 2,
+    "blender_timeout": 120,
+    "shap_e_timeout": 600,
+    "cache_enabled": true,
+    "library_mode_default": false,
+    "script_library_enabled": true,
+    "fuzzy_cache_enabled": true
+  },
+
+  "blender": {
+    "path": "C:\\Program Files\\Blender Foundation\\Blender 5.0\\blender.exe",
+    "version": "5.0",
+    "min_primitives": 20,
+    "export_format": "GLB"
+  },
+
+  "cache": {
+    "max_size_mb": 500,
+    "max_entries": 200,
+    "auto_cleanup": true,
+    "cleanup_threshold_mb": 450
+  },
+
+  "history": {
+    "max_entries": 200,
+    "auto_cleanup": true,
+    "sort_order": "newest_first"
+  },
+
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5000,
+    "debug": false,
+    "threaded": true,
+    "log_level": "INFO",
+    "max_log_lines": 80
+  },
+
+  "ui": {
+    "auto_rotate_default": false,
+    "show_pipeline_dots": true,
+    "show_quality_score": true,
+    "toast_duration_ms": 3500,
+    "theme": "deep-space"
+  },
+
+  "paths": {
+    "models_dir": "models",
+    "cache_dir": "models/cache",
+    "presets_dir": "models/presets",
+    "scripts_dir": "models/scripts",
+    "storage_dir": "storage/users/user",
+    "logs_dir": "logs",
+    "static_dir": "static"
+  },
+
+  "quality": {
+    "min_glb_size_bytes": 8192,
+    "min_mesh_count": 3,
+    "warn_below_bytes": 20000,
+    "auto_retry_on_low_quality": true
+  }
+}

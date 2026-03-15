@@ -1,0 +1,27 @@
+# AI 3D Studio - Python Dependencies
+# Generated for server.py V6.1
+# Works on Windows (local) and Linux (Railway)
+
+# Core web framework
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# HTTP requests (used for Gemini API and Cloudinary)
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Image processing (used by tray launcher icon)
+Pillow>=10.0.0
+
+# Scientific computing (required by Shap-E)
+numpy>=1.24.0
+
+# Shap-E dependencies (optional - only needed if shapee_installed.flag exists)
+# Uncomment if you want Shap-E AI generation:
+# torch>=2.0.0
+# pyyaml>=6.0
+# ipywidgets>=8.0.0
+# trimesh>=3.20.0
+
+# System tray (Windows only - not needed on Railway)
+# pystray>=0.19.0

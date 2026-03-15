@@ -1,0 +1,200 @@
+AI 3D STUDIO - COMPLETE RAILWAY DEPLOYMENT GUIDE
+=================================================
+For beginners. Read every step before starting.
+
+
+STEP 1 - INSTALL GIT FOR WINDOWS
+----------------------------------
+1. Go to: https://git-scm.com/download/win
+2. Download the installer (it starts automatically)
+3. Run the installer - click Next on everything
+4. When done, open Command Prompt and type:
+     git --version
+   You should see something like: git version 2.44.0
+   If yes, Git is installed. Continue to Step 2.
+
+
+STEP 2 - CREATE A GITHUB ACCOUNT (if you don't have one)
+----------------------------------------------------------
+1. Go to: https://github.com
+2. Click Sign Up
+3. Use any email and create a password
+4. Verify your email
+
+
+STEP 3 - CREATE A NEW GITHUB REPOSITORY
+-----------------------------------------
+1. Log in to github.com
+2. Click the green NEW button (top left)
+3. Repository name: ai-3d-studio
+4. Description: AI powered 3D model generator
+5. Set to PUBLIC
+6. IMPORTANT: Do NOT tick "Add a README file"
+7. IMPORTANT: Do NOT tick "Add .gitignore"
+8. Click CREATE REPOSITORY
+9. Copy the URL shown - it looks like:
+   https://github.com/YOUR_USERNAME/ai-3d-studio.git
+   Keep this URL - you need it in Step 5.
+
+
+STEP 4 - OPEN COMMAND PROMPT IN YOUR PROJECT FOLDER
+-----------------------------------------------------
+Method 1 (easiest):
+  1. Open your project folder in Windows Explorer
+     (C:\Users\user\Desktop\ai-3d-project)
+  2. Click the address bar at the top
+  3. Type: cmd
+  4. Press Enter
+  A black Command Prompt window opens already
+  in your project folder.
+
+Method 2:
+  1. Press Windows key + R
+  2. Type: cmd
+  3. Press Enter
+  4. Type: cd C:\Users\user\Desktop\ai-3d-project
+  5. Press Enter
+
+
+STEP 5 - PUSH YOUR CODE TO GITHUB
+-----------------------------------
+Type each command below ONE AT A TIME.
+Press Enter after each one.
+Wait for it to finish before typing the next.
+
+  git init
+
+  git add .
+
+  git commit -m "AI 3D Studio V6.1 - Railway ready"
+
+  git branch -M main
+
+  git remote add origin YOUR_GITHUB_URL_HERE
+
+  (Replace YOUR_GITHUB_URL_HERE with the URL from Step 3)
+  Example:
+  git remote add origin https://github.com/myname/ai-3d-studio.git
+
+  git push -u origin main
+
+When it asks for username: type your GitHub username
+When it asks for password: use a GitHub Personal Access Token
+  (NOT your regular password - see below)
+
+HOW TO GET A GITHUB TOKEN:
+  1. GitHub.com > Your profile icon > Settings
+  2. Scroll to bottom: Developer settings
+  3. Personal access tokens > Tokens (classic)
+  4. Generate new token > Generate new token (classic)
+  5. Note: "Railway deploy"
+  6. Expiration: 90 days
+  7. Tick: repo (full control)
+  8. Click Generate token
+  9. COPY IT IMMEDIATELY (you only see it once)
+  10. Use this as your password when git asks
+
+
+STEP 6 - SIGN UP ON RAILWAY
+-----------------------------
+1. Go to: https://railway.app
+2. Click Login
+3. Choose: Login with GitHub
+4. Authorize Railway to access your GitHub
+5. You are now on the Railway dashboard
+
+
+STEP 7 - CREATE A NEW RAILWAY PROJECT
+---------------------------------------
+1. Click: New Project
+2. Click: Deploy from GitHub repo
+3. Find and click: ai-3d-studio
+4. Railway will start building automatically
+5. Wait 3-5 minutes for the build to complete
+   (it downloads Blender which takes time)
+6. You will see build logs in real time
+
+
+STEP 8 - ADD ENVIRONMENT VARIABLES
+------------------------------------
+IMPORTANT: Do this BEFORE the first deploy finishes.
+
+1. Click your project on Railway dashboard
+2. Click: Variables tab
+3. Add each variable below by clicking "Add Variable":
+
+   Variable Name          Value
+   ─────────────────────────────────────────────────
+   GEMINI_KEY_1           AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY
+   GEMINI_KEY_2           AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M
+   GEMINI_KEY_3           AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44
+   GEMINI_KEY_4           AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU
+   GEMINI_KEY_5           AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI
+   GEMINI_KEY_6           AIzaSyDXsfLELFLRgoNfUXZGUtsK6X2-c--rqAM
+   GEMINI_KEY_7           AIzaSyBXLDQzk9_5naaxS4V5wG-RujQewfJKdw4
+   CLOUDINARY_CLOUD_NAME  root
+   CLOUDINARY_API_KEY     847967395866559
+   CLOUDINARY_API_SECRET  h9OL5-hsJdbxpMV3RpVxdLF7G-Q
+
+4. After adding all variables, Railway redeploys automatically
+
+
+STEP 9 - FIND YOUR LIVE URL
+-----------------------------
+1. Go to your Railway project
+2. Click: Settings tab
+3. Click: Generate Domain
+   OR look for a URL like:
+   https://ai-3d-studio-production.up.railway.app
+4. Click the URL to open your live app
+5. SAVE THIS URL - this is your app online
+
+
+STEP 10 - TEST IT WORKS
+------------------------
+1. Visit your Railway URL + /ping
+   Example: https://your-app.railway.app/ping
+2. You should see JSON like:
+   {
+     "ok": true,
+     "version": "6.1",
+     "gemini_keys_alive": ["key1","key2",...],
+     "blender_found": true
+   }
+3. If blender_found is true - everything is working
+4. If gemini_keys_alive has keys - AI generation works
+5. Go to your main URL and try generating a model
+
+
+TROUBLESHOOTING
+---------------
+Build fails with "blender download failed":
+  - Railway has a 1GB memory limit on free tier
+  - Blender download might fail on slow build
+  - Solution: Upgrade Railway to Starter plan ($5/month)
+
+App crashes with "address already in use":
+  - Check that PORT env var is not manually set
+  - Railway sets PORT automatically
+
+Generation fails / fallback only:
+  - Check Variables tab - all GEMINI_KEY_ values set
+  - Visit /api/gemini/status to see key health
+  - Visit /ping to see alive key count
+
+Models not saving to cloud:
+  - Check CLOUDINARY_ variables are set correctly
+  - Visit /api/cloudinary/test (POST request) to test
+
+
+UPDATING YOUR APP AFTER CHANGES
+---------------------------------
+When you change server.py or index.html locally:
+  1. Open Command Prompt in project folder
+  2. Type:
+       git add .
+       git commit -m "update: describe what you changed"
+       git push
+  3. Railway automatically detects the push
+  4. New version builds and deploys in 2-3 minutes
+  5. Zero downtime - old version runs until new one is ready

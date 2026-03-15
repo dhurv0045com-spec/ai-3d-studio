@@ -1,0 +1,2098 @@
+[15:09:59] INFO GEN: === NEW GENERATION: rocket red ===
+[15:10:05] INFO GEN: SUCCESS: rocket red | model=Preset | size=99696
+[15:11:11] INFO GEN: === NEW GENERATION: rocket red ===
+[15:11:11] INFO GEN: SUCCESS: rocket red | model=Cache | size=99696
+[15:12:37] INFO GEN: === NEW GENERATION: rocket red ===
+[15:12:37] INFO GEN: SUCCESS: rocket red | model=Cache | size=99696
+[15:13:55] INFO GEN: === NEW GENERATION: red dragon ===
+[15:14:00] INFO GEN: SUCCESS: red dragon | model=Preset | size=303968
+[15:14:29] INFO GEN: === NEW GENERATION: robotics hand ===
+[15:14:32] INFO GEN: SUCCESS: robotics hand | model=Preset | size=168216
+[15:14:53] INFO GEN: === NEW GENERATION: moon ===
+[15:14:53] INFO GEN: SUCCESS: moon | model=Fallback | size=1080
+[15:15:56] INFO GEN: === NEW GENERATION: car ===
+[15:16:00] INFO GEN: SUCCESS: car | model=Preset | size=172276
+[15:17:25] INFO GEN: === NEW GENERATION: a peaceful forest with tall trees, a small river flowing through the center, birds flying in the sky, bright colors, cartoon style, flat design, clean lines.” ===
+[15:17:29] INFO GEN: SUCCESS: a peaceful forest with tall trees, a small river flowing thr | model=Preset | size=172276
+[15:52:09] INFO GEN: SERVER: AI 3D Studio V2 starting -- state reset to idle
+[15:52:09] INFO GEN: SERVER: AI 3D Studio V2 on http://127.0.0.1:5000
+[15:52:09] INFO GEN: SERVER: Blender: C:\Program Files\Blender Foundation\Blender 5.0\blender.exe (exists=True)
+[15:52:09] INFO GEN: SERVER: Shap-E flag: True
+[15:52:40] INFO GEN: === NEW GENERATION: create a robot ===
+[15:52:54] INFO GEN: SUCCESS: create a robot | model=Preset | size=168216
+[15:53:18] INFO GEN: === NEW GENERATION: create a robot ===
+[15:53:18] INFO GEN: SUCCESS: create a robot | model=Cache | size=168216
+[15:54:04] INFO GEN: === NEW GENERATION: create a train ===
+[15:54:04] INFO GEN: SUCCESS: create a train | model=Fallback | size=1080
+[15:54:22] INFO GEN: === NEW GENERATION: create a train ===
+[15:54:22] INFO GEN: SUCCESS: create a train | model=Fallback | size=1080
+[15:55:51] INFO GEN: === NEW GENERATION: blue robot blue ===
+[15:55:55] INFO GEN: SUCCESS: blue robot blue | model=Preset | size=168216
+[15:56:58] INFO GEN: === NEW GENERATION: ring ===
+[15:56:58] INFO GEN: SUCCESS: ring | model=Fallback | size=1080
+[16:00:52] INFO GEN: === NEW GENERATION: rocket ===
+[16:00:55] INFO GEN: SUCCESS: rocket | model=Preset | size=99696
+[17:20:24] INFO  GEN: pipeline start: create a train
+[17:20:26] INFO  GEN: enhanced: {"original_prompt": "create a train", "shape": "sphere", "color": "#888888", "scale": 1.0, "style": "standard", "quality": "standard", "material": "", "noun": "train", "library_mode": false, "enhanced
+[17:20:31] INFO  GEN: stage B: launching Blender: noun=train shape=sphere color=#888888 rgb=(0.53,0.53,0.53)
+[17:20:34] INFO  GEN: stage B: Blender exit=0
+[17:20:34] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:20:34] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:20:34] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:20:34] INFO  GEN: stage C: generating preset shape: sphere
+[17:20:34] INFO  GEN: stage B: launching Blender: noun=train shape=sphere color=#888888 rgb=(0.53,0.53,0.53)
+[17:20:36] INFO  GEN: stage B: Blender exit=0
+[17:20:36] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:20:36] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:20:36] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:20:36] WARN  GEN: all stages failed -- using fallback GLB
+[17:20:36] INFO  GEN: final GLB: 11300 bytes via Fallback
+[17:20:36] INFO  GEN: pipeline complete: Fallback
+[17:21:28] INFO  GEN: pipeline start: create a rocket
+[17:21:28] INFO  GEN: enhanced: {"original_prompt": "create a rocket", "shape": "rocket", "color": "#888888", "scale": 1.0, "style": "standard", "quality": "standard", "material": "", "noun": "rocket", "library_mode": false, "enhanc
+[17:21:28] INFO  GEN: stage B: launching Blender: noun=rocket shape=rocket color=#888888 rgb=(0.53,0.53,0.53)
+[17:21:31] INFO  GEN: stage B: Blender exit=0
+[17:21:31] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:21:31] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:21:31] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:21:31] INFO  GEN: stage C: generating preset shape: rocket
+[17:21:31] INFO  GEN: stage B: launching Blender: noun=rocket shape=rocket color=#888888 rgb=(0.53,0.53,0.53)
+[17:21:33] INFO  GEN: stage B: Blender exit=0
+[17:21:33] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:21:33] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:21:33] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:21:33] WARN  GEN: all stages failed -- using fallback GLB
+[17:21:33] INFO  GEN: final GLB: 11300 bytes via Fallback
+[17:21:33] INFO  GEN: pipeline complete: Fallback
+[17:33:34] INFO  GEN: pipeline start: create a train
+[17:33:34] INFO  GEN: enhanced: {"original_prompt": "create a train", "shape": "sphere", "color": "#888888", "scale": 1.0, "style": "standard", "quality": "standard", "material": "", "noun": "train", "library_mode": false, "enhanced
+[17:33:34] INFO  GEN: stage B: launching Blender: noun=train shape=sphere color=#888888 rgb=(0.53,0.53,0.53)
+[17:33:37] INFO  GEN: stage B: Blender exit=0
+[17:33:37] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:33:37] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:33:37] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:33:37] INFO  GEN: stage C: generating preset shape: sphere
+[17:33:37] INFO  GEN: stage B: launching Blender: noun=train shape=sphere color=#888888 rgb=(0.53,0.53,0.53)
+[17:33:40] INFO  GEN: stage B: Blender exit=0
+[17:33:40] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:33:40] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:33:40] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:33:40] WARN  GEN: all stages failed -- using fallback GLB
+[17:33:40] INFO  GEN: final GLB: 11300 bytes via Fallback
+[17:33:40] INFO  GEN: pipeline complete: Fallback
+[17:34:01] INFO  GEN: pipeline start: create a rocket
+[17:34:02] INFO  GEN: enhanced: {"original_prompt": "create a rocket", "shape": "rocket", "color": "#888888", "scale": 1.0, "style": "standard", "quality": "standard", "material": "", "noun": "rocket", "library_mode": false, "enhanc
+[17:34:02] INFO  GEN: stage B: launching Blender: noun=rocket shape=rocket color=#888888 rgb=(0.53,0.53,0.53)
+[17:34:04] INFO  GEN: stage B: Blender exit=0
+[17:34:04] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:34:04] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:34:04] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:34:04] INFO  GEN: stage C: generating preset shape: rocket
+[17:34:04] INFO  GEN: stage B: launching Blender: noun=rocket shape=rocket color=#888888 rgb=(0.53,0.53,0.53)
+[17:34:06] INFO  GEN: stage B: Blender exit=0
+[17:34:06] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:34:06] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:34:06] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:34:06] WARN  GEN: all stages failed -- using fallback GLB
+[17:34:06] INFO  GEN: final GLB: 11300 bytes via Fallback
+[17:34:06] INFO  GEN: pipeline complete: Fallback
+[17:44:11] INFO  GEN: pipeline start: create a dragon
+[17:44:11] INFO  GEN: enhanced: {"original_prompt": "create a dragon", "shape": "dragon", "color": "#888888", "scale": 1.0, "style": "standard", "quality": "standard", "material": "", "noun": "dragon", "library_mode": false, "enhanc
+[17:44:15] INFO  GEN: stage B: launching Blender: noun=dragon shape=dragon color=#888888 rgb=(0.53,0.53,0.53)
+[17:44:19] INFO  GEN: stage B: Blender exit=0
+[17:44:19] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:44:19] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:44:19] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:44:19] INFO  GEN: stage C: generating preset shape: dragon
+[17:44:19] INFO  GEN: stage B: launching Blender: noun=dragon shape=dragon color=#888888 rgb=(0.53,0.53,0.53)
+[17:44:22] INFO  GEN: stage B: Blender exit=0
+[17:44:22] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[17:44:22] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[17:44:22] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[17:44:22] WARN  GEN: all stages failed -- using fallback GLB
+[17:44:22] INFO  GEN: final GLB: 11300 bytes via Fallback
+[17:44:22] INFO  GEN: pipeline complete: Fallback
+[17:56:02] INFO  GEN: pipeline start: create a rocket
+[17:56:04] INFO  GEN: enhanced: {"original_prompt": "create a rocket", "shape": "rocket", "color": "#888888", "scale": 1.0, "style": "standard", "quality": "standard", "material": "", "noun": "rocket", "library_mode": false, "enhanc
+[12:27:39] INFO  GEN: stage B: launching Blender: noun=rocket shape=rocket color=#888888 rgb=(0.53,0.53,0.53)
+[12:27:49] INFO  GEN: stage B: Blender exit=0
+[12:27:49] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[12:27:49] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[12:27:49] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[12:27:49] INFO  GEN: stage C: generating preset shape: rocket
+[12:27:49] INFO  GEN: stage B: launching Blender: noun=rocket shape=rocket color=#888888 rgb=(0.53,0.53,0.53)
+[12:27:55] INFO  GEN: stage B: Blender exit=0
+[12:27:55] INFO  GEN: stage B stdout (last 400): Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+
+Blender quit
+
+[12:27:55] WARN  GEN: stage B stderr (last 400): le "C:\Users\user\Desktop\ai-3d-project\_blender_gen_temp.py", line 66, in <module>
+    bpy.ops.export_scene.gltf(
+  File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Converting py args to operator properties:: keyword "export_colors" unrecognized
+
+[12:27:55] WARN  GEN: stage B: failed (exit=0, glb_size=0)
+[12:27:55] WARN  GEN: all stages failed -- using fallback GLB
+[12:27:55] INFO  GEN: final GLB: 11300 bytes via Fallback
+[12:27:55] INFO  GEN: pipeline complete: Fallback
+[13:15:43] GEN   PIPELINE: [START] Generation started: '"a red dragon' color=#0088ff
+[13:15:44] GEN   PIPELINE: [CACHE] miss hash=a58c3a0336a5f608a4803794f03b2bb8
+[13:15:44] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[13:15:44] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[13:15:44] GEN   PIPELINE: [GROQ] HTTP 401 key=mellow
+[13:15:44] GEN   PIPELINE: [GROQ] Key mellow auth error - marking dead
+[13:15:44] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:15:44] GEN   PIPELINE: [INTERPRETER] {"object": "dragon", "style": "fantasy", "material": null, "features": ["scales", "wings", "fire breath"], "size": "large", "color": "red", "search_keywords": "mythical creature,fire breathing,legendary beast", "notes": "a large red dragon with scales and wings"}
+[13:15:44] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[13:15:44] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[13:15:44] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[13:15:46] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:15:46] GEN   PIPELINE: [MODEL_B] Got script: 2183 chars
+[13:15:46] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[13:15:51] GEN   PIPELINE: [BLENDER] exit=0
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: ng primitive: Cylinder.002
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Cylinder.003
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.001
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Cone
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.002
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.003
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.004
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.005
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.006
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.007
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.008
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.009
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.010
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Plane.011
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Cone.001
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Cone.002
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Cone.003
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Cone.004
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Sphere
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Extracting primitive: Sphere.001
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Primitives created: 1
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: 13:15:51 | INFO: Finished glTF 2.0 export in 0.12421131134033203 s
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:15:51] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:15:51] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[13:15:51] GEN   PIPELINE: [BLENDER] output valid: valid 205092 bytes
+[13:15:51] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[13:15:51] GEN   PIPELINE: [CACHE] stored hash=a58c3a0336a5f608a4803794f03b2bb8
+[13:15:51] GEN   PIPELINE: [DONE] Generation thread complete
+[13:16:25] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_sphere.glb
+[13:16:28] GEN   PIPELINE: [BLENDER] exit=0
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: ary at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Starting glTF 2.0 export
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Torus
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Cylinder
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.001
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.002
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.003
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.004
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.005
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.006
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.007
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Sphere.008
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Torus.001
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Torus.002
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Torus.003
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Torus.004
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Cone
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Cone.001
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Cone.002
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Extracting primitive: Cone.003
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Primitives created: 1
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: 13:16:28 | INFO: Finished glTF 2.0 export in 0.0795748233795166 s
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:16:28] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:16:28] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[13:16:28] GEN   PIPELINE: [BLENDER] output valid: valid 1038364 bytes
+[13:16:49] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_capsule.glb
+[13:16:52] GEN   PIPELINE: [BLENDER] exit=0
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: t C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Starting glTF 2.0 export
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cylinder
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Sphere
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Sphere.001
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Torus
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Torus.001
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Torus.002
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Torus.003
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Torus.004
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cube.001
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cube.002
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cube.003
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cube.004
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cube.005
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cube.006
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cylinder.001
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Cylinder.002
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Sphere.002
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Sphere.003
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Extracting primitive: Sphere.004
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Primitives created: 1
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: 13:16:52 | INFO: Finished glTF 2.0 export in 0.07700681686401367 s
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:16:52] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:16:52] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[13:16:52] GEN   PIPELINE: [BLENDER] output valid: valid 760824 bytes
+[13:18:28] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_sword.glb
+[13:18:32] GEN   PIPELINE: [BLENDER] exit=0
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: ing primitive: Cube.001
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cone
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cube.002
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cube.003
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cube.004
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Sphere
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Sphere.001
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cube.005
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cylinder
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Torus
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Torus.001
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Torus.002
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Torus.003
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Torus.004
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Sphere.002
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cylinder.001
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cube.006
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cube.007
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Cylinder.002
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Sphere.003
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Extracting primitive: Sphere.004
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Primitives created: 1
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: 13:18:32 | INFO: Finished glTF 2.0 export in 0.07400846481323242 s
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:18:32] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:18:32] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[13:18:32] GEN   PIPELINE: [BLENDER] output valid: valid 763928 bytes
+[13:18:55] GEN   PIPELINE: [START] Generation started: 'train' color=#0088ff
+[13:18:55] GEN   PIPELINE: [CACHE] miss hash=61b3a8faa9c1091806675c230a9abe64
+[13:18:55] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[13:18:55] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[13:18:56] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:18:56] GEN   PIPELINE: [INTERPRETER] {"object": "train", "style": "industrial", "material": "metal", "features": ["wheels", "locomotive", "carriages"], "size": "large", "color": "silver", "search_keywords": "transport,vehicle,locomotive", "notes": "a large metal train with carriages"}
+[13:18:56] GEN   PIPELINE: [LIBRARY] library_mode=True, searching: transport,vehicle,locomotive
+[13:18:56] GEN   PIPELINE: [LIBRARY] Searching Sketchfab for: transport,vehicle,locomotive
+[13:19:58] GEN   PIPELINE: [LIBRARY] Sketchfab HTTP 200
+[13:21:23] GEN   PIPELINE: [LIBRARY] download HTTP 401
+[13:21:23] GEN   PIPELINE: [LIBRARY] library search failed, continuing
+[13:21:23] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[13:21:23] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[13:21:23] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[13:21:25] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:21:25] GEN   PIPELINE: [MODEL_B] Got script: 2795 chars
+[13:21:25] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[13:21:27] GEN   PIPELINE: [BLENDER] exit=0
+[13:21:27] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:21:27] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr:   material.use_nodes = True
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr: Traceback (most recent call last):
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py", line 41, in <module>
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr:     bpy.ops.mesh.primitive_cuboid_add(size=(10, 2, 5), enter_editmode=False, location=(10, 0, 0))
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[13:21:27] GEN   PIPELINE: [BLENDER] stderr: AttributeError: Calling operator "bpy.ops.mesh.primitive_cuboid_add" error, could not be found
+[13:21:27] GEN   PIPELINE: [BLENDER] output valid: valid 205092 bytes
+[13:21:27] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[13:21:27] GEN   PIPELINE: [CACHE] stored hash=61b3a8faa9c1091806675c230a9abe64
+[13:21:27] GEN   PIPELINE: [DONE] Generation thread complete
+[13:24:05] GEN   PIPELINE: [START] Generation started: 'create a rocket' color=#0088ff
+[13:24:05] GEN   PIPELINE: [CACHE] miss hash=ce2c595197f49775c5f9fc9d84ee646f
+[13:24:05] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[13:24:05] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[13:24:06] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:24:06] GEN   PIPELINE: [INTERPRETER] {"object": "rocket", "style": "futuristic", "material": "metal", "features": ["engines", "cockpit", "fins"], "size": "large", "color": "silver", "search_keywords": "spacecraft,launch vehicle,aerospace", "notes": "a sleek and powerful rocket ship"}
+[13:24:06] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[13:24:06] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[13:24:06] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[13:24:08] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:24:08] GEN   PIPELINE: [MODEL_B] Got script: 2559 chars
+[13:24:08] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[13:24:11] GEN   PIPELINE: [BLENDER] exit=0
+[13:24:11] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:24:11] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:24:11] GEN   PIPELINE: [BLENDER] stderr: Traceback (most recent call last):
+[13:24:11] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py", line 23, in <module>
+[13:24:11] GEN   PIPELINE: [BLENDER] stderr:     bpy.ops.mesh.primitive_sphere_add(radius=1, enter_editmode=False, location=(0, 7, 0))
+[13:24:11] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[13:24:11] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[13:24:11] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[13:24:11] GEN   PIPELINE: [BLENDER] stderr: AttributeError: Calling operator "bpy.ops.mesh.primitive_sphere_add" error, could not be found
+[13:24:11] GEN   PIPELINE: [BLENDER] output valid: valid 205092 bytes
+[13:24:11] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[13:24:11] GEN   PIPELINE: [CACHE] stored hash=ce2c595197f49775c5f9fc9d84ee646f
+[13:24:11] GEN   PIPELINE: [DONE] Generation thread complete
+[13:24:22] GEN   PIPELINE: [START] Generation started: 'create a rocket' color=#0088ff
+[13:24:22] GEN   PIPELINE: [CACHE] hit hash=ce2c595197f49775c5f9fc9d84ee646f
+[13:24:22] GEN   PIPELINE: [CACHE] served from cache: valid 205092 bytes
+[13:24:22] GEN   PIPELINE: [DONE] Generation thread complete
+[13:25:00] GEN   PIPELINE: [START] Generation started: 'create a rocket' color=#0088ff
+[13:25:00] GEN   PIPELINE: [CACHE] hit hash=ce2c595197f49775c5f9fc9d84ee646f
+[13:25:00] GEN   PIPELINE: [CACHE] served from cache: valid 205092 bytes
+[13:25:00] GEN   PIPELINE: [DONE] Generation thread complete
+[13:25:48] GEN   PIPELINE: [START] Generation started: 'rocket, add booster in the back' color=#0088ff
+[13:25:48] GEN   PIPELINE: [CACHE] miss hash=ad883e8eb99f6199fb11e34fa2c742e1
+[13:25:48] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[13:25:48] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[13:25:49] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:25:49] GEN   PIPELINE: [INTERPRETER] {"object": "rocket", "style": "futuristic", "material": "metal", "features": ["booster", "cockpit", "fins"], "size": "large", "color": "silver", "search_keywords": "space,vehicle,launch", "notes": "a rocket with a booster in the back"}
+[13:25:49] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[13:25:49] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[13:25:49] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[13:25:51] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:25:51] GEN   PIPELINE: [MODEL_B] Got script: 1792 chars
+[13:25:51] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[13:25:53] GEN   PIPELINE: [BLENDER] exit=0
+[13:25:53] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:25:53] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:25:53] GEN   PIPELINE: [BLENDER] stderr: Traceback (most recent call last):
+[13:25:53] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py", line 19, in <module>
+[13:25:53] GEN   PIPELINE: [BLENDER] stderr:     bpy.ops.mesh.primitive_sphere_add(size=2, enter_editmode=False, location=(0, 0, 20))
+[13:25:53] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[13:25:53] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[13:25:53] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[13:25:53] GEN   PIPELINE: [BLENDER] stderr: AttributeError: Calling operator "bpy.ops.mesh.primitive_sphere_add" error, could not be found
+[13:25:53] GEN   PIPELINE: [BLENDER] output valid: valid 205092 bytes
+[13:25:53] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[13:25:53] GEN   PIPELINE: [CACHE] stored hash=ad883e8eb99f6199fb11e34fa2c742e1
+[13:25:53] GEN   PIPELINE: [DONE] Generation thread complete
+[13:26:10] GEN   PIPELINE: [START] Generation started: 'rocket, add booster in the back' color=#cc8833
+[13:26:10] GEN   PIPELINE: [CACHE] hit hash=ad883e8eb99f6199fb11e34fa2c742e1
+[13:26:10] GEN   PIPELINE: [CACHE] served from cache: valid 205092 bytes
+[13:26:10] GEN   PIPELINE: [DONE] Generation thread complete
+[13:29:07] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_robot.glb
+[13:29:11] GEN   PIPELINE: [BLENDER] exit=0
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cylinder.003
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cylinder.004
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cube.004
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cylinder.005
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cylinder.006
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cube.005
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cylinder.007
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cylinder.008
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cube.006
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.001
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cylinder.009
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.002
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Cube.007
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.003
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.004
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.005
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.006
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.007
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Extracting primitive: Sphere.008
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Primitives created: 1
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: 13:29:11 | INFO: Finished glTF 2.0 export in 0.09651923179626465 s
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:29:11] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:29:11] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[13:29:11] GEN   PIPELINE: [BLENDER] output valid: valid 712140 bytes
+[13:30:23] GEN   PIPELINE: [START] Generation started: 'create a rocket weith big wings' color=#ffaa00
+[13:30:23] GEN   PIPELINE: [CACHE] miss hash=5a508a5fefeee84a7f415a723dfdf30a
+[13:30:23] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[13:30:23] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[13:30:24] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:30:24] GEN   PIPELINE: [INTERPRETER] {"object": "rocket", "style": "futuristic", "material": "metal", "features": ["big wings", "engines", "cockpit"], "size": "large", "color": "silver", "search_keywords": "spacecraft,vehicle,aerospace", "notes": "a large rocket with big wings for atmospheric flight"}
+[13:30:24] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[13:30:24] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[13:30:24] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[13:30:26] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:30:26] GEN   PIPELINE: [MODEL_B] Got script: 3151 chars
+[13:30:26] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[13:30:29] GEN   PIPELINE: [BLENDER] exit=0
+[13:30:29] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:30:29] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:30:29] GEN   PIPELINE: [BLENDER] stderr: Traceback (most recent call last):
+[13:30:29] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py", line 18, in <module>
+[13:30:29] GEN   PIPELINE: [BLENDER] stderr:     bpy.ops.transform.rotate(axis=(0, 0, 1), angle=math.radians(45), orient_type='LOCAL')
+[13:30:29] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[13:30:29] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[13:30:29] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[13:30:29] GEN   PIPELINE: [BLENDER] stderr: TypeError: Converting py args to operator properties:: keyword "axis" unrecognized
+[13:30:29] GEN   PIPELINE: [BLENDER] output valid: valid 205092 bytes
+[13:30:29] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[13:30:29] GEN   PIPELINE: [CACHE] stored hash=5a508a5fefeee84a7f415a723dfdf30a
+[13:30:29] GEN   PIPELINE: [DONE] Generation thread complete
+[13:31:34] GEN   PIPELINE: [START] Generation started: 'create a car
+  big wings' color=#ffaa00
+[13:31:34] GEN   PIPELINE: [CACHE] miss hash=ed1ef366917c793bb3133ec464c40fa3
+[13:31:34] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[13:31:34] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[13:31:35] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:31:35] GEN   PIPELINE: [INTERPRETER] {"object": "car", "style": "futuristic", "material": "metal", "features": ["big wings", "aerodynamic"], "size": "large", "color": "silver", "search_keywords": "flying car, sports car, concept vehicle", "notes": "a sleek car with large wings for flight"}
+[13:31:35] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[13:31:35] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[13:31:35] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[13:31:38] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[13:31:38] GEN   PIPELINE: [MODEL_B] Got script: 3139 chars
+[13:31:38] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[13:31:41] GEN   PIPELINE: [BLENDER] exit=0
+[13:31:41] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[13:31:41] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[13:31:41] GEN   PIPELINE: [BLENDER] stderr: le "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[13:31:41] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[13:31:41] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[13:31:41] GEN   PIPELINE: [BLENDER] stderr: TypeError: Converting py args to operator properties: enum "SUBDIVISION" not found in ('DATA_TRANSFER', 'MESH_CACHE', 'MESH_SEQUENCE_CACHE', 'NORMAL_EDIT', 'WEIGHTED_NORMAL', 'UV_PROJECT', 'UV_WARP', 'VERTEX_WEIGHT_EDIT', 'VERTEX_WEIGHT_MIX', 'VERTEX_WEIGHT_PROXIMITY', 'ARRAY', 'BEVEL', 'BOOLEAN', 'BUILD', 'DECIMATE', 'EDGE_SPLIT', 'NODES', 'MASK', 'MIRROR', 'MULTIRES', 'REMESH', 'SCREW', 'SKIN', 'SOLIDIFY', 'SUBSURF', 'TRIANGULATE', 'VOLUME_TO_MESH', 'WELD', 'WIREFRAME', 'ARMATURE', 'CAST', 'CURVE', 'DISPLACE', 'HOOK', 'LAPLACIANDEFORM', 'LATTICE', 'MESH_DEFORM', 'SHRINKWRAP', 'SIMPLE_DEFORM', 'SMOOTH', 'CORRECTIVE_SMOOTH', 'LAPLACIANSMOOTH', 'SURFACE_DEFORM', 'WARP', 'WAVE', 'CLOTH', 'COLLISION', 'DYNAMIC_PAINT', 'EXPLODE', 'FLUID', 'OCEAN', 'PARTICLE_INSTANCE', 'PARTICLE_SYSTEM', 'SOFT_BODY')
+[13:31:41] GEN   PIPELINE: [BLENDER] output valid: valid 205092 bytes
+[13:31:41] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[13:31:41] GEN   PIPELINE: [CACHE] stored hash=ed1ef366917c793bb3133ec464c40fa3
+[13:31:41] GEN   PIPELINE: [DONE] Generation thread complete
+[13:31:52] GEN   PIPELINE: [START] Generation started: 'create a car
+  big wings' color=#ffaa00
+[13:31:52] GEN   PIPELINE: [CACHE] hit hash=ed1ef366917c793bb3133ec464c40fa3
+[13:31:52] GEN   PIPELINE: [CACHE] served from cache: valid 205092 bytes
+[13:31:52] GEN   PIPELINE: [DONE] Generation thread complete
+[14:21:02] GEN   PIPELINE: [START] Generation started: 'create a dragon with wing' color=#9922ff
+[14:21:02] GEN   PIPELINE: [CACHE] miss hash=ced678a7eb5fc3e06e2cdca6a892041f
+[14:21:02] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[14:21:02] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[14:21:03] GEN   PIPELINE: [GROQ] HTTP 401 key=mellow
+[14:21:03] GEN   PIPELINE: [GROQ] Key mellow auth error - marking dead
+[14:21:04] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:21:04] GEN   PIPELINE: [INTERPRETER] {"object": "dragon", "style": "mythical", "material": null, "features": ["wings", "scales", "fire breath"], "size": "large", "color": "red", "search_keywords": "dragon,wing,mythical,creature", "notes": "a large red dragon with wings and fire breath"}
+[14:21:04] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[14:21:04] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[14:21:04] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[14:21:06] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:21:06] GEN   PIPELINE: [MODEL_B] Got script: 2013 chars
+[14:21:06] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[14:21:10] GEN   PIPELINE: [BLENDER] exit=0
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: rimitive: Cylinder
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cylinder.001
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cylinder.002
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cylinder.003
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.001
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cone
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.002
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.003
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.004
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.005
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.006
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.007
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.008
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.009
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.010
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Plane.011
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cone.001
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cone.002
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cone.003
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Extracting primitive: Cone.004
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Primitives created: 1
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: 14:21:10 | INFO: Finished glTF 2.0 export in 0.13400745391845703 s
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:21:10] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:21:10] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[14:21:10] GEN   PIPELINE: [BLENDER] output valid: valid 65536 bytes
+[14:21:10] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[14:21:10] GEN   PIPELINE: [CACHE] stored hash=ced678a7eb5fc3e06e2cdca6a892041f
+[14:21:10] GEN   PIPELINE: [DONE] Generation thread complete
+[14:22:44] GEN   PIPELINE: [START] Generation started: 'create a train' color=#9922ff
+[14:22:44] GEN   PIPELINE: [CACHE] stale entry, removing: too small: 1080 bytes
+[14:22:44] GEN   PIPELINE: [CACHE] miss hash=2e649efc9cde8c4b97f586fe3220e003
+[14:22:44] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[14:22:44] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[14:22:45] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:22:45] GEN   PIPELINE: [INTERPRETER] {"object": "train", "style": "modern", "material": "metal", "features": ["wheels", "locomotive", "carriages"], "size": "large", "color": "silver", "search_keywords": "transport, vehicle, railway", "notes": "a fast passenger train"}
+[14:22:45] GEN   PIPELINE: [LIBRARY] library_mode=True, searching: transport, vehicle, railway
+[14:22:45] GEN   PIPELINE: [LIBRARY] Searching Sketchfab for: transport, vehicle, railway
+[14:22:46] GEN   PIPELINE: [LIBRARY] Sketchfab HTTP 200
+[14:22:47] GEN   PIPELINE: [LIBRARY] download HTTP 401
+[14:22:47] GEN   PIPELINE: [LIBRARY] library search failed, continuing
+[14:22:47] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[14:22:47] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[14:22:47] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[14:22:49] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:22:49] GEN   PIPELINE: [MODEL_B] Got script: 2060 chars
+[14:22:49] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[14:22:53] GEN   PIPELINE: [BLENDER] exit=0
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: Extracting primitive: Cylinder.017
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.001
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.002
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.003
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.004
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.005
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.006
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.007
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.008
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.009
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.010
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.011
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.012
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.013
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.014
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.015
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.016
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.017
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.018
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.019
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Extracting primitive: Cube.020
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Primitives created: 1
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: 14:22:53 | INFO: Finished glTF 2.0 export in 0.08600664138793945 s
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:22:53] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:22:53] GEN   PIPELINE: [BLENDER] stderr:   material.use_nodes = True
+[14:22:53] GEN   PIPELINE: [BLENDER] output valid: valid 150588 bytes
+[14:22:53] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[14:22:53] GEN   PIPELINE: [CACHE] stored hash=2e649efc9cde8c4b97f586fe3220e003
+[14:22:53] GEN   PIPELINE: [DONE] Generation thread complete
+[14:23:39] GEN   PIPELINE: [START] Generation started: 'create a dragon with wing, make wing larger' color=#00ddff
+[14:23:39] GEN   PIPELINE: [CACHE] miss hash=7767044060c4c81f763401699553c818
+[14:23:39] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[14:23:39] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[14:23:40] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:23:40] GEN   PIPELINE: [INTERPRETER] {"object": "dragon", "style": "fantasy", "material": "scale", "features": ["wing", "claw", "fire breath"], "size": "large", "color": "red", "search_keywords": "mythical creature, dragon, winged beast", "notes": "a large red dragon with large wings and sharp claws"}
+[14:23:40] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[14:23:40] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[14:23:40] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[14:23:43] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:23:43] GEN   PIPELINE: [MODEL_B] Got script: 2301 chars
+[14:23:43] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[14:23:46] GEN   PIPELINE: [BLENDER] exit=0
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Starting glTF 2.0 export
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cylinder
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cylinder.001
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cylinder.002
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cylinder.003
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Plane
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Plane.001
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cone
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cone.001
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cone.002
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cone.003
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Extracting primitive: Cone.004
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Primitives created: 1
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: 14:23:46 | INFO: Finished glTF 2.0 export in 0.03400444984436035 s
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:23:46] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:23:46] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[14:23:46] GEN   PIPELINE: [BLENDER] output valid: valid 53728 bytes
+[14:23:46] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[14:23:46] GEN   PIPELINE: [CACHE] stored hash=7767044060c4c81f763401699553c818
+[14:23:46] GEN   PIPELINE: [DONE] Generation thread complete
+[14:24:29] GEN   PIPELINE: [START] Generation started: 'create a dragon with wing, add booster' color=#00ddff
+[14:24:29] GEN   PIPELINE: [CACHE] miss hash=454a551188719d3f02c07da621a285bb
+[14:24:29] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[14:24:29] GEN   PIPELINE: [INTERPRETER] Calling Groq interpreter...
+[14:24:30] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:24:30] GEN   PIPELINE: [INTERPRETER] {"object": "dragon", "style": "fantasy", "material": "scale", "features": ["wing", "booster", "claw"], "size": "large", "color": "red", "search_keywords": "mythical creature,fire-breathing,legendary beast", "notes": "a large red dragon with wings and a booster"}
+[14:24:30] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[14:24:30] GEN   PIPELINE: [MODEL_B] attempting Groq+Blender...
+[14:24:30] GEN   PIPELINE: [MODEL_B] Starting Groq+Blender stage
+[14:24:31] GEN   PIPELINE: [GROQ] HTTP 200 key=traco
+[14:24:31] GEN   PIPELINE: [MODEL_B] Got script: 2289 chars
+[14:24:31] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[14:24:33] GEN   PIPELINE: [BLENDER] exit=0
+[14:24:33] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:24:33] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:24:33] GEN   PIPELINE: [BLENDER] stderr: Traceback (most recent call last):
+[14:24:33] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py", line 45, in <module>
+[14:24:33] GEN   PIPELINE: [BLENDER] stderr:     bpy.ops.mesh.primitive_uv_sphere_add(size=1, enter_editmode=False, location=(2, 0, 26))
+[14:24:33] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[14:24:33] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[14:24:33] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[14:24:33] GEN   PIPELINE: [BLENDER] stderr: TypeError: Converting py args to operator properties:: keyword "size" unrecognized
+[14:24:33] GEN   PIPELINE: [BLENDER] output valid: valid 53728 bytes
+[14:24:33] GEN   PIPELINE: [MODEL_B] Groq+Blender success
+[14:24:33] GEN   PIPELINE: [CACHE] stored hash=454a551188719d3f02c07da621a285bb
+[14:24:33] GEN   PIPELINE: [DONE] Generation thread complete
+[14:25:12] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_cone.glb
+[14:25:15] GEN   PIPELINE: [BLENDER] exit=0
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Starting glTF 2.0 export
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cone
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Torus
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Torus.001
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Torus.002
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Torus.003
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cube.001
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cube.002
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cube.003
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Sphere
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cylinder
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cylinder.001
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cylinder.002
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cylinder.003
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cylinder.004
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Extracting primitive: Cylinder.005
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Primitives created: 1
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: 14:25:15 | INFO: Finished glTF 2.0 export in 0.0542905330657959 s
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:25:15] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:25:15] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[14:25:15] GEN   PIPELINE: [BLENDER] output valid: valid 428088 bytes
+[14:25:51] GEN   PIPELINE: [START] Generation started: 'create a train' color=#9922ff
+[14:25:51] GEN   PIPELINE: [CACHE] hit hash=2e649efc9cde8c4b97f586fe3220e003
+[14:25:51] GEN   PIPELINE: [CACHE] served from cache: valid 150588 bytes
+[14:25:51] GEN   PIPELINE: [DONE] Generation thread complete
+[14:41:47] GEN   PIPELINE: [START] Generation started: 'create a train' color=#00ffcc
+[14:41:47] GEN   PIPELINE: [CACHE] hit hash=2e649efc9cde8c4b97f586fe3220e003
+[14:41:47] GEN   PIPELINE: [CACHE] served from cache: valid 150588 bytes
+[14:41:47] GEN   PIPELINE: [DONE] Generation thread complete
+[14:42:04] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_car.glb
+[14:42:07] GEN   PIPELINE: [BLENDER] exit=0
+[14:42:07] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:42:07] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr: Traceback (most recent call last):
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py", line 34, in <module>
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr:     bpy.ops.mesh.primitive_wedge_add(size=1.0)
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[14:42:07] GEN   PIPELINE: [BLENDER] stderr: AttributeError: Calling operator "bpy.ops.mesh.primitive_wedge_add" error, could not be found
+[14:42:07] GEN   PIPELINE: [BLENDER] output invalid: file not found
+[14:42:21] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_tree.glb
+[14:42:25] GEN   PIPELINE: [BLENDER] exit=0
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout:  | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cone.001
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cone.002
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cone.003
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.001
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.002
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.003
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.004
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.005
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cylinder.001
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cylinder.002
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cylinder.003
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cylinder.004
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cylinder.005
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cylinder.006
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Cylinder.007
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.006
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.007
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.008
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Extracting primitive: Sphere.009
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Primitives created: 1
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: 14:42:25 | INFO: Finished glTF 2.0 export in 0.09005212783813477 s
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:42:25] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:42:25] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[14:42:25] GEN   PIPELINE: [BLENDER] output valid: valid 786028 bytes
+[14:42:46] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_pyramid.glb
+[14:42:50] GEN   PIPELINE: [BLENDER] exit=0
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Starting glTF 2.0 export
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cone
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cube.001
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cone.001
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cone.002
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Sphere
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cylinder
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cylinder.001
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cylinder.002
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cylinder.003
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Sphere.001
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Sphere.002
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Sphere.003
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Sphere.004
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Extracting primitive: Cube.002
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Primitives created: 1
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: 14:42:50 | INFO: Finished glTF 2.0 export in 0.06500577926635742 s
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[14:42:50] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[14:42:50] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[14:42:50] GEN   PIPELINE: [BLENDER] output valid: valid 386916 bytes
+[14:43:01] GEN   PIPELINE: [START] Generation started: 'create a train' color=#ffaa00
+[14:43:01] GEN   PIPELINE: [CACHE] hit hash=2e649efc9cde8c4b97f586fe3220e003
+[14:43:01] GEN   PIPELINE: [CACHE] served from cache: valid 150588 bytes
+[14:43:01] GEN   PIPELINE: [DONE] Generation thread complete
+[14:44:21] GEN   PIPELINE: [START] Generation started: 'create a train' color=#ffaa00
+[14:44:21] GEN   PIPELINE: [CACHE] hit hash=2e649efc9cde8c4b97f586fe3220e003
+[14:44:21] GEN   PIPELINE: [CACHE] served from cache: valid 150588 bytes
+[14:44:21] GEN   PIPELINE: [DONE] Generation thread complete
+[14:48:51] GEN   PIPELINE: [START] Generation started: 'create a train' color=#445566
+[14:48:51] GEN   PIPELINE: [CACHE] hit hash=2e649efc9cde8c4b97f586fe3220e003
+[14:48:51] GEN   PIPELINE: [CACHE] served from cache: valid 150588 bytes
+[14:48:51] GEN   PIPELINE: [DONE] Generation thread complete
+[15:16:50] GEN   PIPELINE: [START] Generation started: 'create a train' color=#44bb88
+[15:16:50] GEN   PIPELINE: [CACHE] hit hash=2e649efc9cde8c4b97f586fe3220e003
+[15:16:50] GEN   PIPELINE: [CACHE] served from cache: valid 150588 bytes
+[15:16:50] GEN   PIPELINE: [DONE] Generation thread complete
+[15:22:17] GEN   PIPELINE: [START] Generation started: 'a red dragon' color=#4488ff
+[15:22:17] GEN   PIPELINE: [CACHE] miss hash=dec0955dcf9106fe4d593fe19eeb4c56
+[15:22:17] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[15:22:17] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[15:22:18] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:22:20] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:22:22] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "dragon", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "red", "search_keywords": "dragon 3d model", "notes": "a red dragon"}
+[15:22:22] GEN   PIPELINE: [SHAPEE] attempting Shap-E generation...
+[15:22:22] GEN   PIPELINE: [SHAPEE] generating: a red dragon
+[15:23:52] GEN   PIPELINE: [SHAPEE] worker exception: 'NoneType' object has no attribute 'write'
+[15:23:53] GEN   PIPELINE: [SHAPEE] success: valid 53728 bytes
+[15:23:53] GEN   PIPELINE: [SHAPEE] [MODEL_A] Shap-E success
+[15:23:53] GEN   PIPELINE: [CACHE] stored hash=dec0955dcf9106fe4d593fe19eeb4c56
+[15:23:53] GEN   PIPELINE: [DONE] Generation thread complete
+[15:29:52] GEN   PIPELINE: [START] Generation started: 'a red dragon' color=#4488ff
+[15:29:52] GEN   PIPELINE: [CACHE] hit hash=dec0955dcf9106fe4d593fe19eeb4c56
+[15:29:52] GEN   PIPELINE: [CACHE] served from cache: valid 53728 bytes
+[15:29:52] GEN   PIPELINE: [DONE] Generation thread complete
+[15:30:01] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_car.glb
+[15:30:03] GEN   PIPELINE: [BLENDER] exit=0
+[15:30:03] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[15:30:03] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr: Traceback (most recent call last):
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py", line 34, in <module>
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr:     bpy.ops.mesh.primitive_wedge_add(size=1.0)
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr:   File "C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\modules\bpy\ops.py", line 109, in __call__
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr:     ret = _op_call(self.idname_py(), kw)
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[15:30:03] GEN   PIPELINE: [BLENDER] stderr: AttributeError: Calling operator "bpy.ops.mesh.primitive_wedge_add" error, could not be found
+[15:30:03] GEN   PIPELINE: [BLENDER] output invalid: file not found
+[15:34:46] GEN   PIPELINE: [START] Generation started: 'red dragon' color=#4488ff
+[15:34:46] GEN   PIPELINE: [CACHE] miss hash=bebaf603693836b2f5c4803261fc5b95
+[15:34:46] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[15:34:46] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[15:34:47] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:34:49] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:34:51] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "dragon", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "red", "search_keywords": "dragon 3d model", "notes": "red dragon"}
+[15:34:51] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[15:34:51] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender...
+[15:34:51] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[15:34:51] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:34:57] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:34:59] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[15:34:59] GEN   PIPELINE: [MODEL_B] Groq+Blender failed, falling through
+[15:34:59] GEN   PIPELINE: [PRESET] matched keyword: dragon
+[15:34:59] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[15:35:03] GEN   PIPELINE: [BLENDER] exit=0
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: mitive: Cone.001
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cylinder.001
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cylinder.002
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cylinder.003
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cylinder.004
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.002
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.003
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Plane
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Plane.001
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.004
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.005
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Sphere.002
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Sphere.003
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.006
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.007
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.008
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.009
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.010
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.011
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.012
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Extracting primitive: Cone.013
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Primitives created: 1
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: 15:35:02 | INFO: Finished glTF 2.0 export in 0.10200691223144531 s
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[15:35:03] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[15:35:03] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[15:35:03] GEN   PIPELINE: [BLENDER] output valid: valid 391008 bytes
+[15:35:03] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: dragon
+[15:35:03] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: dragon
+[15:35:03] GEN   PIPELINE: [CACHE] stored hash=bebaf603693836b2f5c4803261fc5b95
+[15:35:03] GEN   PIPELINE: [DONE] Generation thread complete
+[15:36:23] GEN   PIPELINE: [START] Generation started: 'red dragon' color=#ff2200
+[15:36:23] GEN   PIPELINE: [CACHE] hit hash=bebaf603693836b2f5c4803261fc5b95
+[15:36:23] GEN   PIPELINE: [CACHE] served from cache: valid 391008 bytes
+[15:36:23] GEN   PIPELINE: [DONE] Generation thread complete
+[15:36:34] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_diamond.glb
+[15:36:38] GEN   PIPELINE: [BLENDER] exit=0
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Starting glTF 2.0 export
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cone
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cube.001
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cone.001
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cone.002
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Sphere
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cylinder
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cylinder.001
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cylinder.002
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cylinder.003
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Sphere.001
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Sphere.002
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Sphere.003
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Sphere.004
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Extracting primitive: Cube.002
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Primitives created: 1
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: 15:36:37 | INFO: Finished glTF 2.0 export in 0.05000591278076172 s
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[15:36:38] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[15:36:38] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[15:36:38] GEN   PIPELINE: [BLENDER] output valid: valid 386916 bytes
+[15:36:51] GEN   PIPELINE: [START] Generation started: 'red dragon' color=#ff2200
+[15:36:51] GEN   PIPELINE: [CACHE] hit hash=bebaf603693836b2f5c4803261fc5b95
+[15:36:51] GEN   PIPELINE: [CACHE] served from cache: valid 391008 bytes
+[15:36:51] GEN   PIPELINE: [DONE] Generation thread complete
+[15:38:43] GEN   PIPELINE: [START] Generation started: '"a green castle' color=#ff2200
+[15:38:43] GEN   PIPELINE: [CACHE] miss hash=044c3998a0c4880148b451c7159b5787
+[15:38:43] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[15:38:43] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[15:38:43] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:38:45] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:38:47] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "castle", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "green", "search_keywords": "castle 3d model", "notes": "\"a green castle"}
+[15:38:47] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[15:38:47] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender...
+[15:38:47] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[15:38:48] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:38:50] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:38:52] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[15:38:52] GEN   PIPELINE: [MODEL_B] Groq+Blender failed, falling through
+[15:38:52] GEN   PIPELINE: [PRESET] matched keyword: castle
+[15:38:52] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[15:38:56] GEN   PIPELINE: [BLENDER] exit=0
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: ting primitive: Cone
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cylinder.001
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cone.001
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cylinder.002
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cone.002
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cylinder.003
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cone.003
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.005
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.006
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.007
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.008
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.009
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.010
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.011
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.012
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cube.013
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cylinder.004
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cone.004
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Torus
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Cylinder.005
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Extracting primitive: Plane
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Primitives created: 1
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: 15:38:55 | INFO: Finished glTF 2.0 export in 0.05800461769104004 s
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[15:38:56] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[15:38:56] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[15:38:56] GEN   PIPELINE: [BLENDER] output valid: valid 168908 bytes
+[15:38:56] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: castle
+[15:38:56] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: castle
+[15:38:56] GEN   PIPELINE: [CACHE] stored hash=044c3998a0c4880148b451c7159b5787
+[15:38:56] GEN   PIPELINE: [DONE] Generation thread complete
+[15:41:55] GEN   PIPELINE: [START] Generation started: '"a green castle  with a dragon on roof' color=#ff2200
+[15:41:55] GEN   PIPELINE: [CACHE] miss hash=ca15593b60ff2e357596f105b9a1d835
+[15:41:55] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[15:41:55] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[15:41:55] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:41:58] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:42:00] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "roof", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "green", "search_keywords": "roof 3d model", "notes": "\"a green castle  with a dragon on roof"}
+[15:42:00] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[15:42:00] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender...
+[15:42:00] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[15:42:00] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:42:02] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:42:04] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[15:42:04] GEN   PIPELINE: [MODEL_B] Groq+Blender failed, falling through
+[15:42:04] GEN   PIPELINE: [PRESET] matched keyword: dragon
+[15:42:04] GEN   PIPELINE: [PRESET] [MODEL_C] loaded from cache: valid 391008 bytes
+[15:42:04] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: dragon
+[15:42:04] GEN   PIPELINE: [CACHE] stored hash=ca15593b60ff2e357596f105b9a1d835
+[15:42:04] GEN   PIPELINE: [DONE] Generation thread complete
+[15:45:53] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#4488ff
+[15:45:53] GEN   PIPELINE: [CACHE] miss hash=bb463677d3cd2260681f1783a9ae0186
+[15:45:53] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[15:45:53] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[15:45:54] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:45:56] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:45:58] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "snake", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "cyan", "search_keywords": "snake 3d model", "notes": "create a snake"}
+[15:45:58] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[15:45:58] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[15:45:58] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[15:45:59] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:46:01] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:46:03] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[15:46:03] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[15:46:03] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[15:46:03] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[15:46:07] GEN   PIPELINE: [BLENDER] exit=0
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: ry at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Starting glTF 2.0 export
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Torus
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Cylinder
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.001
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.002
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.003
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.004
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.005
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.006
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.007
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Sphere.008
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Torus.001
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Torus.002
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Torus.003
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Torus.004
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Cone
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Cone.001
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Cone.002
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Extracting primitive: Cone.003
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Primitives created: 1
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: 15:46:07 | INFO: Finished glTF 2.0 export in 0.07999658584594727 s
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[15:46:07] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[15:46:07] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[15:46:07] GEN   PIPELINE: [BLENDER] output valid: valid 1038348 bytes
+[15:46:07] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: sphere
+[15:46:07] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[15:46:07] GEN   PIPELINE: [CACHE] stored hash=bb463677d3cd2260681f1783a9ae0186
+[15:46:07] GEN   PIPELINE: [DONE] Generation thread complete
+[15:50:02] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#ff9977
+[15:50:02] GEN   PIPELINE: [CACHE] hit hash=bb463677d3cd2260681f1783a9ae0186
+[15:50:02] GEN   PIPELINE: [CACHE] served from cache: valid 1038348 bytes
+[15:50:02] GEN   PIPELINE: [DONE] Generation thread complete
+[15:51:49] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#ff22cc
+[15:51:49] GEN   PIPELINE: [CACHE] miss hash=bb463677d3cd2260681f1783a9ae0186
+[15:51:49] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[15:51:49] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[15:51:50] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:51:52] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:51:54] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "snake", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "magenta", "search_keywords": "snake 3d model", "notes": "create a snake"}
+[15:51:54] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[15:51:54] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[15:51:54] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[15:51:55] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:51:57] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:51:59] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[15:51:59] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[15:51:59] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[15:51:59] GEN   PIPELINE: [PRESET] [MODEL_C] loaded from cache: valid 1038348 bytes
+[15:51:59] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[15:51:59] GEN   PIPELINE: [CACHE] stored hash=bb463677d3cd2260681f1783a9ae0186
+[15:51:59] GEN   PIPELINE: [DONE] Generation thread complete
+[15:55:47] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#ff22cc
+[15:55:47] GEN   PIPELINE: [CACHE] miss hash=bb463677d3cd2260681f1783a9ae0186
+[15:55:47] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[15:55:47] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[15:55:47] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:55:50] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:55:52] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "snake", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "magenta", "search_keywords": "snake 3d model", "notes": "create a snake"}
+[15:55:52] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[15:55:52] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[15:55:52] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[15:55:52] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:55:54] GEN   PIPELINE: [GEMINI] HTTP 429
+[15:55:56] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[15:55:56] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[15:55:56] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[15:55:56] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[15:56:00] GEN   PIPELINE: [BLENDER] exit=0
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: ry at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Starting glTF 2.0 export
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Torus
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Cylinder
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.001
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.002
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.003
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.004
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.005
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.006
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.007
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Sphere.008
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Torus.001
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Torus.002
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Torus.003
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Torus.004
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Cone
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Cone.001
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Cone.002
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Extracting primitive: Cone.003
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Primitives created: 1
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: 15:56:00 | INFO: Finished glTF 2.0 export in 0.08000683784484863 s
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[15:56:00] GEN   PIPELINE: [BLENDER] stdout: Blender quit
+[15:56:00] GEN   PIPELINE: [BLENDER] stderr:   mat.use_nodes = True
+[15:56:00] GEN   PIPELINE: [BLENDER] output valid: valid 1038348 bytes
+[15:56:00] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: sphere
+[15:56:00] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[15:56:00] GEN   PIPELINE: [CACHE] stored hash=bb463677d3cd2260681f1783a9ae0186
+[15:56:00] GEN   PIPELINE: [DONE] Generation thread complete
+[16:02:15] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#4488ff
+[16:02:15] GEN   PIPELINE: [CACHE] miss hash=bb463677d3cd2260681f1783a9ae0186
+[16:02:15] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[16:02:15] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[16:02:15] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:02:17] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:02:19] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "snake", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "cyan", "search_keywords": "snake 3d model", "notes": "create a snake"}
+[16:02:19] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[16:02:19] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[16:02:19] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[16:02:20] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:02:22] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:02:24] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[16:02:24] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[16:02:24] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[16:02:24] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[16:02:28] GEN   PIPELINE: [BLENDER] exit=0
+[16:02:28] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Starting glTF 2.0 export
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Torus
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Cylinder
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.001
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.002
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.003
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.004
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.005
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.006
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.007
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Sphere.008
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Torus.001
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Torus.002
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Torus.003
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Torus.004
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Cone
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Cone.001
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Cone.002
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Extracting primitive: Cone.003
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Primitives created: 1
+[16:02:28] GEN   PIPELINE: [BLENDER] out: 16:02:27 | INFO: Finished glTF 2.0 export in 0.08400702476501465 s
+[16:02:28] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[16:02:28] GEN   PIPELINE: [BLENDER] out: Blender quit
+[16:02:28] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[16:02:28] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[16:02:28] GEN   PIPELINE: [BLENDER] output valid: valid 1038348 bytes
+[16:02:28] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: sphere
+[16:02:28] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[16:02:28] GEN   PIPELINE: [CACHE] stored hash=bb463677d3cd2260681f1783a9ae0186
+[16:02:28] GEN   PIPELINE: [DONE] Generation thread complete
+[16:45:54] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#4488ff
+[16:45:54] GEN   PIPELINE: [CACHE] miss hash=bb463677d3cd2260681f1783a9ae0186
+[16:45:54] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[16:45:54] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[16:45:56] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:45:58] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:46:00] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "snake", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "cyan", "search_keywords": "snake 3d model", "notes": "create a snake"}
+[16:46:00] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[16:46:00] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[16:46:00] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[16:46:01] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:46:03] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:46:05] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[16:46:05] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[16:46:05] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[16:46:05] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[16:46:09] GEN   PIPELINE: [BLENDER] exit=0
+[16:46:09] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Starting glTF 2.0 export
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Torus
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Cylinder
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.001
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.002
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.003
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.004
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.005
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.006
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.007
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Sphere.008
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Torus.001
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Torus.002
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Torus.003
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Torus.004
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Cone
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Cone.001
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Cone.002
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Extracting primitive: Cone.003
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Primitives created: 1
+[16:46:09] GEN   PIPELINE: [BLENDER] out: 16:46:09 | INFO: Finished glTF 2.0 export in 0.08154463768005371 s
+[16:46:09] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[16:46:09] GEN   PIPELINE: [BLENDER] out: Blender quit
+[16:46:09] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[16:46:09] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[16:46:09] GEN   PIPELINE: [BLENDER] output valid: valid 1038348 bytes
+[16:46:09] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: sphere
+[16:46:09] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[16:46:09] GEN   PIPELINE: [CACHE] stored hash=bb463677d3cd2260681f1783a9ae0186
+[16:46:09] GEN   PIPELINE: [DONE] Generation thread complete
+[16:49:29] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#4488ff
+[16:49:29] GEN   PIPELINE: [CACHE] miss hash=bb463677d3cd2260681f1783a9ae0186
+[16:49:29] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[16:49:29] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[16:49:29] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:49:31] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:49:33] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "snake", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "cyan", "search_keywords": "snake 3d model", "notes": "create a snake"}
+[16:49:33] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[16:49:33] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[16:49:33] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[16:49:34] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:49:36] GEN   PIPELINE: [GEMINI] HTTP 429
+[16:49:38] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[16:49:38] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[16:49:38] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[16:49:38] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[16:49:42] GEN   PIPELINE: [BLENDER] exit=0
+[16:49:42] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Starting glTF 2.0 export
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Torus
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Cylinder
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.001
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.002
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.003
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.004
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.005
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.006
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.007
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Sphere.008
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Torus.001
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Torus.002
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Torus.003
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Torus.004
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Cone
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Cone.001
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Cone.002
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Extracting primitive: Cone.003
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Primitives created: 1
+[16:49:42] GEN   PIPELINE: [BLENDER] out: 16:49:41 | INFO: Finished glTF 2.0 export in 0.08201479911804199 s
+[16:49:42] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[16:49:42] GEN   PIPELINE: [BLENDER] out: Blender quit
+[16:49:42] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[16:49:42] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[16:49:42] GEN   PIPELINE: [BLENDER] output valid: valid 1038348 bytes
+[16:49:42] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: sphere
+[16:49:42] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[16:49:42] GEN   PIPELINE: [CACHE] stored hash=bb463677d3cd2260681f1783a9ae0186
+[16:49:42] GEN   PIPELINE: [DONE] Generation thread complete
+[17:00:25] GEN   PIPELINE: [START] Generation started: 'create a horse' color=#cc8833
+[17:00:25] GEN   PIPELINE: [CACHE] miss hash=98157d2bd5f8414b55dbdff41db29be9
+[17:00:25] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[17:00:25] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[17:00:26] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:00:28] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:00:30] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "horse", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "orange", "search_keywords": "horse 3d model", "notes": "create a horse"}
+[17:00:30] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[17:00:30] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[17:00:30] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[17:00:30] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:00:33] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:00:35] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[17:00:35] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[17:00:35] GEN   PIPELINE: [PRESET] matched keyword: horse
+[17:00:35] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[17:00:39] GEN   PIPELINE: [BLENDER] exit=0
+[17:00:39] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Starting glTF 2.0 export
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Torus
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.001
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.002
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Torus.001
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Torus.002
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Torus.003
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.003
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.004
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.005
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.006
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Cone
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Cone.001
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.007
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.008
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.009
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.010
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.011
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Sphere.012
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Torus.004
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Extracting primitive: Torus.005
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Primitives created: 1
+[17:00:39] GEN   PIPELINE: [BLENDER] out: 17:00:39 | INFO: Finished glTF 2.0 export in 0.1110067367553711 s
+[17:00:39] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[17:00:39] GEN   PIPELINE: [BLENDER] out: Blender quit
+[17:00:39] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[17:00:39] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[17:00:39] GEN   PIPELINE: [BLENDER] output valid: valid 1375840 bytes
+[17:00:39] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: horse
+[17:00:39] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: horse
+[17:00:39] GEN   PIPELINE: [CACHE] stored hash=98157d2bd5f8414b55dbdff41db29be9
+[17:00:39] GEN   PIPELINE: [DONE] Generation thread complete
+[17:03:49] GEN   PIPELINE: [START] Generation started: 'creATE A HORSE' color=#4488ff
+[17:03:50] GEN   PIPELINE: [CACHE] hit hash=98157d2bd5f8414b55dbdff41db29be9
+[17:03:50] GEN   PIPELINE: [CACHE] served from cache: valid 1375840 bytes
+[17:03:50] GEN   PIPELINE: [DONE] Generation thread complete
+[17:04:15] GEN   PIPELINE: [START] Generation started: 'creATE A RAInbow' color=#4488ff
+[17:04:15] GEN   PIPELINE: [CACHE] miss hash=acd8a74e8b3959f70e9d48a7d4d82396
+[17:04:15] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[17:04:15] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[17:04:16] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:04:18] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:04:20] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "rainbow", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "cyan", "search_keywords": "rainbow 3d model", "notes": "creATE A RAInbow"}
+[17:04:20] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[17:04:20] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[17:04:20] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[17:04:20] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:04:23] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:04:25] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[17:04:25] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[17:04:25] GEN   PIPELINE: [PRESET] matched keyword: bow
+[17:04:25] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[17:04:29] GEN   PIPELINE: [BLENDER] exit=0
+[17:04:29] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Starting glTF 2.0 export
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Torus
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.001
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.002
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Torus.001
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Torus.002
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Torus.003
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.003
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.004
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.005
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.006
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Cone
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Cone.001
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.007
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.008
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.009
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.010
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.011
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Sphere.012
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Torus.004
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Extracting primitive: Torus.005
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Primitives created: 1
+[17:04:29] GEN   PIPELINE: [BLENDER] out: 17:04:28 | INFO: Finished glTF 2.0 export in 0.10800385475158691 s
+[17:04:29] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[17:04:29] GEN   PIPELINE: [BLENDER] out: Blender quit
+[17:04:29] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[17:04:29] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[17:04:29] GEN   PIPELINE: [BLENDER] output valid: valid 1375824 bytes
+[17:04:29] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: bow
+[17:04:29] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: bow
+[17:04:29] GEN   PIPELINE: [CACHE] stored hash=acd8a74e8b3959f70e9d48a7d4d82396
+[17:04:29] GEN   PIPELINE: [DONE] Generation thread complete
+[17:20:01] GEN   PIPELINE: [START] Generation started: 'create a hut' color=#4488ff
+[17:20:01] GEN   PIPELINE: [CACHE] miss hash=dd1532901bb15fff804d384107c8976d
+[17:20:01] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[17:20:01] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[17:20:02] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:20:04] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:20:06] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "hut", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "cyan", "search_keywords": "hut 3d model", "notes": "create a hut"}
+[17:20:06] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[17:20:06] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[17:20:06] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[17:20:06] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:20:09] GEN   PIPELINE: [GEMINI] HTTP 429
+[17:20:11] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[17:20:11] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[17:20:11] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[17:20:11] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[17:20:15] GEN   PIPELINE: [BLENDER] exit=0
+[17:20:15] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Starting glTF 2.0 export
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Torus
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Cylinder
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.001
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.002
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.003
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.004
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.005
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.006
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.007
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Sphere.008
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Torus.001
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Torus.002
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Torus.003
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Torus.004
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Cone
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Cone.001
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Cone.002
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Extracting primitive: Cone.003
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Primitives created: 1
+[17:20:15] GEN   PIPELINE: [BLENDER] out: 17:20:14 | INFO: Finished glTF 2.0 export in 0.07699394226074219 s
+[17:20:15] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[17:20:15] GEN   PIPELINE: [BLENDER] out: Blender quit
+[17:20:15] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[17:20:15] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[17:20:15] GEN   PIPELINE: [BLENDER] output valid: valid 1038348 bytes
+[17:20:15] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: sphere
+[17:20:15] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[17:20:15] GEN   PIPELINE: [CACHE] stored hash=dd1532901bb15fff804d384107c8976d
+[17:20:15] GEN   PIPELINE: [DONE] Generation thread complete
+[20:06:45] GEN   PIPELINE: [START] Generation started: 'create a castle' color=#0077ff
+[20:06:45] GEN   PIPELINE: [CACHE] miss hash=d3a66c012b2febfefa5885c91d221b16
+[20:06:45] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[20:06:45] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[20:06:46] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:06:48] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:06:50] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "castle", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "blue", "search_keywords": "castle 3d model", "notes": "create a castle"}
+[20:06:50] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[20:06:50] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[20:06:50] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[20:06:50] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:06:53] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:06:55] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[20:06:55] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[20:06:55] GEN   PIPELINE: [PRESET] matched keyword: castle
+[20:06:55] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[20:07:00] GEN   PIPELINE: [BLENDER] exit=0
+[20:07:00] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Starting glTF 2.0 export
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.001
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.002
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.003
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.004
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cylinder
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cone
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cylinder.001
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cone.001
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cylinder.002
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cone.002
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cylinder.003
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cone.003
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.005
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.006
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.007
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.008
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.009
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.010
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.011
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.012
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cube.013
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cylinder.004
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cone.004
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Torus
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Cylinder.005
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Extracting primitive: Plane
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Primitives created: 1
+[20:07:00] GEN   PIPELINE: [BLENDER] out: 20:06:59 | INFO: Finished glTF 2.0 export in 0.0850057601928711 s
+[20:07:00] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[20:07:00] GEN   PIPELINE: [BLENDER] out: Blender quit
+[20:07:00] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[20:07:00] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[20:07:00] GEN   PIPELINE: [BLENDER] output valid: valid 168908 bytes
+[20:07:00] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: castle
+[20:07:00] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: castle
+[20:07:00] GEN   PIPELINE: [CACHE] stored hash=d3a66c012b2febfefa5885c91d221b16
+[20:07:00] GEN   PIPELINE: [DONE] Generation thread complete
+[20:08:58] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_quick_spaceship.glb
+[20:09:02] GEN   PIPELINE: [BLENDER] exit=0
+[20:09:02] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Starting glTF 2.0 export
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Sphere
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Sphere.001
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder.001
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cone
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cone.001
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cone.002
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cone.003
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cone.004
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Sphere.002
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cube.001
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder.002
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder.003
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder.004
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder.005
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder.006
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cube.002
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cube.003
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Torus
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Torus.001
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Extracting primitive: Cylinder.007
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Primitives created: 1
+[20:09:02] GEN   PIPELINE: [BLENDER] out: 20:09:02 | INFO: Finished glTF 2.0 export in 0.06542634963989258 s
+[20:09:02] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[20:09:02] GEN   PIPELINE: [BLENDER] out: Blender quit
+[20:09:02] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[20:09:02] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[20:09:02] GEN   PIPELINE: [BLENDER] output valid: valid 456872 bytes
+[20:10:57] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#0077ff
+[20:10:57] GEN   PIPELINE: [CACHE] miss hash=bb463677d3cd2260681f1783a9ae0186
+[20:10:57] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[20:10:57] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[20:10:58] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:11:00] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:11:02] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "snake", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "blue", "search_keywords": "snake 3d model", "notes": "create a snake"}
+[20:11:02] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[20:11:02] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[20:11:02] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[20:11:02] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:11:05] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:11:07] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[20:11:07] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[20:11:07] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[20:11:07] GEN   PIPELINE: [PRESET] [MODEL_C] loaded from cache: valid 1038348 bytes
+[20:11:07] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[20:11:07] GEN   PIPELINE: [CACHE] stored hash=bb463677d3cd2260681f1783a9ae0186
+[20:11:07] GEN   PIPELINE: [DONE] Generation thread complete
+[20:12:19] GEN   PIPELINE: [START] Generation started: 'quick shape: capsule' color=#00ff88
+[20:12:19] GEN   PIPELINE: [CACHE] miss hash=3030f8c805df7b0ab3b6afeed7905340
+[20:12:19] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[20:12:19] GEN   PIPELINE: [INTERPRETER] Calling Gemini interpreter...
+[20:12:19] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:12:22] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:12:24] GEN   PIPELINE: [INTERPRETER] fallback result: {"object": "capsule", "style": "realistic", "material": null, "features": [], "size": "medium", "color": "turquoise", "search_keywords": "capsule 3d model", "notes": "quick shape: capsule"}
+[20:12:24] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[20:12:24] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[20:12:24] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage
+[20:12:24] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:12:26] GEN   PIPELINE: [GEMINI] HTTP 429
+[20:12:28] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[20:12:28] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[20:12:28] GEN   PIPELINE: [PRESET] matched keyword: capsule
+[20:12:28] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[20:12:32] GEN   PIPELINE: [BLENDER] exit=0
+[20:12:32] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Starting glTF 2.0 export
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cylinder
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Sphere
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Sphere.001
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Torus
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Torus.001
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Torus.002
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Torus.003
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Torus.004
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cube.001
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cube.002
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cube.003
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cube.004
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cube.005
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cube.006
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cylinder.001
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Cylinder.002
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Sphere.002
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Sphere.003
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Extracting primitive: Sphere.004
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Primitives created: 1
+[20:12:32] GEN   PIPELINE: [BLENDER] out: 20:12:32 | INFO: Finished glTF 2.0 export in 0.06900525093078613 s
+[20:12:32] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[20:12:32] GEN   PIPELINE: [BLENDER] out: Blender quit
+[20:12:32] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[20:12:32] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[20:12:32] GEN   PIPELINE: [BLENDER] output valid: valid 760788 bytes
+[20:12:32] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: capsule
+[20:12:32] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: capsule
+[20:12:32] GEN   PIPELINE: [CACHE] stored hash=3030f8c805df7b0ab3b6afeed7905340
+[20:12:32] GEN   PIPELINE: [DONE] Generation thread complete
+[23:40:02] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#4488ff
+[23:40:02] GEN   PIPELINE: [CACHE] miss hash=de1b2a7baf7850243db71c4abd4e5a39
+[23:40:02] GEN   PIPELINE: [CACHE] miss - proceeding to generation
+[23:40:02] GEN   PIPELINE: [INTERPRETER] fast local parse (no API call): obj=snake color=cyan
+[23:40:02] GEN   PIPELINE: [SHAPEE] not available - skipping Stage A
+[23:40:02] GEN   PIPELINE: [MODEL_B] attempting Gemini+Blender with full prompt...
+[23:40:02] GEN   PIPELINE: [MODEL_B] Starting Gemini+Blender stage (style=realistic, complexity=3)
+[23:40:03] GEN   PIPELINE: [GEMINI] HTTP 429
+[23:40:05] GEN   PIPELINE: [GEMINI] HTTP 429
+[23:40:07] GEN   PIPELINE: [MODEL_B] Gemini returned no script
+[23:40:07] GEN   PIPELINE: [MODEL_B] Gemini+Blender failed, falling through to preset
+[23:40:07] GEN   PIPELINE: [PRESET] matched keyword: sphere
+[23:40:07] GEN   PIPELINE: [BLENDER] running script -> C:\Users\user\Desktop\ai-3d-project\_temp_output.glb
+[23:40:12] GEN   PIPELINE: [BLENDER] exit=0
+[23:40:12] GEN   PIPELINE: [BLENDER] out: INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 5.0\5.0\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Starting glTF 2.0 export
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Torus
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Cylinder
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.001
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.002
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.003
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.004
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.005
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.006
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.007
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Sphere.008
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Torus.001
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Torus.002
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Torus.003
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Torus.004
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Cone
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Cone.001
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Cone.002
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Extracting primitive: Cone.003
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Primitives created: 1
+[23:40:12] GEN   PIPELINE: [BLENDER] out: 23:40:12 | INFO: Finished glTF 2.0 export in 0.12701058387756348 s
+[23:40:12] GEN   PIPELINE: [BLENDER] out: Blender 5.0.1 (hash a3db93c5b259 built 2025-12-16 01:32:30)
+[23:40:12] GEN   PIPELINE: [BLENDER] out: Blender quit
+[23:40:12] GEN   PIPELINE: [BLENDER] err: C:\Users\user\Desktop\ai-3d-project\_temp_blender_script.py:12: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+[23:40:12] GEN   PIPELINE: [BLENDER] err:   mat.use_nodes = True
+[23:40:12] GEN   PIPELINE: [BLENDER] output valid: valid 1038348 bytes
+[23:40:12] GEN   PIPELINE: [PRESET] [MODEL_C] Blender preset success: sphere
+[23:40:12] GEN   PIPELINE: [PRESET] [MODEL_C] preset success: sphere
+[23:40:12] GEN   PIPELINE: [CACHE] stored hash=de1b2a7baf7850243db71c4abd4e5a39 (fuzzy key: ['snake'])
+[23:40:12] GEN   PIPELINE: [DONE] Generation thread complete
+[15:44:43] GEN   PIPELINE: [START] Generation started: 'create a snake' color=#4488ff
+[15:44:43] GEN   PIPELINE: [CACHE] hit hash=de1b2a7baf7850243db71c4abd4e5a39 (fuzzy key: ['snake'])
+[15:44:43] GEN   PIPELINE: [CACHE] served from cache: valid 1038348 bytes
+[15:44:43] GEN   PIPELINE: [DONE] Generation thread complete

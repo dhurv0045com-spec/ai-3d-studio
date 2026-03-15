@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 3D Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root {
+    --bg: #050810;
+    --panel: #0a0f1e;
+    --border: #1a2a4a;
+    --glow: #00d4ff;
+    --glow2: #7b2fff;
+    --accent: #00ffaa;
+    --danger: #ff3366;
+    --text: #c8e0ff;
+    --dim: #4a6a8a;
+    --gold: #ffcc44;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    height: 100vh; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,0.012) 2px,rgba(0,212,255,0.012) 4px);
+    pointer-events:none; z-index:999;
+  }
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px; border-bottom:1px solid var(--border);
+    background:linear-gradient(90deg,rgba(0,212,255,0.05),transparent,rgba(123,47,255,0.05));
+    flex-shrink:0;
+  }
+  .logo {
+    font-family:'Orbitron',sans-serif; font-size:1.2rem; font-weight:900;
+    background:linear-gradient(135deg,var(--glow),var(--glow2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    letter-spacing:3px;
+  }
+  .status-bar { display:flex; gap:16px; align-items:center; font-size:0.72rem; font-family:'Orbitron',sans-serif; }
+  .service-badge {
+    display:flex; align-items:center; gap:5px;
+    padding:4px 10px; border-radius:12px;
+    border:1px solid; font-size:0.65rem; letter-spacing:1px;
+  }
+  .badge-tripo { border-color:rgba(0,212,255,0.4); color:var(--glow); background:rgba(0,212,255,0.08); }
+  .badge-hf    { border-color:rgba(0,255,170,0.4); color:var(--accent); background:rgba(0,255,170,0.08); }
+  .badge-off   { border-color:rgba(255,51,102,0.4); color:var(--danger); background:rgba(255,51,102,0.08); }
+  .dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+  .dot-on  { background:var(--glow); box-shadow:0 0 6px var(--glow); animation:pulse 2s infinite; }
+  .dot-hf  { background:var(--accent); box-shadow:0 0 6px var(--accent); animation:pulse 2s infinite; }
+  .dot-off { background:var(--danger); }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .workspace {
+    display:grid; grid-template-columns:220px 1fr 290px;
+    flex:1; overflow:hidden;
+  }
+  .panel {
+    background:var(--panel); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .panel-header {
+    padding:11px 15px; font-family:'Orbitron',sans-serif; font-size:0.62rem;
+    letter-spacing:3px; color:var(--glow); text-transform:uppercase;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px; flex-shrink:0;
+  }
+  .panel-header::before { content:''; width:3px;height:13px; background:var(--glow); box-shadow:0 0 8px var(--glow); }
+  .panel-body { flex:1; overflow-y:auto; padding:12px; }
+  .panel-body::-webkit-scrollbar{width:3px}
+  .panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+  /* Folders */
+  .folder-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 11px; border-radius:6px; cursor:pointer;
+    margin-bottom:3px; transition:all 0.2s; font-size:0.88rem; letter-spacing:1px;
+  }
+  .folder-item:hover{background:rgba(0,212,255,0.07)}
+  .folder-item.active{background:rgba(0,212,255,0.14);border:1px solid rgba(0,212,255,0.3);color:var(--glow)}
+  .folder-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.7rem;padding:2px 5px;border-radius:3px;opacity:0;transition:opacity 0.2s}
+  .folder-item:hover .folder-del{opacity:1}
+  .folder-del:hover{color:var(--danger)}
+  .new-folder-form{display:flex;gap:6px;margin-top:10px}
+
+  /* Viewer */
+  #viewer-panel{border:none;position:relative;background:radial-gradient(ellipse at center,#0c1428 0%,#050810 70%)}
+  #three-canvas{width:100%;height:100%;display:block}
+  .viewer-overlay{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+  .viewer-placeholder{text-align:center;opacity:0.25}
+  .viewer-placeholder .big-icon{font-size:3.5rem;display:block;margin-bottom:10px}
+  .viewer-placeholder p{font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:3px;color:var(--glow)}
+  .viewer-controls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:7px;pointer-events:all}
+  .viewer-btn{background:rgba(10,15,30,0.85);border:1px solid var(--border);color:var(--dim);padding:5px 13px;border-radius:20px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:0.78rem;letter-spacing:1px;transition:all 0.2s;backdrop-filter:blur(10px)}
+  .viewer-btn:hover{border-color:var(--glow);color:var(--glow)}
+  .corner{position:absolute;width:18px;height:18px;border-color:var(--glow);border-style:solid;opacity:0.35}
+  .corner.tl{top:10px;left:10px;border-width:2px 0 0 2px}
+  .corner.tr{top:10px;right:10px;border-width:2px 2px 0 0}
+  .corner.bl{bottom:10px;left:10px;border-width:0 0 2px 2px}
+  .corner.br{bottom:10px;right:10px;border-width:0 2px 2px 0}
+  .model-info{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(10,15,30,0.85);border:1px solid var(--border);border-radius:20px;padding:4px 15px;font-size:0.7rem;font-family:'Orbitron',sans-serif;letter-spacing:2px;color:var(--glow);backdrop-filter:blur(10px);display:none;white-space:nowrap;max-width:80%}
+  .service-used{position:absolute;top:44px;left:50%;transform:translateX(-50%);font-size:0.62rem;font-family:'Orbitron',sans-serif;letter-spacing:2px;color:var(--dim);display:none}
+
+  /* Mode tabs */
+  .mode-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+  .mode-tab{flex:1;padding:10px;background:none;border:none;color:var(--dim);cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;transition:all 0.2s;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .mode-tab.active{color:var(--glow);border-bottom-color:var(--glow)}
+
+  /* Inputs */
+  input[type="text"],textarea,select{background:rgba(0,0,0,0.4);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:0.9rem;width:100%;transition:border-color 0.2s;outline:none}
+  input[type="text"]:focus,textarea:focus{border-color:var(--glow);box-shadow:0 0 8px rgba(0,212,255,0.15)}
+  textarea{resize:vertical;min-height:72px}
+  .label{font-size:0.65rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;font-family:'Orbitron',sans-serif;margin-bottom:6px;display:block}
+  .section{margin-bottom:15px}
+
+  /* Color */
+  .color-row{display:flex;align-items:center;gap:10px}
+  input[type="color"]{width:42px;height:42px;border:2px solid var(--border);border-radius:8px;background:none;cursor:pointer;padding:2px;flex-shrink:0}
+  input[type="color"]::-webkit-color-swatch-wrapper{padding:0;border-radius:5px}
+  input[type="color"]::-webkit-color-swatch{border:none;border-radius:4px}
+  .swatches{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+  .swatch{width:20px;height:20px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:all 0.15s;flex-shrink:0}
+  .swatch:hover,.swatch.active{border-color:white;transform:scale(1.2)}
+
+  /* Tags */
+  .tags-box{display:flex;flex-wrap:wrap;gap:4px;min-height:30px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;padding:5px;margin-bottom:5px}
+  .tag{display:flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:0.78rem}
+  .tag-add{background:rgba(0,255,170,0.1);border:1px solid rgba(0,255,170,0.3);color:var(--accent)}
+  .tag-rem{background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);color:var(--danger)}
+  .tag-del{background:none;border:none;color:inherit;cursor:pointer;font-size:0.85rem;opacity:0.6;transition:opacity 0.15s;line-height:1}
+  .tag-del:hover{opacity:1}
+  .tag-row{display:flex;gap:5px}
+  .tag-row input{flex:1}
+
+  /* Buttons */
+  .btn{padding:7px 13px;border-radius:6px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;border:1px solid;transition:all 0.2s;white-space:nowrap}
+  .btn-primary{background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(123,47,255,0.18));border-color:var(--glow);color:var(--glow);width:100%;padding:12px;font-size:0.72rem}
+  .btn-primary:hover:not(:disabled){background:linear-gradient(135deg,rgba(0,212,255,0.32),rgba(123,47,255,0.32));box-shadow:0 0 18px rgba(0,212,255,0.25)}
+  .btn-primary:disabled{opacity:0.35;cursor:not-allowed}
+  .btn-sm{padding:4px 9px;font-size:0.58rem}
+  .btn-add{border-color:var(--accent);color:var(--accent);background:rgba(0,255,170,0.05)}
+  .btn-add:hover{background:rgba(0,255,170,0.12)}
+  .btn-rem{border-color:var(--danger);color:var(--danger);background:rgba(255,51,102,0.05)}
+  .btn-rem:hover{background:rgba(255,51,102,0.12)}
+  .btn-edit{border-color:var(--gold);color:var(--gold);background:rgba(255,204,68,0.05);width:100%;margin-top:6px}
+  .btn-edit:hover:not(:disabled){background:rgba(255,204,68,0.12)}
+  .btn-edit:disabled{opacity:0.35;cursor:not-allowed}
+  .btn-ghost{border-color:var(--border);color:var(--dim);background:rgba(255,255,255,0.02);font-size:0.6rem;padding:4px 9px}
+  .btn-ghost:hover{border-color:var(--dim);color:var(--text)}
+  select{appearance:none;cursor:pointer}
+  .divider{border:none;border-top:1px solid var(--border);margin:13px 0}
+
+  /* Progress */
+  .progress-wrap{display:none;margin-bottom:11px}
+  .progress-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:7px}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--glow),var(--glow2));border-radius:2px;animation:prog 2.5s ease-in-out infinite}
+  @keyframes prog{0%{width:5%}50%{width:82%}100%{width:96%}}
+  .progress-text{font-size:0.68rem;color:var(--glow);font-family:'Orbitron',sans-serif;letter-spacing:2px;animation:flicker 1.8s infinite}
+  @keyframes flicker{0%,100%{opacity:1}50%{opacity:0.55}}
+
+  /* History */
+  .hist-item{padding:9px;border:1px solid var(--border);border-radius:7px;margin-bottom:7px;cursor:pointer;transition:all 0.2s;position:relative}
+  .hist-item:hover{border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.04)}
+  .hist-item.selected{border-color:var(--glow);background:rgba(0,212,255,0.09)}
+  .hist-prompt{font-size:0.84rem;font-weight:600;margin-bottom:3px;color:var(--text);display:flex;align-items:center;gap:7px}
+  .hist-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,0.25)}
+  .hist-meta{font-size:0.67rem;color:var(--dim);letter-spacing:1px}
+  .hist-actions{display:flex;gap:4px;margin-top:6px}
+  .hist-svc{font-size:0.6rem;color:var(--glow2);font-family:'Orbitron',sans-serif;letter-spacing:1px}
+
+  /* Error */
+  .err-box{background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.3);color:var(--danger);padding:7px 11px;border-radius:6px;font-size:0.78rem;margin-top:7px;display:none}
+
+  /* Toast */
+  .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(60px);background:rgba(10,15,30,0.95);border:1px solid var(--glow);color:var(--glow);padding:9px 22px;border-radius:20px;font-family:'Orbitron',sans-serif;font-size:0.68rem;letter-spacing:2px;z-index:1000;transition:transform 0.3s;backdrop-filter:blur(10px);box-shadow:0 0 18px rgba(0,212,255,0.18)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:var(--danger);color:var(--danger)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡ AI 3D STUDIO</div>
+  <div class="status-bar">
+    <div class="service-badge badge-tripo" id="badge-tripo">
+      <div class="dot dot-off" id="dot-tripo"></div>
+      TRIPO3D
+    </div>
+    <div class="service-badge badge-hf">
+      <div class="dot dot-hf"></div>
+      HUGGINGFACE
+    </div>
+    <span style="color:var(--dim);font-size:0.65rem" id="model-count">0 MODELS</span>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- LEFT: Folders -->
+  <div class="panel">
+    <div class="panel-header">FOLDERS</div>
+    <div class="panel-body">
+      <div id="folder-list"></div>
+      <div class="new-folder-form">
+        <input type="text" id="new-folder-name" placeholder="new folder..." maxlength="20" onkeydown="if(event.key==='Enter')createFolder()">
+        <button class="btn btn-add btn-sm" onclick="createFolder()">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Viewer -->
+  <div id="viewer-panel" class="panel" style="border:none">
+    <canvas id="three-canvas"></canvas>
+    <div class="viewer-overlay" id="viewer-overlay">
+      <div class="viewer-placeholder">
+        <span class="big-icon">🔮</span>
+        <p>DESCRIBE ANYTHING</p>
+        <p style="margin-top:6px;font-size:0.55rem;color:var(--dim)">DRAGON · CASTLE · CAR · ROBOT · ANYTHING</p>
+      </div>
+    </div>
+    <div class="model-info" id="model-info"></div>
+    <div class="service-used" id="service-used"></div>
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+    <div class="viewer-controls" id="viewer-controls" style="display:none">
+      <button class="viewer-btn" onclick="resetCamera()">⟲ RESET</button>
+      <button class="viewer-btn" onclick="toggleAutoRotate()">⟳ AUTO</button>
+      <button class="viewer-btn" onclick="downloadModel()">↓ SAVE GLB</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Controls -->
+  <div class="panel" style="border-left:1px solid var(--border);border-right:none">
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" onclick="switchMode('generate')">CREATE</button>
+      <button class="mode-tab" onclick="switchMode('history')">HISTORY</button>
+      <button class="mode-tab" onclick="switchMode('edit')">EDIT</button>
+    </div>
+
+    <!-- CREATE -->
+    <div id="pane-generate" class="panel-body">
+      <div class="section">
+        <label class="label">Describe your model</label>
+        <textarea id="main-prompt" placeholder="a fire breathing red dragon with large wings, sitting on a mountain peak, detailed scales..."></textarea>
+      </div>
+
+      <div class="section">
+        <label class="label">Color</label>
+        <div class="color-row">
+          <input type="color" id="color-picker" value="#ff4400">
+          <div class="swatches" id="swatches"></div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <label class="label">➕ Add Features</label>
+        <div class="tags-box" id="add-tags"></div>
+        <div class="tag-row">
+          <input type="text" id="add-input" placeholder="wings, fire, spikes..." onkeydown="if(event.key==='Enter')addTag('add')">
+          <button class="btn btn-add btn-sm" onclick="addTag('add')">ADD</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <label class="label">➖ Remove Features</label>
+        <div class="tags-box" id="remove-tags"></div>
+        <div class="tag-row">
+          <input type="text" id="remove-input" placeholder="tail, horns..." onkeydown="if(event.key==='Enter')addTag('remove')">
+          <button class="btn btn-rem btn-sm" onclick="addTag('remove')">REMOVE</button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <label class="label">Save to Folder</label>
+        <select id="folder-select"></select>
+      </div>
+
+      <div class="progress-wrap" id="gen-progress">
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="progress-text" id="gen-progress-text">AI IS THINKING...</div>
+      </div>
+      <div class="err-box" id="gen-err"></div>
+
+      <button class="btn btn-primary" id="gen-btn" onclick="generate()">⬡ GENERATE MODEL</button>
+      <div style="text-align:center;margin-top:8px;font-size:0.62rem;color:var(--dim);font-family:Orbitron,sans-serif;letter-spacing:1px">
+        Generation takes ~1-3 minutes
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="pane-history" class="panel-body" style="display:none;padding:10px">
+      <div id="history-list"></div>
+    </div>
+
+    <!-- EDIT -->
+    <div id="pane-edit" class="panel-body" style="display:none">
+      <div id="edit-info" style="padding:9px;background:rgba(0,212,255,0.04);border:1px solid var(--border);border-radius:7px;margin-bottom:13px;font-size:0.78rem;color:var(--dim)">
+        ← Select a model from History to edit
+      </div>
+      <div class="section">
+        <label class="label">Describe the edit</label>
+        <textarea id="edit-prompt" placeholder="make the wings bigger, add a saddle, change to medieval armor..."></textarea>
+      </div>
+      <div class="section">
+        <label class="label">New Color</label>
+        <div class="color-row">
+          <input type="color" id="edit-color" value="#4488ff">
+          <div class="swatches" id="edit-swatches"></div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="section">
+        <label class="label">➕ Also Add</label>
+        <div class="tags-box" id="edit-add-tags"></div>
+        <div class="tag-row">
+          <input type="text" id="edit-add-input" placeholder="feature to add..." onkeydown="if(event.key==='Enter')addTag('edit-add')">
+          <button class="btn btn-add btn-sm" onclick="addTag('edit-add')">ADD</button>
+        </div>
+      </div>
+      <div class="section">
+        <label class="label">➖ Also Remove</label>
+        <div class="tags-box" id="edit-rem-tags"></div>
+        <div class="tag-row">
+          <input type="text" id="edit-rem-input" placeholder="feature to remove..." onkeydown="if(event.key==='Enter')addTag('edit-rem')">
+          <button class="btn btn-rem btn-sm" onclick="addTag('edit-rem')">REMOVE</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="edit-progress">
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="progress-text" id="edit-progress-text">REGENERATING...</div>
+      </div>
+      <div class="err-box" id="edit-err"></div>
+      <button class="btn btn-edit" id="edit-btn" onclick="editModel()" disabled>✦ APPLY EDITS</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const S = {
+  folders:[], activeFolder:'default', history:[],
+  selectedModel:null, autoRotate:false,
+  tags:{ add:[], remove:[], 'edit-add':[], 'edit-rem':[] }
+};
+
+// ── THREE.JS ──────────────────────────────────────────────────────────────────
+let scene,camera,renderer,currentMesh;
+let mouseDown=false, lastMouse={x:0,y:0};
+let sph={theta:0.5,phi:1.0,radius:5};
+
+function initThree(){
+  const canvas=document.getElementById('three-canvas');
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled=true;
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(45,1,0.01,1000);
+  scene.add(new THREE.AmbientLight(0x334466,0.9));
+  const d1=new THREE.DirectionalLight(0x00d4ff,1.6); d1.position.set(3,5,3); scene.add(d1);
+  const d2=new THREE.DirectionalLight(0x7b2fff,0.9); d2.position.set(-3,2,-3); scene.add(d2);
+  const pt=new THREE.PointLight(0x00ffaa,0.4,20); pt.position.set(0,3,0); scene.add(pt);
+  scene.add(new THREE.GridHelper(10,20,0x1a2a4a,0x0d1830));
+  resize();
+  canvas.addEventListener('mousedown',e=>{mouseDown=true;lastMouse={x:e.clientX,y:e.clientY}});
+  window.addEventListener('mouseup',()=>mouseDown=false);
+  canvas.addEventListener('mousemove',e=>{
+    if(!mouseDown)return;
+    sph.theta-=(e.clientX-lastMouse.x)*0.008;
+    sph.phi=Math.max(0.1,Math.min(Math.PI-0.1,sph.phi+(e.clientY-lastMouse.y)*0.008));
+    lastMouse={x:e.clientX,y:e.clientY};
+  });
+  canvas.addEventListener('wheel',e=>sph.radius=Math.max(1,Math.min(20,sph.radius+e.deltaY*0.01)));
+  window.addEventListener('resize',resize);
+  animate();
+}
+
+function resize(){
+  const p=document.getElementById('viewer-panel');
+  renderer.setSize(p.clientWidth,p.clientHeight);
+  camera.aspect=p.clientWidth/p.clientHeight;
+  camera.updateProjectionMatrix();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(S.autoRotate) sph.theta+=0.005;
+  camera.position.set(
+    sph.radius*Math.sin(sph.phi)*Math.sin(sph.theta),
+    sph.radius*Math.cos(sph.phi),
+    sph.radius*Math.sin(sph.phi)*Math.cos(sph.theta)
+  );
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+
+function resetCamera(){sph={theta:0.5,phi:1.0,radius:5}}
+function toggleAutoRotate(){S.autoRotate=!S.autoRotate}
+
+function loadGLB(url){
+  if(currentMesh){scene.remove(currentMesh);currentMesh=null}
+  fetch(url).then(r=>r.arrayBuffer()).then(buf=>{
+    const loader=new GLBLoader();
+    loader.parse(buf,'',(gltf)=>{
+      currentMesh=gltf.scene;
+      const box=new THREE.Box3().setFromObject(currentMesh);
+      const center=box.getCenter(new THREE.Vector3());
+      const size=box.getSize(new THREE.Vector3());
+      const maxDim=Math.max(size.x,size.y,size.z)||1;
+      currentMesh.position.sub(center);
+      currentMesh.scale.setScalar(2.5/maxDim);
+      currentMesh.position.y-=box.min.y*(2.5/maxDim);
+      scene.add(currentMesh);
+      document.getElementById('viewer-overlay').style.display='none';
+      document.getElementById('viewer-controls').style.display='flex';
+      resetCamera();
+    });
+  }).catch(e=>console.error('GLB load:',e));
+}
+
+class GLBLoader{
+  parse(buf,path,cb){
+    try{
+      const v=new DataView(buf);
+      if(v.getUint32(0,true)!==0x46546C67){cb({scene:new THREE.Group()});return}
+      let off=12,jsonChunk=null,binChunk=null;
+      const len=v.getUint32(8,true);
+      while(off<len){
+        const cl=v.getUint32(off,true),ct=v.getUint32(off+4,true);
+        const cd=buf.slice(off+8,off+8+cl);
+        if(ct===0x4E4F534A)jsonChunk=cd;
+        if(ct===0x004E4942)binChunk=cd;
+        off+=8+cl;
+      }
+      if(!jsonChunk){cb({scene:new THREE.Group()});return}
+      const g=JSON.parse(new TextDecoder().decode(jsonChunk));
+      const group=new THREE.Group();
+      if(g.meshes&&g.bufferViews&&binChunk){
+        const acc=(i)=>{
+          const a=g.accessors[i],bv=g.bufferViews[a.bufferView];
+          const start=(bv.byteOffset||0)+(a.byteOffset||0);
+          const sz={SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT4:16};
+          const n=sz[a.type]||1;
+          const T=a.componentType===5126?Float32Array:a.componentType===5123?Uint16Array:a.componentType===5121?Uint8Array:Float32Array;
+          return new T(binChunk,start,a.count*n);
+        };
+        g.meshes.forEach(m=>m.primitives.forEach(p=>{
+          const geo=new THREE.BufferGeometry();
+          if(p.attributes.POSITION!==undefined)geo.setAttribute('position',new THREE.BufferAttribute(acc(p.attributes.POSITION),3));
+          if(p.attributes.NORMAL!==undefined)geo.setAttribute('normal',new THREE.BufferAttribute(acc(p.attributes.NORMAL),3));
+          if(p.indices!==undefined)geo.setIndex(new THREE.BufferAttribute(acc(p.indices),1));
+          if(!geo.attributes.normal)geo.computeVertexNormals();
+          let mat;
+          if(p.material!==undefined&&g.materials){
+            const gm=g.materials[p.material],pb=gm.pbrMetallicRoughness||{};
+            const c=pb.baseColorFactor||[0.4,0.5,0.9,1];
+            mat=new THREE.MeshStandardMaterial({color:new THREE.Color(c[0],c[1],c[2]),metalness:pb.metallicFactor??0.1,roughness:pb.roughnessFactor??0.5});
+          } else {
+            mat=new THREE.MeshStandardMaterial({color:0x4488ff,metalness:0.1,roughness:0.5});
+          }
+          group.add(new THREE.Mesh(geo,mat));
+        }));
+      } else {
+        group.add(new THREE.Mesh(new THREE.SphereGeometry(1,32,32),new THREE.MeshStandardMaterial({color:0x4488ff})));
+      }
+      cb({scene:group});
+    }catch(e){console.error('GLB parse:',e);cb({scene:new THREE.Group()})}
+  }
+}
+
+// ── SWATCHES ────────────────────────────────────────────────────────────────
+const COLORS=['#ff2222','#ff6600','#ffaa00','#ffee00','#aaff00','#00ff88','#00ddff','#0066ff','#7733ff','#ff33cc','#ffffff','#888888','#c0a060','#ff9966','#334455'];
+function initSwatches(cid,pid){
+  const c=document.getElementById(cid);
+  COLORS.forEach(col=>{
+    const s=document.createElement('div');
+    s.className='swatch'; s.style.background=col; s.title=col;
+    s.onclick=()=>{document.getElementById(pid).value=col;c.querySelectorAll('.swatch').forEach(x=>x.classList.remove('active'));s.classList.add('active')};
+    c.appendChild(s);
+  });
+}
+
+// ── TAGS ────────────────────────────────────────────────────────────────────
+const INPUT_MAP={'add':'add-input','remove':'remove-input','edit-add':'edit-add-input','edit-rem':'edit-rem-input'};
+const BOX_MAP={'add':'add-tags','remove':'remove-tags','edit-add':'edit-add-tags','edit-rem':'edit-rem-tags'};
+
+function addTag(type){
+  const input=document.getElementById(INPUT_MAP[type]);
+  const val=input.value.trim(); if(!val)return;
+  if(!S.tags[type])S.tags[type]=[];
+  if(!S.tags[type].includes(val)){S.tags[type].push(val);renderTags(type)}
+  input.value='';
+}
+function removeTag(type,val){
+  S.tags[type]=S.tags[type].filter(t=>t!==val); renderTags(type);
+}
+function renderTags(type){
+  const isAdd=type==='add'||type==='edit-add';
+  document.getElementById(BOX_MAP[type]).innerHTML=(S.tags[type]||[]).map(t=>
+    `<span class="tag ${isAdd?'tag-add':'tag-rem'}">${t}<button class="tag-del" onclick="removeTag('${type}','${t}')">×</button></span>`
+  ).join('');
+}
+
+// ── FOLDERS ─────────────────────────────────────────────────────────────────
+async function loadFolders(){
+  const r=await fetch('/api/folders');
+  S.folders=await r.json();
+  renderFolders(); renderFolderSelect();
+}
+function renderFolders(){
+  document.getElementById('folder-list').innerHTML=S.folders.map(f=>`
+    <div class="folder-item ${f===S.activeFolder?'active':''}" onclick="selectFolder('${f}')">
+      <span>📁 ${f}</span>
+      ${f!=='default'?`<button class="folder-del" onclick="event.stopPropagation();deleteFolder('${f}')">✕</button>`:''}
+    </div>`).join('');
+}
+function renderFolderSelect(){
+  document.getElementById('folder-select').innerHTML=S.folders.map(f=>`<option value="${f}">${f}</option>`).join('');
+}
+function selectFolder(n){S.activeFolder=n;renderFolders();loadHistory()}
+
+async function createFolder(){
+  const name=document.getElementById('new-folder-name').value.trim(); if(!name)return;
+  const r=await fetch('/api/folders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  const d=await r.json();
+  if(d.success){S.folders=d.folders;renderFolders();renderFolderSelect();document.getElementById('new-folder-name').value='';toast('Folder created')}
+}
+async function deleteFolder(name){
+  if(!confirm(`Delete "${name}" and all its models?`))return;
+  const r=await fetch(`/api/folders/${name}`,{method:'DELETE'});
+  const d=await r.json(); S.folders=d.folders;
+  if(S.activeFolder===name)S.activeFolder='default';
+  renderFolders();renderFolderSelect();loadHistory();toast('Deleted');
+}
+
+// ── HISTORY ─────────────────────────────────────────────────────────────────
+async function loadHistory(){
+  const r=await fetch(`/api/history?folder=${S.activeFolder}`);
+  S.history=await r.json(); renderHistory();
+  document.getElementById('model-count').textContent=`${S.history.length} MODELS`;
+}
+function renderHistory(){
+  const el=document.getElementById('history-list');
+  if(!S.history.length){el.innerHTML='<div style="text-align:center;color:var(--dim);font-size:0.75rem;padding:20px;font-family:Orbitron,sans-serif;letter-spacing:2px">NO MODELS YET</div>';return}
+  el.innerHTML=S.history.map(h=>`
+    <div class="hist-item ${S.selectedModel?.id===h.id?'selected':''}" onclick="selectModel(${h.id})">
+      <div class="hist-prompt"><div class="hist-dot" style="background:${h.color}"></div>${h.prompt.substring(0,48)}${h.prompt.length>48?'...':''}</div>
+      <div class="hist-meta">📁 ${h.folder} · ${h.created} <span class="hist-svc">· ${h.service||'AI'}</span></div>
+      <div class="hist-actions">
+        <button class="btn btn-ghost" onclick="event.stopPropagation();viewModel(${h.id})">VIEW</button>
+        <button class="btn btn-ghost" onclick="event.stopPropagation();prepareEdit(${h.id})">EDIT</button>
+        <button class="btn btn-rem btn-sm" onclick="event.stopPropagation();deleteModel(${h.id})">DEL</button>
+      </div>
+    </div>`).join('');
+}
+function selectModel(id){S.selectedModel=S.history.find(h=>h.id===id);renderHistory();viewModel(id)}
+function viewModel(id){
+  const m=S.history.find(h=>h.id===id); if(!m)return;
+  loadGLB(`/${m.file}`);
+  const mi=document.getElementById('model-info');
+  mi.textContent=m.prompt.toUpperCase().substring(0,40); mi.style.display='block';
+  const su=document.getElementById('service-used');
+  su.textContent=`VIA ${(m.service||'AI').toUpperCase()}`; su.style.display='block';
+}
+function prepareEdit(id){
+  const m=S.history.find(h=>h.id===id); if(!m)return;
+  S.selectedModel=m; switchMode('edit');
+  document.getElementById('edit-info').innerHTML=`<strong style="color:var(--glow)">${m.prompt}</strong><br><span>📁 ${m.folder} · ${m.created}</span>`;
+  document.getElementById('edit-btn').disabled=false;
+  document.getElementById('edit-color').value=m.color;
+}
+async function deleteModel(id){
+  if(!confirm('Delete this model?'))return;
+  await fetch(`/api/history/${id}`,{method:'DELETE'}); loadHistory(); toast('Deleted');
+}
+function downloadModel(){
+  if(!S.selectedModel)return;
+  const a=document.createElement('a');
+  a.href=`/${S.selectedModel.file}`;
+  a.download=S.selectedModel.prompt.substring(0,20).replace(/\s/g,'_')+'.glb'; a.click();
+}
+
+// ── GENERATE ─────────────────────────────────────────────────────────────────
+const STEPS=['ENHANCING PROMPT WITH AI...','SENDING TO TRIPO3D...','GENERATING 3D GEOMETRY...','APPLYING MATERIALS & COLORS...','EXPORTING GLB MODEL...'];
+async function generate(){
+  const prompt=document.getElementById('main-prompt').value.trim();
+  if(!prompt){showErr('gen-err','Please describe what to create!');return}
+  const color=document.getElementById('color-picker').value;
+  const folder=document.getElementById('folder-select').value;
+  setBusy('gen-btn',true,'⟳ GENERATING...');
+  showProgress('gen-progress',true,STEPS[0]);
+  hideErr('gen-err');
+  let si=0;
+  const stepTimer=setInterval(()=>{si=(si+1)%STEPS.length;showProgress('gen-progress',true,STEPS[si])},8000);
+  try{
+    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,color,add:S.tags.add||[],remove:S.tags.remove||[],folder})});
+    clearInterval(stepTimer);
+    const d=await r.json();
+    showProgress('gen-progress',false); setBusy('gen-btn',false,'⬡ GENERATE MODEL');
+    if(d.success){
+      viewModel(d.model.id);
+      loadHistory(); toast(`✓ Created via ${d.model.service}`);
+      S.tags.add=[];S.tags.remove=[];renderTags('add');renderTags('remove');
+    } else {
+      showErr('gen-err',d.error||'Generation failed. Try again.');
+    }
+  }catch(e){
+    clearInterval(stepTimer);
+    showProgress('gen-progress',false); setBusy('gen-btn',false,'⬡ GENERATE MODEL');
+    showErr('gen-err','Server error — is server.py running?');
+  }
+}
+
+async function editModel(){
+  if(!S.selectedModel)return;
+  const ep=document.getElementById('edit-prompt').value.trim();
+  if(!ep){showErr('edit-err','Describe your edit!');return}
+  const color=document.getElementById('edit-color').value;
+  setBusy('edit-btn',true,'⟳ REGENERATING...');
+  showProgress('edit-progress',true,'AI IS EDITING YOUR MODEL...');
+  hideErr('edit-err');
+  try{
+    const r=await fetch('/api/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:S.selectedModel.id,edit_prompt:ep,color,add:S.tags['edit-add']||[],remove:S.tags['edit-rem']||[]})});
+    const d=await r.json();
+    showProgress('edit-progress',false); setBusy('edit-btn',false,'✦ APPLY EDITS');
+    if(d.success){
+      viewModel(d.model.id); loadHistory(); toast('Edit applied ✓');
+      S.tags['edit-add']=[]; S.tags['edit-rem']=[]; renderTags('edit-add'); renderTags('edit-rem');
+    } else showErr('edit-err',d.error||'Edit failed');
+  }catch(e){showProgress('edit-progress',false);setBusy('edit-btn',false,'✦ APPLY EDITS');showErr('edit-err','Server error')}
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function setBusy(id,busy,text){const b=document.getElementById(id);b.disabled=busy;b.textContent=text}
+function showProgress(id,show,text){const w=document.getElementById(id);w.style.display=show?'block':'none';if(text)document.getElementById(id+'-text').textContent=text}
+function showErr(id,msg){const e=document.getElementById(id);e.textContent=msg;e.style.display='block'}
+function hideErr(id){document.getElementById(id).style.display='none'}
+function switchMode(m){
+  ['generate','history','edit'].forEach((n,i)=>{
+    document.querySelectorAll('.mode-tab')[i].classList.toggle('active',n===m);
+    document.getElementById(`pane-${n}`).style.display=n===m?'block':'none';
+  });
+}
+let toastT;
+function toast(msg,isErr=false){
+  const e=document.getElementById('toast');
+  e.textContent=msg; e.className='toast show'+(isErr?' err':'');
+  clearTimeout(toastT); toastT=setTimeout(()=>e.classList.remove('show'),3000);
+}
+
+async function checkStatus(){
+  try{
+    const r=await fetch('/api/status'); const d=await r.json();
+    const dot=document.getElementById('dot-tripo');
+    if(d.tripo){dot.className='dot dot-on'}else{dot.className='dot dot-off'}
+  }catch(e){}
+}
+
+async function init(){
+  initThree();
+  initSwatches('swatches','color-picker');
+  initSwatches('edit-swatches','edit-color');
+  await loadFolders();
+  await loadHistory();
+  await checkStatus();
+}
+init();
+</script>
+</body>
+</html>

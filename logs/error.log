@@ -1,0 +1,190 @@
+[15:10:00] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:13:56] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:14:29] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:14:53] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:14:53] ERROR ERROR: FALLBACK: validation failed even for fallback: file too small (1080 bytes)
+[15:15:56] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:17:25] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:52:49] ERROR ERROR: SHAP-E: exception: Traceback (most recent call last):
+  File "C:\Users\user\Desktop\ai-3d-project\server.py", line 303, in run_shap_e
+    return data if isinstance(data,list) else []
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\sample.py", line 6, in <module>
+    from .gaussian_diffusion import GaussianDiffusion
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\gaussian_diffusion.py", line 11, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+
+[15:52:49] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:54:04] ERROR ERROR: SHAP-E: exception: Traceback (most recent call last):
+  File "C:\Users\user\Desktop\ai-3d-project\server.py", line 303, in run_shap_e
+    return data if isinstance(data,list) else []
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\sample.py", line 6, in <module>
+    from .gaussian_diffusion import GaussianDiffusion
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\gaussian_diffusion.py", line 11, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+
+[15:54:04] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:54:04] ERROR ERROR: FALLBACK: validation failed even for fallback: file too small (1080 bytes)
+[15:54:22] ERROR ERROR: SHAP-E: exception: Traceback (most recent call last):
+  File "C:\Users\user\Desktop\ai-3d-project\server.py", line 303, in run_shap_e
+    return data if isinstance(data,list) else []
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\sample.py", line 6, in <module>
+    from .gaussian_diffusion import GaussianDiffusion
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\gaussian_diffusion.py", line 11, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+
+[15:54:22] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:54:22] ERROR ERROR: FALLBACK: validation failed even for fallback: file too small (1080 bytes)
+[15:55:51] ERROR ERROR: SHAP-E: exception: Traceback (most recent call last):
+  File "C:\Users\user\Desktop\ai-3d-project\server.py", line 303, in run_shap_e
+    return data if isinstance(data,list) else []
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\sample.py", line 6, in <module>
+    from .gaussian_diffusion import GaussianDiffusion
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\gaussian_diffusion.py", line 11, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+
+[15:55:51] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:56:58] ERROR ERROR: SHAP-E: exception: Traceback (most recent call last):
+  File "C:\Users\user\Desktop\ai-3d-project\server.py", line 303, in run_shap_e
+    return data if isinstance(data,list) else []
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\sample.py", line 6, in <module>
+    from .gaussian_diffusion import GaussianDiffusion
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\gaussian_diffusion.py", line 11, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+
+[15:56:58] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[15:56:58] ERROR ERROR: FALLBACK: validation failed even for fallback: file too small (1080 bytes)
+[16:00:52] ERROR ERROR: SHAP-E: exception: Traceback (most recent call last):
+  File "C:\Users\user\Desktop\ai-3d-project\server.py", line 303, in run_shap_e
+    return data if isinstance(data,list) else []
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\sample.py", line 6, in <module>
+    from .gaussian_diffusion import GaussianDiffusion
+  File "C:\Users\user\AppData\Local\Programs\Python\Python313\Lib\site-packages\shap_e\diffusion\gaussian_diffusion.py", line 11, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+
+[16:00:52] ERROR ERROR: GROQ: API call failed: HTTP Error 403: Forbidden
+[17:20:26] WARN  ERROR: interpret_prompt Groq failed: All Groq keys failed. Last error: HTTP 403 -- using regex fallback
+[17:20:31] WARN  ERROR: Shap-E failed: No module named 'ipywidgets'
+[17:21:28] WARN  ERROR: interpret_prompt Groq failed: All Groq keys failed. Last error: HTTP 403 -- using regex fallback
+[17:21:28] WARN  ERROR: Shap-E failed: No module named 'ipywidgets'
+[17:33:34] WARN  ERROR: interpret_prompt Groq failed: All Groq keys failed. Last error: HTTP 403 -- using regex fallback
+[17:33:34] WARN  ERROR: Shap-E failed: No module named 'ipywidgets'
+[17:34:02] WARN  ERROR: interpret_prompt Groq failed: All Groq keys failed. Last error: HTTP 403 -- using regex fallback
+[17:34:02] WARN  ERROR: Shap-E failed: No module named 'ipywidgets'
+[17:44:11] WARN  ERROR: interpret_prompt Groq failed: All Groq keys failed. Last error: HTTP 403 -- using regex fallback
+[17:44:15] WARN  ERROR: Shap-E failed: No module named 'ipywidgets'
+[17:56:04] WARN  ERROR: interpret_prompt Groq failed: All Groq keys failed. Last error: HTTP 403 -- using regex fallback
+[12:27:39] WARN  ERROR: Shap-E failed: No module named 'ipywidgets'
+[15:22:22] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:34:51] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:34:59] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:38:47] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:38:52] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:42:00] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:42:04] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:45:58] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:46:03] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:51:54] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:51:59] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:55:52] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[15:55:56] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[16:02:19] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[16:02:24] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[2026-03-13 16:45:15] ERROR TRAY: port 5000 already in use — aborting
+[16:46:00] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[16:46:05] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[2026-03-13 16:48:56] ERROR TRAY: port 5000 already in use — aborting
+[16:49:33] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[16:49:38] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[2026-03-13 16:59:34] ERROR TRAY: port 5000 already in use — aborting
+[2026-03-13 16:59:47] ERROR TRAY: port 5000 already in use — aborting
+[17:00:30] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[17:00:35] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[17:04:20] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[17:04:25] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[17:20:06] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[17:20:11] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[2026-03-13 20:05:05] ERROR TRAY: port 5000 already in use — aborting
+[20:06:50] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[20:06:55] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[20:11:02] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[20:11:07] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[20:12:24] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[20:12:28] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+
+[2026-03-13 23:39:12] ERROR TRAY: port 5000 already in use — aborting
+[23:40:07] ERROR SYSTEM: [GEMINI] All keys failed
+NoneType: None
+

@@ -1778,12 +1778,12 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     """Stage B: Gemini writes a Blender script, validator cleans it, retry on failure."""
     log_gen("[MODEL_B] Starting Gemini+Blender (style=" + style
             + " complexity=" + str(complexity) + ")")
-
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
     script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=4000, temperature=0.2)
-        if not script_raw:
-            log_gen("[MODEL_B] Gemini returned no script")
-            return False
+    if not script_raw:
+        log_gen("[MODEL_B] Gemini returned no script")
+        return False
+
     script  = strip_md_fences(script_raw)
     preview = script[:300].replace("\n", " | ")
     log_gen("[MODEL_B] Script " + str(len(script)) + " chars: " + preview)

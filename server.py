@@ -72,7 +72,7 @@ def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
         _k = get_gemini_key()
         _pl = {"contents":[{"parts":[{"text":system_msg+"\n\n"+user_msg}]}],"generationConfig":{"temperature":temperature,"maxOutputTokens":max_tokens,"candidateCount":1}}
         try:
-            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=90,verify=False)
+            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=180,verify=False)
             if _r.status_code==200:
                 _c=_r.json().get("candidates",[])
                 if _c:
@@ -189,7 +189,7 @@ def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
         _k = get_gemini_key()
         _pl = {"contents":[{"parts":[{"text":system_msg+"\n\n"+user_msg}]}],"generationConfig":{"temperature":temperature,"maxOutputTokens":max_tokens,"candidateCount":1}}
         try:
-            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=90,verify=False)
+            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=180,verify=False)
             if _r.status_code==200:
                 _c=_r.json().get("candidates",[])
                 if _c:
@@ -239,7 +239,7 @@ def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
             payload = {"system_instruction": {"parts": [{"text": system_prompt}]}, "contents": [{"parts": [{"text": user_prompt}]}], "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}}
-            r = _requests.post(url, json=payload, timeout=90)
+            r = _requests.post(url, json=payload, timeout=180)
             result = r.json()
             return result["candidates"][0]["content"]["parts"][0]["text"]
         except:
@@ -5093,6 +5093,7 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+
 
 
 

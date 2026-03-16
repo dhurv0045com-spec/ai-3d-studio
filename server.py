@@ -3565,7 +3565,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 4: Stage B - Gemini + Blender (AI reads full prompt)
         # ------------------------------------------------------------------
         set_state(progress=40, step="stage_b_gemini_blender")
-        if os.path.exists(BLENDER_EXE):
+        if True:  # forced - bypass BLENDER_EXE check
             log_gen("[MODEL_B] attempting Gemini+Blender with full prompt...")
             set_state(progress=60, step="blender_running")
             ok = stage_b_gemini_blender(prompt, interp, color_hex, temp_path, style=style, complexity=complexity)

@@ -3368,6 +3368,8 @@ var APP = {
   folders:          [],
   activeFolder:     'default',
   history:          [],
+  historyAll:       [],
+  folderItems:      null,
   selectedModel:    null,
   isGenerating:     false,
   autoRotate:       false,
@@ -4268,14 +4270,17 @@ function applyEdit() {
   setGenerating(true);
 
   var body = {
-    base_model_id:    APP.selectedModel.id || APP.selectedModel.timestamp,
+    prompt:           APP.selectedModel.prompt || APP.lastPrompt || 'edit model',
+    is_edit:          true,
+    base_prompt:      APP.selectedModel.prompt || APP.lastPrompt || '',
     edit_instruction: instr ? instr.value.trim() : '',
     color:            cpEl  ? cpEl.value : APP.selectedColor,
     add:              APP.editAddTags,
-    remove:           APP.editRemoveTags
+    remove:           APP.editRemoveTags,
+    folder:           APP.selectedModel.folder || APP.activeFolder || 'default'
   };
 
-  fetch('/edit', {
+  fetch('/generate', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(body)
@@ -4283,7 +4288,7 @@ function applyEdit() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status === 'started') {
-        startEditPoll();
+        startPoll();
         toast('Edit started...', 'default');
       } else {
         setGenerating(false);
@@ -4316,7 +4321,9 @@ function refreshHistory() {
   fetch('/history')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      APP.history = Array.isArray(data) ? data : [];
+      APP.historyAll = Array.isArray(data) ? data : [];
+      APP.history = APP.historyAll.slice();
+      APP.folderItems = null;
       updateModelCounter();
       renderHistoryList();
       updateFolderCounts();
@@ -4326,12 +4333,30 @@ function refreshHistory() {
 
 var histFilter = 'all';
 
+function loadFolderContents(folderName) {
+  if (!folderName || folderName === 'all') {
+    APP.folderItems = null;
+    renderHistoryList();
+    return;
+  }
+  fetch('/history?folder=' + encodeURIComponent(folderName))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      APP.folderItems = Array.isArray(data) ? data : [];
+      renderHistoryList();
+    })
+    .catch(function() {
+      APP.folderItems = (APP.historyAll || []).filter(function(i) { return i.folder === folderName; });
+      renderHistoryList();
+    });
+}
+
 function filterHistory(folder, btn) {
   histFilter = folder;
   document.querySelectorAll('.hist-f-btn').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-folder') === folder);
   });
-  renderHistoryList();
+  loadFolderContents(folder);
 }
 
 function renderHistoryList() {
@@ -4339,9 +4364,13 @@ function renderHistoryList() {
   var cntEl  = document.getElementById('hist-count');
   if (!list) { return; }
 
-  var items = APP.history;
+  var items = APP.historyAll || APP.history;
   if (histFilter && histFilter !== 'all') {
-    items = items.filter(function(i) { return i.folder === histFilter; });
+    if (Array.isArray(APP.folderItems)) {
+      items = APP.folderItems;
+    } else {
+      items = items.filter(function(i) { return i.folder === histFilter; });
+    }
   }
 
   if (cntEl) { cntEl.textContent = items.length; }
@@ -4472,14 +4501,39 @@ function mkHBtn(label, cls) {
 }
 
 /* ---- VIEW (no triple quotes) ---- */
-function viewHistModel(item) {
-  var url;
-  if (item.file === 'rocket.glb' || !item.file) {
-    url = '/rocket.glb';
-  } else {
-    url = '/models/' + item.file.replace(/\\/g, '/').replace(/\/\//g, '/');
+function loadHistoryModelToViewer(item, onDone) {
+  var candidates = [];
+  if (item && item.cloud_url) { candidates.push(item.cloud_url); }
+  if (item && item.file) {
+    var f = String(item.file).replace(/\\/g, '/').replace(/\/\//g, '/');
+    if (f.indexOf('models/') === 0 || f.indexOf('storage/') === 0) { candidates.push('/' + f); }
+    candidates.push('/models/' + f);
+    candidates.push('/storage/' + f);
   }
-  loadGLB(url + '?t=' + Date.now(), function() {
+  candidates.push('/rocket.glb');
+
+  (function next(i) {
+    if (i >= candidates.length) {
+      toast('Failed to load saved model', 'err');
+      return;
+    }
+    var base = candidates[i];
+    fetch(base, { method: 'GET' })
+      .then(function(r) {
+        if (r.ok) {
+          loadGLB(base + '?t=' + Date.now(), function() {
+            if (onDone) { onDone(); }
+          });
+        } else {
+          next(i + 1);
+        }
+      })
+      .catch(function() { next(i + 1); });
+  })(0);
+}
+
+function viewHistModel(item) {
+  loadHistoryModelToViewer(item, function() {
     showModelBar(item.prompt || '(no prompt)', item.service || item.pipeline || '');
   });
   APP.selectedModel = item;
@@ -4492,9 +4546,12 @@ function viewHistModel(item) {
 
 function editHistModel(item) {
   APP.selectedModel = item;
-  renderEditInfo();
-  goRTab('edit');
-  toast('Model loaded for editing', 'ok');
+  loadHistoryModelToViewer(item, function() {
+    renderEditInfo();
+    goPage('studio');
+    goRTab('edit');
+    toast('Model loaded for editing', 'ok');
+  });
 }
 
 function downloadHistModel(item) {
@@ -4569,11 +4626,15 @@ function renderEditInfo() {
    FOLDERS - Kurosawa chapters
    ============================================================ */
 function loadFolders() {
-  fetch('/folders')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      APP.folders = Array.isArray(data) ? data : Object.keys(data);
+  Promise.all([
+    fetch('/folders').then(function(r) { return r.json(); }).catch(function(){ return ['default']; }),
+    fetch('/history').then(function(r) { return r.json(); }).catch(function(){ return []; })
+  ])
+    .then(function(res) {
+      var fData = res[0], hData = res[1];
+      APP.folders = Array.isArray(fData) ? fData : Object.keys(fData || {});
       if (APP.folders.indexOf('default') === -1) { APP.folders.unshift('default'); }
+      APP.historyAll = Array.isArray(hData) ? hData : APP.historyAll;
       renderFolderList();
       syncDropdowns();
       var el = document.getElementById('stat-folders');
@@ -4590,7 +4651,7 @@ function renderFolderList() {
   if (!list) { return; }
   list.innerHTML = '';
   APP.folders.forEach(function(name) {
-    var cnt = APP.history.filter(function(h) { return h.folder === name; }).length;
+    var cnt = (APP.historyAll || APP.history).filter(function(h) { return h.folder === name; }).length;
     list.appendChild(buildFolderRow(name, cnt));
   });
 
@@ -4649,6 +4710,7 @@ function buildFolderRow(name, count) {
     row.classList.add('active');
     var sel = document.getElementById('folder-select');
     if (sel) { sel.value = name; }
+    goRTab('history');
     filterHistory(name, null);
   });
 

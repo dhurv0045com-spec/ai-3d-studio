@@ -67,45 +67,55 @@ def save_index(idx):
 def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
     import requests as _requests
     import time as _time
+    models = [
+        os.environ.get("GEMINI_MODEL", "").strip(),
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+    ]
+    models = [m for m in models if m]
     tries = max(len(GEMINI_KEYS), 1)
     for _ in range(tries):
         key_val = get_gemini_key()
         if not key_val:
-            log_error("[LLM] No GEMINI key configured (set GEMINI_KEY_1 or GEMINI_API_KEY)")
+            log_error("[LLM] No GEMINI key configured (set GEMINI_KEY_1, GEMINI_API_KEY, or GOOGLE_API_KEY)")
             return None
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key_val}"
-            payload = {
-                "system_instruction": {"parts": [{"text": system_prompt}]},
-                "contents": [{"parts": [{"text": user_prompt}]}],
-                "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
-            }
-            r = _requests.post(url, json=payload, timeout=180)
-            if r.status_code == 429:
-                log_gen("[LLM] Gemini returned 429, sleeping 5s")
-                _time.sleep(5)
-                continue
-            if r.status_code in (401, 403):
-                mark_key_dead(key_val)
-                log_error(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
-                continue
-            if r.status_code != 200:
+        for model in models:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key_val}"
+                payload = {
+                    "system_instruction": {"parts": [{"text": system_prompt}]},
+                    "contents": [{"parts": [{"text": user_prompt}]}],
+                    "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
+                }
+                r = _requests.post(url, json=payload, timeout=180)
+                if r.status_code == 429:
+                    log_gen("[LLM] Gemini returned 429, sleeping 5s")
+                    _time.sleep(5)
+                    break
+                if r.status_code in (401, 403):
+                    mark_key_dead(key_val)
+                    log_error(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
+                    break
+                if r.status_code == 404:
+                    log_gen(f"[LLM] model not available: {model}; trying next model")
+                    continue
+                if r.status_code != 200:
+                    rotate_gemini_key()
+                    log_error(f"[LLM] Gemini API HTTP {r.status_code}: {r.text[:300]}")
+                    break
+                result = r.json()
+                candidates = result.get("candidates", [])
+                if not candidates:
+                    rotate_gemini_key(); log_error("[LLM] Gemini response missing candidates"); break
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if not parts:
+                    rotate_gemini_key(); log_error("[LLM] Gemini response missing content parts"); break
+                mark_key_success(key_val)
+                return parts[0].get("text", "")
+            except Exception as e:
                 rotate_gemini_key()
-                log_error(f"[LLM] Gemini API HTTP {r.status_code}: {r.text[:300]}")
-                continue
-            result = r.json()
-            candidates = result.get("candidates", [])
-            if not candidates:
-                rotate_gemini_key(); log_error("[LLM] Gemini response missing candidates"); continue
-            parts = candidates[0].get("content", {}).get("parts", [])
-            if not parts:
-                rotate_gemini_key(); log_error("[LLM] Gemini response missing content parts"); continue
-            mark_key_success(key_val)
-            return parts[0].get("text", "")
-        except Exception as e:
-            rotate_gemini_key()
-            log_error(f"[LLM] Gemini request exception: {e}")
-            continue
+                log_error(f"[LLM] Gemini request exception: {e}")
+                break
     return None
 
 def mark_key_failed(name_or_val):
@@ -128,7 +138,7 @@ def run_blender_script(script_text, output_path):
         with tempfile.NamedTemporaryFile(mode="w",suffix=".py",delete=False,encoding="utf-8") as tf:
             tf.write(full); tmp=tf.name
         cf = 0x08000000 if _op.name=="nt" else 0
-        r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=120,creationflags=cf)
+        r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=240,creationflags=cf)
         try:
             _op.unlink(tmp)
         except Exception as _e:
@@ -429,7 +439,7 @@ def _build_gemini_keys():
     raw_values = []
 
     # Common single-key env names
-    for env_name in ["GEMINI_API_KEY", "GEMINI_KEY"]:
+    for env_name in ["GEMINI_API_KEY", "GEMINI_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_API_KEY"]:
         val = (os.environ.get(env_name) or "").strip()
         if val:
             raw_values.append((env_name.lower(), val))
@@ -874,7 +884,7 @@ def validate_glb_quality(path):
     if not valid:
         return False, msg
     score, detail = score_glb_quality(path)
-    min_size = int(get_setting("quality.min_glb_size_bytes", 1024))
+    min_size = 1024
     if os.path.getsize(path) < min_size:
         return False, "Quality too low: score=" + str(score) + " " + detail
     return True, "OK score=" + str(score) + " " + detail
@@ -1345,7 +1355,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
     current_script  = script
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
     debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
-    blender_timeout = int(get_setting("generation.blender_timeout", 120))
+    blender_timeout = int(get_setting("generation.blender_timeout", 240))
 
     # Inject OUTPUT_PATH into script before first run
     if "OUTPUT_PATH" not in current_script or "OUTPUT_PATH =" not in current_script:

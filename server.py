@@ -3645,7 +3645,6 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
         log_gen(f"[PYGLB] fallback written: {sz} bytes")
-        store_cache(ROCKET_GLB, prompt)
         _cloud = upload_to_cloudinary(ROCKET_GLB)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,

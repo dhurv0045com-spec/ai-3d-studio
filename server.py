@@ -343,6 +343,8 @@ def before_request_timer():
 def after_request_logger(response):
     try:
         from flask import g
+        if request.path in ("/ping", "/favicon.ico"):
+            return response
         elapsed = time.time() - g.req_start
         ms      = round(elapsed * 1000)
         log_srv("[HTTP] " + request.method + " " + request.path +

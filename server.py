@@ -82,6 +82,8 @@ def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
                         return _p[0].get("text","")
             elif _r.status_code in (401,403):
                 mark_key_dead(_k)
+            elif _r.status_code == 429:
+                import time; time.sleep(5)
             else:
                 rotate_gemini_key()
         except Exception:
@@ -199,6 +201,8 @@ def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
                         return _p[0].get("text","")
             elif _r.status_code in (401,403):
                 mark_key_dead(_k)
+            elif _r.status_code == 429:
+                import time; time.sleep(5)
             else:
                 rotate_gemini_key()
         except Exception:
@@ -5093,6 +5097,7 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+
 
 
 

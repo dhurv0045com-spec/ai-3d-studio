@@ -70,6 +70,9 @@ def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
     tries = max(len(GEMINI_KEYS), 1)
     for _ in range(tries):
         key_val = get_gemini_key()
+        if not key_val:
+            log_error("[LLM] No GEMINI key configured (set GEMINI_KEY_1 or GEMINI_API_KEY)")
+            return None
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key_val}"
             payload = {
@@ -422,25 +425,42 @@ def upload_to_cloudinary(local_path, public_id=None):
 #  GEMINI KEY SYSTEM V6 - 7 KEYS, ENV VARS FOR RAILWAY, HARDCODED FOR LOCAL
 # ---------------------------------------------------------------------------
 def _build_gemini_keys():
-    """Build key list from env vars (Railway) with hardcoded fallbacks (local)."""
-    pairs = [
-        ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
-        ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
-        ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
-        ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
-        ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
-        ("key6", "AIzaSyDXsfLELFLRgoNfUXZGUtsK6X2-c--rqAM"),
-        ("key7", "AIzaSyBXLDQzk9_5naaxS4V5wG-RujQewfJKdw4"),
-    ]
+    """Build Gemini key list from env vars only (Railway-safe, no hardcoded secrets)."""
+    raw_values = []
+
+    # Common single-key env names
+    for env_name in ["GEMINI_API_KEY", "GEMINI_KEY"]:
+        val = (os.environ.get(env_name) or "").strip()
+        if val:
+            raw_values.append((env_name.lower(), val))
+
+    # Numbered key slots: GEMINI_KEY_1..GEMINI_KEY_20
+    for i in range(1, 21):
+        val = (os.environ.get(f"GEMINI_KEY_{i}") or "").strip()
+        if val:
+            raw_values.append((f"key{i}", val))
+
+    # Optional comma-separated list support
+    csv = (os.environ.get("GEMINI_KEYS") or "").strip()
+    if csv:
+        for idx, item in enumerate(csv.split(","), 1):
+            v = item.strip()
+            if v:
+                raw_values.append((f"csv{idx}", v))
+
+    # Deduplicate while preserving order
+    seen = set()
     result = []
-    for i, (name, fallback) in enumerate(pairs, 1):
-        key_val = os.environ.get("GEMINI_KEY_" + str(i), fallback)
-        if key_val and key_val.startswith("AIza"):
-            result.append({"name": name, "key": key_val,
-                           "fails": 0, "dead": False, "last_used": 0.0})
-    return result if result else [
-        {"name": "fallback", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}
-    ]
+    for name, key_val in raw_values:
+        if not key_val.startswith("AIza"):
+            continue
+        if key_val in seen:
+            continue
+        seen.add(key_val)
+        result.append({"name": name, "key": key_val,
+                       "fails": 0, "dead": False, "last_used": 0.0})
+
+    return result
 
 GEMINI_KEYS = _build_gemini_keys()
 _gemini_index = 0
@@ -450,6 +470,8 @@ _gemini_lock  = threading.Lock()
 def get_gemini_key():
     """Return the least-recently-used alive key string."""
     with _gemini_lock:
+        if not GEMINI_KEYS:
+            return ""
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             for k in GEMINI_KEYS:
@@ -464,6 +486,8 @@ def get_gemini_key():
 def get_gemini_key_info():
     """Return the full key info dict for the next key to use."""
     with _gemini_lock:
+        if not GEMINI_KEYS:
+            return None
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             return GEMINI_KEYS[0]
@@ -474,6 +498,8 @@ def get_gemini_key_info():
 def rotate_gemini_key():
     """Advance to next key, incrementing fail count on current."""
     info = get_gemini_key_info()
+    if not info:
+        return
     with _gemini_lock:
         for k in GEMINI_KEYS:
             if k["key"] == info["key"]:
@@ -4703,9 +4729,9 @@ def list_presets():
     })
 
 
-@app.route("/api/system_info", methods=["GET"])
-def system_info():
-    """Return system and server info."""
+@app.route("/api/system_info/basic", methods=["GET"])
+def system_info_basic():
+    """Return basic system and server info."""
     blender_found = os.path.exists(BLENDER_EXE)
     cache_count = 0
     cache_size = 0
@@ -4723,7 +4749,7 @@ def system_info():
         "cache_size_bytes": cache_size,
         "history_entries": history_count,
         "gemini_keys_total": len(GEMINI_KEYS),
-        "gemini_active_index": _gemini_index % len(GEMINI_KEYS),
+        "gemini_active_index": (_gemini_index % len(GEMINI_KEYS)) if GEMINI_KEYS else 0,
         "python_version": sys.version.split()[0],
         "base_dir": BASE_DIR
     })

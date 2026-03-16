@@ -4651,7 +4651,10 @@ def too_many_requests(e):
 # ---------------------------------------------------------------------------
 #  MAIN ENTRY POINT
 # ---------------------------------------------------------------------------
-if __name__ == "__main__":
+def _run_server():
+    import logging
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
     print("=" * 60)
     print("  AI 3D STUDIO v" + VERSION)
     print("  Production-ready Flask backend")
@@ -4674,11 +4677,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print("Listening on http://0.0.0.0:" + str(port))
 
-    # Start system tray
-    # start_tray()  # Windows only - disabled on Railway
-
     # Run Flask
-    port = int(os.environ.get("PORT", 5000))
     host = "0.0.0.0"
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(
@@ -5060,12 +5059,5 @@ def build_preset_for_keyword(keyword, r, g, b):
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
 
-
-
-
-
-
-
-
-
-
+if __name__ == "__main__":
+    _run_server()

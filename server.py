@@ -4,6 +4,9 @@ import json as _jp, threading as _tp, os as _op
 COLOR_MAP = {"red":(1.0,0.0,0.0),"green":(0.0,0.8,0.0),"blue":(0.0,0.3,1.0),"yellow":(1.0,0.9,0.0),"orange":(1.0,0.5,0.0),"purple":(0.5,0.0,0.8),"pink":(1.0,0.4,0.7),"cyan":(0.0,0.9,1.0),"white":(1.0,1.0,1.0),"black":(0.05,0.05,0.05),"gray":(0.5,0.5,0.5),"grey":(0.5,0.5,0.5),"brown":(0.4,0.2,0.1),"gold":(1.0,0.8,0.0),"silver":(0.75,0.75,0.75)}
 _hl = _tp.Lock()
 
+_missing_key_warn_ts = 0.0
+_missing_blender_warn_ts = 0.0
+
 def load_history():
     try:
         if _op.path.exists(HISTORY_FILE):
@@ -77,7 +80,11 @@ def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
     for _ in range(tries):
         key_val = get_gemini_key()
         if not key_val:
-            log_error("[LLM] No GEMINI key configured (set GEMINI_KEY_1, GEMINI_API_KEY, or GOOGLE_API_KEY)")
+            global _missing_key_warn_ts
+            now = time.time()
+            if now - _missing_key_warn_ts > 60:
+                log_gen("[LLM] Gemini key not configured; skipping Stage B (set GEMINI_KEY_1 or GEMINI_API_KEY)")
+                _missing_key_warn_ts = now
             return None
         for model in models:
             try:
@@ -94,7 +101,7 @@ def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
                     break
                 if r.status_code in (401, 403):
                     mark_key_dead(key_val)
-                    log_error(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
+                    log_gen(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
                     break
                 if r.status_code == 404:
                     log_gen(f"[LLM] model not available: {model}; trying next model")
@@ -131,7 +138,11 @@ def mark_key_failed(name_or_val):
 def run_blender_script(script_text, output_path):
     import tempfile, subprocess as _sp
     if not _op.path.isfile(BLENDER_EXE):
-        log_error("[BLENDER] executable not found: " + str(BLENDER_EXE))
+        global _missing_blender_warn_ts
+        now = time.time()
+        if now - _missing_blender_warn_ts > 60:
+            log_gen("[BLENDER] executable not found: " + str(BLENDER_EXE))
+            _missing_blender_warn_ts = now
         return False
     try:
         full = "import bpy,math,os\nOUTPUT_PATH=r'" + output_path.replace("\\","/") + "'\n" + script_text
@@ -1072,14 +1083,17 @@ def check_cache(prompt):
     if os.path.exists(path):
         ok, msg = validate_glb(path)
         if ok:
-            log_gen(f"[CACHE] hit hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
-            return path
+            score, _detail = score_glb_quality(path)
+            if score >= 1:
+                log_gen(f"[CACHE] hit hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
+                return path
+            log_gen(f"[CACHE] stale low-quality entry, removing: score={score}")
         else:
             log_gen(f"[CACHE] stale entry, removing: {msg}")
-            try:
-                os.remove(path)
-            except Exception:
-                pass
+        try:
+            os.remove(path)
+        except Exception as e:
+            log_error(f"[CACHE] remove stale failed: {e}")
     log_gen(f"[CACHE] miss hash={h}"); global _cache_misses; _cache_misses += 1
     return None
 
@@ -3415,7 +3429,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "",
+                          model_used="Cache", cloud_url=_cloud or "",
                           quality_score=score_glb_quality(ROCKET_GLB)[0])
                 return
         set_state(progress=15, step="cache_miss")
@@ -3501,7 +3515,9 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 4: Stage B - Gemini + Blender (AI reads full prompt)
         # ------------------------------------------------------------------
         set_state(progress=40, step="stage_b_gemini_blender")
-        if True:  # forced - bypass BLENDER_EXE check
+        blender_ready = os.path.isfile(BLENDER_EXE)
+        gemini_ready = bool(GEMINI_KEYS)
+        if blender_ready and gemini_ready:
             log_gen("[MODEL_B] attempting Gemini+Blender with full prompt...")
             set_state(progress=60, step="blender_running")
             ok = stage_b_gemini_blender(prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
@@ -3518,23 +3534,29 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through to preset")
         else:
-            log_gen(f"[MODEL_B] Blender not found at {BLENDER_EXE}, skipping Stage B")
+            if not gemini_ready:
+                log_gen("[MODEL_B] skipped: no Gemini keys configured")
+            if not blender_ready:
+                log_gen(f"[MODEL_B] skipped: Blender not found at {BLENDER_EXE}")
 
         # ------------------------------------------------------------------
         # STEP 5: Stage C - Preset shapes
         # ------------------------------------------------------------------
         set_state(progress=75, step="stage_c_preset")
-        ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
-        if ok:
-            shutil.copy2(temp_path, ROCKET_GLB)
-            sz = os.path.getsize(ROCKET_GLB)
-            log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
-            store_cache(ROCKET_GLB, prompt)
-            set_state(status="done", progress=100, step="done",
-                      service="Preset", glb_size=sz, last_model=ROCKET_GLB,
-                      cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
-                      quality_score=score_glb_quality(ROCKET_GLB)[0])
-            return
+        if os.path.isfile(BLENDER_EXE):
+            ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
+            if ok:
+                shutil.copy2(temp_path, ROCKET_GLB)
+                sz = os.path.getsize(ROCKET_GLB)
+                log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
+                store_cache(ROCKET_GLB, prompt)
+                set_state(status="done", progress=100, step="done",
+                          service="Preset", glb_size=sz, last_model=ROCKET_GLB,
+                          model_used="Preset", cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
+                          quality_score=score_glb_quality(ROCKET_GLB)[0])
+                return
+        else:
+            log_gen(f"[PRESET] skipped: Blender not found at {BLENDER_EXE}")
 
         # ------------------------------------------------------------------
         # STEP 6: Fallback - Pure Python GLB
@@ -3544,11 +3566,10 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
         log_gen(f"[PYGLB] fallback written: {sz} bytes")
-        store_cache(ROCKET_GLB, prompt)
         _cloud = upload_to_cloudinary(ROCKET_GLB)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
-                  cloud_url=_cloud or "",
+                  model_used="Fallback", cloud_url=_cloud or "",
                   quality_score=score_glb_quality(ROCKET_GLB)[0])
 
     except Exception as e:
@@ -3572,6 +3593,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
 # ---------------------------------------------------------------------------
 #  FLASK ROUTES
 # ---------------------------------------------------------------------------
+
+@app.route("/favicon.ico")
+def favicon():
+    return ("", 204)
+
 
 @app.route("/")
 def index():

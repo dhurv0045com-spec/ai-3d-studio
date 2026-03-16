@@ -256,9 +256,10 @@ import subprocess, tempfile, os as _os
 import requests as _requests
 def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
     import time as _time
-    for key in GEMINI_KEYS:
+    tries = max(len(GEMINI_KEYS), 1)
+    for _ in range(tries):
+        key_val = get_gemini_key()
         try:
-            key_val = key.get("key") if isinstance(key, dict) else str(key)
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_val}"
             payload = {
                 "system_instruction": {"parts": [{"text": system_prompt}]},
@@ -268,29 +269,36 @@ def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
             r = _requests.post(url, json=payload, timeout=180)
 
             if r.status_code == 429:
-                log_gen("[LLM] Gemini returned 429, sleeping 5s and retrying key")
+                log_gen("[LLM] Gemini returned 429, sleeping 5s")
                 _time.sleep(5)
                 continue
 
             if r.status_code in (401, 403):
+                mark_key_dead(key_val)
                 log_error(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
                 continue
 
             if r.status_code != 200:
+                rotate_gemini_key()
                 log_error(f"[LLM] Gemini API HTTP {r.status_code}: {r.text[:300]}")
                 continue
 
             result = r.json()
             candidates = result.get("candidates", [])
             if not candidates:
+                rotate_gemini_key()
                 log_error("[LLM] Gemini response missing candidates")
                 continue
             parts = candidates[0].get("content", {}).get("parts", [])
             if not parts:
+                rotate_gemini_key()
                 log_error("[LLM] Gemini response missing content parts")
                 continue
+
+            mark_key_success(key_val)
             return parts[0].get("text", "")
         except Exception as e:
+            rotate_gemini_key()
             log_error(f"[LLM] Gemini request exception: {e}")
             continue
     return None
@@ -484,10 +492,10 @@ def after_request_logger(response):
 import base64
 import hashlib as _hashlib_cloud
 
-CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME",  "root")
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY",    "847967395866559")
-CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "h9OL5-hsJdbxpMV3RpVxdLF7G-Q")
-CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER",     "ai3d_studio")
+CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER", "ai3d_studio").strip() or "ai3d_studio"
 CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY_SECRET)
 
 
@@ -998,7 +1006,7 @@ def validate_glb_quality(path):
     if not valid:
         return False, msg
     score, detail = score_glb_quality(path)
-    min_size = int(get_setting("quality.min_glb_size_bytes", 8192))
+    min_size = int(get_setting("quality.min_glb_size_bytes", 1024))
     if os.path.getsize(path) < min_size:
         return False, "Quality too low: score=" + str(score) + " " + detail
     return True, "OK score=" + str(score) + " " + detail
@@ -3624,8 +3632,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[MODEL_B] Gemini+Blender success")
                 store_cache(ROCKET_GLB, prompt)
+                _cloud = upload_to_cloudinary(ROCKET_GLB)
                 set_state(status="done", progress=100, step="done",
-                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB)
+                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
+                          model_used="Gemini+Blender", cloud_url=_cloud or "",
+                          quality_score=score_glb_quality(ROCKET_GLB)[0])
                 return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through to preset")
         else:

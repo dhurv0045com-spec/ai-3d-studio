@@ -6,7 +6,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxi6 \
     libxfixes3 \
     libxrender1 \
+    libxrandr2 \
+    libxxf86vm1 \
+    libglib2.0-0 \
     libgl1 \
+    libgl1-mesa-glx \
     libglu1-mesa \
     libsm6 \
     libice6 \

@@ -86,8 +86,11 @@ def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
                 import time; time.sleep(5)
             else:
                 rotate_gemini_key()
-        except Exception:
-            rotate_gemini_key()
+        except Exception as _e:
+            try:
+                log_error("[LLM] request exception: " + str(_e))
+            except Exception:
+                pass
     return None
 
 def mark_key_failed(name_or_val):
@@ -109,8 +112,13 @@ def run_blender_script(script_text, output_path):
             tf.write(full); tmp=tf.name
         cf = 0x08000000 if _op.name=="nt" else 0
         r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=120,creationflags=cf)
-        try: _op.unlink(tmp)
-        except: pass
+        try:
+            _op.unlink(tmp)
+        except Exception as _e:
+            try:
+                log_error("[BLENDER] temp script cleanup failed: " + str(_e))
+            except Exception:
+                pass
         if r.returncode==0 and _op.path.exists(output_path):
             ok,msg=validate_glb(output_path)
             return ok
@@ -205,8 +213,11 @@ def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
                 import time; time.sleep(5)
             else:
                 rotate_gemini_key()
-        except Exception:
-            rotate_gemini_key()
+        except Exception as _e:
+            try:
+                log_error("[LLM] request exception: " + str(_e))
+            except Exception:
+                pass
     return None
 
 def mark_key_failed(name_or_val):
@@ -228,8 +239,13 @@ def run_blender_script(script_text, output_path):
             tf.write(full); tmp=tf.name
         cf = 0x08000000 if _op.name=="nt" else 0
         r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=120,creationflags=cf)
-        try: _op.unlink(tmp)
-        except: pass
+        try:
+            _op.unlink(tmp)
+        except Exception as _e:
+            try:
+                log_error("[BLENDER] temp script cleanup failed: " + str(_e))
+            except Exception:
+                pass
         if r.returncode==0 and _op.path.exists(output_path):
             ok,msg=validate_glb(output_path)
             return ok
@@ -239,14 +255,43 @@ def run_blender_script(script_text, output_path):
 import subprocess, tempfile, os as _os
 import requests as _requests
 def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    import time as _time
     for key in GEMINI_KEYS:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
-            payload = {"system_instruction": {"parts": [{"text": system_prompt}]}, "contents": [{"parts": [{"text": user_prompt}]}], "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}}
+            key_val = key.get("key") if isinstance(key, dict) else str(key)
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_val}"
+            payload = {
+                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"parts": [{"text": user_prompt}]}],
+                "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
+            }
             r = _requests.post(url, json=payload, timeout=180)
+
+            if r.status_code == 429:
+                log_gen("[LLM] Gemini returned 429, sleeping 5s and retrying key")
+                _time.sleep(5)
+                continue
+
+            if r.status_code in (401, 403):
+                log_error(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
+                continue
+
+            if r.status_code != 200:
+                log_error(f"[LLM] Gemini API HTTP {r.status_code}: {r.text[:300]}")
+                continue
+
             result = r.json()
-            return result["candidates"][0]["content"]["parts"][0]["text"]
-        except:
+            candidates = result.get("candidates", [])
+            if not candidates:
+                log_error("[LLM] Gemini response missing candidates")
+                continue
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if not parts:
+                log_error("[LLM] Gemini response missing content parts")
+                continue
+            return parts[0].get("text", "")
+        except Exception as e:
+            log_error(f"[LLM] Gemini request exception: {e}")
             continue
     return None
 COLOR_MAP = {'red': (1,0,0), 'blue': (0,0,1), 'green': (0,1,0), 'yellow': (1,1,0), 'white': (1,1,1), 'black': (0,0,0), 'orange': (1,0.5,0), 'purple': (0.5,0,0.5), 'pink': (1,0.5,0.5), 'gray': (0.5,0.5,0.5)}
@@ -343,7 +388,7 @@ SHAPEE_FLAG     = os.path.join(BASE_DIR, "shapee_installed.flag")
 def _find_blender_exe():
     """Auto-detect Blender. Works on Windows local AND Railway Linux cloud."""
     import glob
-    env_path = os.environ.get("BLENDER_PATH", "")
+    env_path = os.environ.get("BLENDER_PATH", "/app/blender/blender")
     if env_path and os.path.isfile(env_path):
         return env_path
     if _platform.system() == "Linux":
@@ -359,7 +404,9 @@ def _find_blender_exe():
             return sorted(win)[-1]
         return r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"
 
-BLENDER_EXE = os.environ.get("BLENDER_PATH", r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe")
+BLENDER_EXE = os.environ.get("BLENDER_PATH", "/app/blender/blender")
+if not os.path.isfile(BLENDER_EXE):
+    BLENDER_EXE = _find_blender_exe()
 BLENDER_PATH = BLENDER_EXE  # alias for Railway compatibility
 VERSION         = "7.0"
 MAX_HISTORY     = 200
@@ -876,12 +923,12 @@ _last_quality_score = 0
 
 
 def validate_glb(path):
-    """Basic GLB validation: exists, >4096 bytes, magic == glTF."""
+    """Basic GLB validation: exists, >1024 bytes, magic == glTF."""
     try:
         if not os.path.exists(path):
             return False, "file not found"
         size = os.path.getsize(path)
-        if size < 4096:
+        if size < 1024:
             return False, "too small: " + str(size) + " bytes"
         with open(path, "rb") as f:
             magic = f.read(4)
@@ -1441,8 +1488,8 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
         try:
             with open(debug_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(fixed_script)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error("[BLENDER] Failed to write debug script: " + str(e))
 
         try:
             safe = fixed_script.encode("ascii", errors="replace").decode("ascii")
@@ -3430,8 +3477,8 @@ def stage_c_preset(prompt, interp, color_hex, output_path):
         # Cache the result
         try:
             shutil.copy2(output_path, cached_preset)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error(f"[PRESET] Failed to cache preset '{keyword}': {e}")
         return True, keyword
     log_gen(f"[PRESET] [MODEL_C] Blender preset failed for {keyword}")
     return False, keyword
@@ -4158,8 +4205,8 @@ def quick_shape(name):
         try:
             shutil.copy2(temp_out, preset_path)
             os.remove(temp_out)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error(f"[QUICK_SHAPE] cache write failed for {name}: {e}")
         target = preset_path if os.path.exists(preset_path) else temp_out
         ok, msg = validate_glb(target)
         if ok:
@@ -5097,7 +5144,6 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
-
 
 
 

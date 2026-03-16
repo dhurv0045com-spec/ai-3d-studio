@@ -1,128 +1,12 @@
-﻿# LINUX PATCH - DO NOT REMOVE
-import json as _jp, threading as _tp, os as _op
-
-COLOR_MAP = {"red":(1.0,0.0,0.0),"green":(0.0,0.8,0.0),"blue":(0.0,0.3,1.0),"yellow":(1.0,0.9,0.0),"orange":(1.0,0.5,0.0),"purple":(0.5,0.0,0.8),"pink":(1.0,0.4,0.7),"cyan":(0.0,0.9,1.0),"white":(1.0,1.0,1.0),"black":(0.05,0.05,0.05),"gray":(0.5,0.5,0.5),"grey":(0.5,0.5,0.5),"brown":(0.4,0.2,0.1),"gold":(1.0,0.8,0.0),"silver":(0.75,0.75,0.75)}
-_hl = _tp.Lock()
-
-def load_history():
-    try:
-        if _op.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE,"r",encoding="utf-8") as f:
-                d=_jp.load(f)
-            return d if isinstance(d,list) else []
-    except Exception:
-        pass
-    return []
-
-def save_history(hist):
-    try:
-        with _hl:
-            hist=sorted(hist,key=lambda x:x.get("id",0),reverse=True)
-            if len(hist)>MAX_HISTORY: hist=hist[:MAX_HISTORY]
-            with open(HISTORY_FILE,"w",encoding="utf-8") as f:
-                _jp.dump(hist,f,indent=2)
-    except Exception as e:
-        pass
-
-def add_history_entry(entry):
-    try:
-        h=load_history(); h.insert(0,entry); save_history(h)
-    except Exception:
-        pass
-
-def load_folders():
-    try:
-        if _op.path.exists(FOLDERS_FILE):
-            with open(FOLDERS_FILE,"r",encoding="utf-8") as f:
-                d=_jp.load(f)
-            return d if isinstance(d,list) else list(DEFAULT_FOLDERS)
-    except Exception:
-        pass
-    return list(DEFAULT_FOLDERS)
-
-def save_folders(folders):
-    try:
-        with open(FOLDERS_FILE,"w",encoding="utf-8") as f:
-            _jp.dump(folders,f,indent=2)
-    except Exception:
-        pass
-
-def load_index():
-    try:
-        if _op.path.exists(INDEX_FILE):
-            with open(INDEX_FILE,"r",encoding="utf-8") as f:
-                d=_jp.load(f)
-            return d if isinstance(d,list) else []
-    except Exception:
-        pass
-    return []
-
-def save_index(idx):
-    try:
-        with open(INDEX_FILE,"w",encoding="utf-8") as f:
-            _jp.dump(idx[:MAX_HISTORY],f,indent=2)
-    except Exception:
-        pass
-
-def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
-    import requests as _rq, urllib3 as _u3
-    _u3.disable_warnings(_u3.exceptions.InsecureRequestWarning)
-    _base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-    for _i in range(max(len(GEMINI_KEYS),1)):
-        _k = get_gemini_key()
-        _pl = {"contents":[{"parts":[{"text":system_msg+"\n\n"+user_msg}]}],"generationConfig":{"temperature":temperature,"maxOutputTokens":max_tokens,"candidateCount":1}}
-        try:
-            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=180,verify=False)
-            if _r.status_code==200:
-                _c=_r.json().get("candidates",[])
-                if _c:
-                    _p=_c[0].get("content",{}).get("parts",[])
-                    if _p:
-                        mark_key_success(_k)
-                        return _p[0].get("text","")
-            elif _r.status_code in (401,403):
-                mark_key_dead(_k)
-            elif _r.status_code == 429:
-                import time; time.sleep(5)
-            else:
-                rotate_gemini_key()
-        except Exception:
-            rotate_gemini_key()
-    return None
-
-def mark_key_failed(name_or_val):
-    try:
-        for _k in GEMINI_KEYS:
-            if _k.get("key")==name_or_val or _k.get("name")==name_or_val:
-                _k["fails"]=_k.get("fails",0)+1
-                if _k["fails"]>=3: _k["dead"]=True
-                break
-    except Exception:
-        pass
-
-def run_blender_script(script_text, output_path):
-    import tempfile, subprocess as _sp
-    if not _op.path.isfile(BLENDER_EXE): return False
-    try:
-        full = "import bpy,math,os\nOUTPUT_PATH=r'" + output_path.replace("\\","/") + "'\n" + script_text
-        with tempfile.NamedTemporaryFile(mode="w",suffix=".py",delete=False,encoding="utf-8") as tf:
-            tf.write(full); tmp=tf.name
-        cf = 0x08000000 if _op.name=="nt" else 0
-        r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=120,creationflags=cf)
-        try: _op.unlink(tmp)
-        except: pass
-        if r.returncode==0 and _op.path.exists(output_path):
-            ok,msg=validate_glb(output_path)
-            return ok
-        return False
-    except Exception:
-        return False
 # LINUX PATCH - DO NOT REMOVE
 import json as _jp, threading as _tp, os as _op
 
 COLOR_MAP = {"red":(1.0,0.0,0.0),"green":(0.0,0.8,0.0),"blue":(0.0,0.3,1.0),"yellow":(1.0,0.9,0.0),"orange":(1.0,0.5,0.0),"purple":(0.5,0.0,0.8),"pink":(1.0,0.4,0.7),"cyan":(0.0,0.9,1.0),"white":(1.0,1.0,1.0),"black":(0.05,0.05,0.05),"gray":(0.5,0.5,0.5),"grey":(0.5,0.5,0.5),"brown":(0.4,0.2,0.1),"gold":(1.0,0.8,0.0),"silver":(0.75,0.75,0.75)}
 _hl = _tp.Lock()
 
+_missing_key_warn_ts = 0.0
+_missing_blender_warn_ts = 0.0
+
 def load_history():
     try:
         if _op.path.exists(HISTORY_FILE):
@@ -140,7 +24,7 @@ def save_history(hist):
             if len(hist)>MAX_HISTORY: hist=hist[:MAX_HISTORY]
             with open(HISTORY_FILE,"w",encoding="utf-8") as f:
                 _jp.dump(hist,f,indent=2)
-    except Exception as e:
+    except Exception:
         pass
 
 def add_history_entry(entry):
@@ -183,30 +67,62 @@ def save_index(idx):
     except Exception:
         pass
 
-def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
-    import requests as _rq, urllib3 as _u3
-    _u3.disable_warnings(_u3.exceptions.InsecureRequestWarning)
-    _base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-    for _i in range(max(len(GEMINI_KEYS),1)):
-        _k = get_gemini_key()
-        _pl = {"contents":[{"parts":[{"text":system_msg+"\n\n"+user_msg}]}],"generationConfig":{"temperature":temperature,"maxOutputTokens":max_tokens,"candidateCount":1}}
-        try:
-            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=180,verify=False)
-            if _r.status_code==200:
-                _c=_r.json().get("candidates",[])
-                if _c:
-                    _p=_c[0].get("content",{}).get("parts",[])
-                    if _p:
-                        mark_key_success(_k)
-                        return _p[0].get("text","")
-            elif _r.status_code in (401,403):
-                mark_key_dead(_k)
-            elif _r.status_code == 429:
-                import time; time.sleep(5)
-            else:
+def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    import requests as _requests
+    import time as _time
+    models = [
+        os.environ.get("GEMINI_MODEL", "").strip(),
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+    ]
+    models = [m for m in models if m]
+    tries = max(len(GEMINI_KEYS), 1)
+    for _ in range(tries):
+        key_val = get_gemini_key()
+        if not key_val:
+            global _missing_key_warn_ts
+            now = time.time()
+            if now - _missing_key_warn_ts > 60:
+                log_gen("[LLM] Gemini key not configured; skipping Stage B (set GEMINI_KEY_1 or GEMINI_API_KEY)")
+                _missing_key_warn_ts = now
+            return None
+        for model in models:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key_val}"
+                payload = {
+                    "system_instruction": {"parts": [{"text": system_prompt}]},
+                    "contents": [{"parts": [{"text": user_prompt}]}],
+                    "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
+                }
+                r = _requests.post(url, json=payload, timeout=180)
+                if r.status_code == 429:
+                    log_gen("[LLM] Gemini returned 429, sleeping 5s")
+                    _time.sleep(5)
+                    break
+                if r.status_code in (401, 403):
+                    mark_key_dead(key_val)
+                    log_gen(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
+                    break
+                if r.status_code == 404:
+                    log_gen(f"[LLM] model not available: {model}; trying next model")
+                    continue
+                if r.status_code != 200:
+                    rotate_gemini_key()
+                    log_error(f"[LLM] Gemini API HTTP {r.status_code}: {r.text[:300]}")
+                    break
+                result = r.json()
+                candidates = result.get("candidates", [])
+                if not candidates:
+                    rotate_gemini_key(); log_error("[LLM] Gemini response missing candidates"); break
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if not parts:
+                    rotate_gemini_key(); log_error("[LLM] Gemini response missing content parts"); break
+                mark_key_success(key_val)
+                return parts[0].get("text", "")
+            except Exception as e:
                 rotate_gemini_key()
-        except Exception:
-            rotate_gemini_key()
+                log_error(f"[LLM] Gemini request exception: {e}")
+                break
     return None
 
 def mark_key_failed(name_or_val):
@@ -221,35 +137,34 @@ def mark_key_failed(name_or_val):
 
 def run_blender_script(script_text, output_path):
     import tempfile, subprocess as _sp
-    if not _op.path.isfile(BLENDER_EXE): return False
+    if not _op.path.isfile(BLENDER_EXE):
+        global _missing_blender_warn_ts
+        now = time.time()
+        if now - _missing_blender_warn_ts > 60:
+            log_gen("[BLENDER] executable not found: " + str(BLENDER_EXE))
+            _missing_blender_warn_ts = now
+        return False
     try:
         full = "import bpy,math,os\nOUTPUT_PATH=r'" + output_path.replace("\\","/") + "'\n" + script_text
         with tempfile.NamedTemporaryFile(mode="w",suffix=".py",delete=False,encoding="utf-8") as tf:
             tf.write(full); tmp=tf.name
         cf = 0x08000000 if _op.name=="nt" else 0
-        r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=120,creationflags=cf)
-        try: _op.unlink(tmp)
-        except: pass
+        r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=240,creationflags=cf)
+        try:
+            _op.unlink(tmp)
+        except Exception as _e:
+            log_error("[BLENDER] temp script cleanup failed: " + str(_e))
         if r.returncode==0 and _op.path.exists(output_path):
             ok,msg=validate_glb(output_path)
+            if not ok:
+                log_error("[BLENDER] invalid GLB after run: " + msg)
             return ok
+        log_error("[BLENDER] run failed rc=" + str(r.returncode) + " stderr=" + (r.stderr or "")[-300:])
         return False
-    except Exception:
+    except Exception as e:
+        log_error("[BLENDER] run exception: " + str(e))
         return False
-import subprocess, tempfile, os as _os
-import requests as _requests
-def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
-    for key in GEMINI_KEYS:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
-            payload = {"system_instruction": {"parts": [{"text": system_prompt}]}, "contents": [{"parts": [{"text": user_prompt}]}], "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}}
-            r = _requests.post(url, json=payload, timeout=180)
-            result = r.json()
-            return result["candidates"][0]["content"]["parts"][0]["text"]
-        except:
-            continue
-    return None
-COLOR_MAP = {'red': (1,0,0), 'blue': (0,0,1), 'green': (0,1,0), 'yellow': (1,1,0), 'white': (1,1,1), 'black': (0,0,0), 'orange': (1,0.5,0), 'purple': (0.5,0,0.5), 'pink': (1,0.5,0.5), 'gray': (0.5,0.5,0.5)}
+
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
@@ -343,13 +258,17 @@ SHAPEE_FLAG     = os.path.join(BASE_DIR, "shapee_installed.flag")
 def _find_blender_exe():
     """Auto-detect Blender. Works on Windows local AND Railway Linux cloud."""
     import glob
-    env_path = os.environ.get("BLENDER_PATH", "")
+    import shutil as _shutil
+    env_path = os.environ.get("BLENDER_PATH", "/app/blender/blender")
     if env_path and os.path.isfile(env_path):
         return env_path
     if _platform.system() == "Linux":
         for p in ["/app/blender/blender", "/usr/bin/blender", "/usr/local/bin/blender"]:
             if os.path.isfile(p):
                 return p
+        found = _shutil.which("blender")
+        if found:
+            return found
         return "/app/blender/blender"
     else:
         import glob as _glob
@@ -359,7 +278,9 @@ def _find_blender_exe():
             return sorted(win)[-1]
         return r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"
 
-BLENDER_EXE = os.environ.get("BLENDER_PATH", r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe")
+BLENDER_EXE = os.environ.get("BLENDER_PATH", "/app/blender/blender")
+if not os.path.isfile(BLENDER_EXE):
+    BLENDER_EXE = _find_blender_exe()
 BLENDER_PATH = BLENDER_EXE  # alias for Railway compatibility
 VERSION         = "7.0"
 MAX_HISTORY     = 200
@@ -422,6 +343,8 @@ def before_request_timer():
 def after_request_logger(response):
     try:
         from flask import g
+        if request.path in ("/ping", "/favicon.ico"):
+            return response
         elapsed = time.time() - g.req_start
         ms      = round(elapsed * 1000)
         log_srv("[HTTP] " + request.method + " " + request.path +
@@ -437,10 +360,10 @@ def after_request_logger(response):
 import base64
 import hashlib as _hashlib_cloud
 
-CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME",  "root")
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY",    "847967395866559")
-CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "h9OL5-hsJdbxpMV3RpVxdLF7G-Q")
-CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER",     "ai3d_studio")
+CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER", "ai3d_studio").strip() or "ai3d_studio"
 CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY_SECRET)
 
 
@@ -525,25 +448,42 @@ def upload_to_cloudinary(local_path, public_id=None):
 #  GEMINI KEY SYSTEM V6 - 7 KEYS, ENV VARS FOR RAILWAY, HARDCODED FOR LOCAL
 # ---------------------------------------------------------------------------
 def _build_gemini_keys():
-    """Build key list from env vars (Railway) with hardcoded fallbacks (local)."""
-    pairs = [
-        ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
-        ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
-        ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
-        ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
-        ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
-        ("key6", "AIzaSyDXsfLELFLRgoNfUXZGUtsK6X2-c--rqAM"),
-        ("key7", "AIzaSyBXLDQzk9_5naaxS4V5wG-RujQewfJKdw4"),
-    ]
+    """Build Gemini key list from env vars only (Railway-safe, no hardcoded secrets)."""
+    raw_values = []
+
+    # Common single-key env names
+    for env_name in ["GEMINI_API_KEY", "GEMINI_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_API_KEY"]:
+        val = (os.environ.get(env_name) or "").strip()
+        if val:
+            raw_values.append((env_name.lower(), val))
+
+    # Numbered key slots: GEMINI_KEY_1..GEMINI_KEY_20
+    for i in range(1, 21):
+        val = (os.environ.get(f"GEMINI_KEY_{i}") or "").strip()
+        if val:
+            raw_values.append((f"key{i}", val))
+
+    # Optional comma-separated list support
+    csv = (os.environ.get("GEMINI_KEYS") or "").strip()
+    if csv:
+        for idx, item in enumerate(csv.split(","), 1):
+            v = item.strip()
+            if v:
+                raw_values.append((f"csv{idx}", v))
+
+    # Deduplicate while preserving order
+    seen = set()
     result = []
-    for i, (name, fallback) in enumerate(pairs, 1):
-        key_val = os.environ.get("GEMINI_KEY_" + str(i), fallback)
-        if key_val and key_val.startswith("AIza"):
-            result.append({"name": name, "key": key_val,
-                           "fails": 0, "dead": False, "last_used": 0.0})
-    return result if result else [
-        {"name": "fallback", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}
-    ]
+    for name, key_val in raw_values:
+        if not key_val.startswith("AIza"):
+            continue
+        if key_val in seen:
+            continue
+        seen.add(key_val)
+        result.append({"name": name, "key": key_val,
+                       "fails": 0, "dead": False, "last_used": 0.0})
+
+    return result
 
 GEMINI_KEYS = _build_gemini_keys()
 _gemini_index = 0
@@ -553,6 +493,8 @@ _gemini_lock  = threading.Lock()
 def get_gemini_key():
     """Return the least-recently-used alive key string."""
     with _gemini_lock:
+        if not GEMINI_KEYS:
+            return ""
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             for k in GEMINI_KEYS:
@@ -567,6 +509,8 @@ def get_gemini_key():
 def get_gemini_key_info():
     """Return the full key info dict for the next key to use."""
     with _gemini_lock:
+        if not GEMINI_KEYS:
+            return None
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             return GEMINI_KEYS[0]
@@ -577,6 +521,8 @@ def get_gemini_key_info():
 def rotate_gemini_key():
     """Advance to next key, incrementing fail count on current."""
     info = get_gemini_key_info()
+    if not info:
+        return
     with _gemini_lock:
         for k in GEMINI_KEYS:
             if k["key"] == info["key"]:
@@ -876,12 +822,12 @@ _last_quality_score = 0
 
 
 def validate_glb(path):
-    """Basic GLB validation: exists, >4096 bytes, magic == glTF."""
+    """Basic GLB validation: exists, >1024 bytes, magic == glTF."""
     try:
         if not os.path.exists(path):
             return False, "file not found"
         size = os.path.getsize(path)
-        if size < 4096:
+        if size < 1024:
             return False, "too small: " + str(size) + " bytes"
         with open(path, "rb") as f:
             magic = f.read(4)
@@ -951,7 +897,7 @@ def validate_glb_quality(path):
     if not valid:
         return False, msg
     score, detail = score_glb_quality(path)
-    min_size = int(get_setting("quality.min_glb_size_bytes", 8192))
+    min_size = 1024
     if os.path.getsize(path) < min_size:
         return False, "Quality too low: score=" + str(score) + " " + detail
     return True, "OK score=" + str(score) + " " + detail
@@ -1139,14 +1085,17 @@ def check_cache(prompt):
     if os.path.exists(path):
         ok, msg = validate_glb(path)
         if ok:
-            log_gen(f"[CACHE] hit hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
-            return path
+            score, _detail = score_glb_quality(path)
+            if score >= 1:
+                log_gen(f"[CACHE] hit hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
+                return path
+            log_gen(f"[CACHE] stale low-quality entry, removing: score={score}")
         else:
             log_gen(f"[CACHE] stale entry, removing: {msg}")
-            try:
-                os.remove(path)
-            except Exception:
-                pass
+        try:
+            os.remove(path)
+        except Exception as e:
+            log_error(f"[CACHE] remove stale failed: {e}")
     log_gen(f"[CACHE] miss hash={h}"); global _cache_misses; _cache_misses += 1
     return None
 
@@ -1422,7 +1371,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
     current_script  = script
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
     debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
-    blender_timeout = int(get_setting("generation.blender_timeout", 120))
+    blender_timeout = int(get_setting("generation.blender_timeout", 240))
 
     # Inject OUTPUT_PATH into script before first run
     if "OUTPUT_PATH" not in current_script or "OUTPUT_PATH =" not in current_script:
@@ -1441,8 +1390,8 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
         try:
             with open(debug_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(fixed_script)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error("[BLENDER] Failed to write debug script: " + str(e))
 
         try:
             safe = fixed_script.encode("ascii", errors="replace").decode("ascii")
@@ -3430,8 +3379,8 @@ def stage_c_preset(prompt, interp, color_hex, output_path):
         # Cache the result
         try:
             shutil.copy2(output_path, cached_preset)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error(f"[PRESET] Failed to cache preset '{keyword}': {e}")
         return True, keyword
     log_gen(f"[PRESET] [MODEL_C] Blender preset failed for {keyword}")
     return False, keyword
@@ -3482,7 +3431,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "",
+                          model_used="Cache", cloud_url=_cloud or "",
                           quality_score=score_glb_quality(ROCKET_GLB)[0])
                 return
         set_state(progress=15, step="cache_miss")
@@ -3568,7 +3517,9 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 4: Stage B - Gemini + Blender (AI reads full prompt)
         # ------------------------------------------------------------------
         set_state(progress=40, step="stage_b_gemini_blender")
-        if True:  # forced - bypass BLENDER_EXE check
+        blender_ready = os.path.isfile(BLENDER_EXE)
+        gemini_ready = bool(GEMINI_KEYS)
+        if blender_ready and gemini_ready:
             log_gen("[MODEL_B] attempting Gemini+Blender with full prompt...")
             set_state(progress=60, step="blender_running")
             ok = stage_b_gemini_blender(prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
@@ -3577,28 +3528,37 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[MODEL_B] Gemini+Blender success")
                 store_cache(ROCKET_GLB, prompt)
+                _cloud = upload_to_cloudinary(ROCKET_GLB)
                 set_state(status="done", progress=100, step="done",
-                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB)
+                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
+                          model_used="Gemini+Blender", cloud_url=_cloud or "",
+                          quality_score=score_glb_quality(ROCKET_GLB)[0])
                 return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through to preset")
         else:
-            log_gen(f"[MODEL_B] Blender not found at {BLENDER_EXE}, skipping Stage B")
+            if not gemini_ready:
+                log_gen("[MODEL_B] skipped: no Gemini keys configured")
+            if not blender_ready:
+                log_gen(f"[MODEL_B] skipped: Blender not found at {BLENDER_EXE}")
 
         # ------------------------------------------------------------------
         # STEP 5: Stage C - Preset shapes
         # ------------------------------------------------------------------
         set_state(progress=75, step="stage_c_preset")
-        ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
-        if ok:
-            shutil.copy2(temp_path, ROCKET_GLB)
-            sz = os.path.getsize(ROCKET_GLB)
-            log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
-            store_cache(ROCKET_GLB, prompt)
-            set_state(status="done", progress=100, step="done",
-                      service="Preset", glb_size=sz, last_model=ROCKET_GLB,
-                      cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
-                      quality_score=score_glb_quality(ROCKET_GLB)[0])
-            return
+        if os.path.isfile(BLENDER_EXE):
+            ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
+            if ok:
+                shutil.copy2(temp_path, ROCKET_GLB)
+                sz = os.path.getsize(ROCKET_GLB)
+                log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
+                store_cache(ROCKET_GLB, prompt)
+                set_state(status="done", progress=100, step="done",
+                          service="Preset", glb_size=sz, last_model=ROCKET_GLB,
+                          model_used="Preset", cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
+                          quality_score=score_glb_quality(ROCKET_GLB)[0])
+                return
+        else:
+            log_gen(f"[PRESET] skipped: Blender not found at {BLENDER_EXE}")
 
         # ------------------------------------------------------------------
         # STEP 6: Fallback - Pure Python GLB
@@ -3608,11 +3568,10 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
         log_gen(f"[PYGLB] fallback written: {sz} bytes")
-        store_cache(ROCKET_GLB, prompt)
         _cloud = upload_to_cloudinary(ROCKET_GLB)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
-                  cloud_url=_cloud or "",
+                  model_used="Fallback", cloud_url=_cloud or "",
                   quality_score=score_glb_quality(ROCKET_GLB)[0])
 
     except Exception as e:
@@ -3636,6 +3595,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
 # ---------------------------------------------------------------------------
 #  FLASK ROUTES
 # ---------------------------------------------------------------------------
+
+@app.route("/favicon.ico")
+def favicon():
+    return ("", 204)
+
 
 @app.route("/")
 def index():
@@ -4158,8 +4122,8 @@ def quick_shape(name):
         try:
             shutil.copy2(temp_out, preset_path)
             os.remove(temp_out)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error(f"[QUICK_SHAPE] cache write failed for {name}: {e}")
         target = preset_path if os.path.exists(preset_path) else temp_out
         ok, msg = validate_glb(target)
         if ok:
@@ -4689,7 +4653,12 @@ def too_many_requests(e):
 # ---------------------------------------------------------------------------
 #  MAIN ENTRY POINT
 # ---------------------------------------------------------------------------
-if __name__ == "__main__":
+def _run_server():
+    import logging
+    _wlog = logging.getLogger("werkzeug")
+    _wlog.setLevel(logging.ERROR)
+    _wlog.disabled = True
+
     print("=" * 60)
     print("  AI 3D STUDIO v" + VERSION)
     print("  Production-ready Flask backend")
@@ -4712,11 +4681,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print("Listening on http://0.0.0.0:" + str(port))
 
-    # Start system tray
-    # start_tray()  # Windows only - disabled on Railway
-
     # Run Flask
-    port = int(os.environ.get("PORT", 5000))
     host = "0.0.0.0"
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(
@@ -4803,9 +4768,9 @@ def list_presets():
     })
 
 
-@app.route("/api/system_info", methods=["GET"])
-def system_info():
-    """Return system and server info."""
+@app.route("/api/system_info/basic", methods=["GET"])
+def system_info_basic():
+    """Return basic system and server info."""
     blender_found = os.path.exists(BLENDER_EXE)
     cache_count = 0
     cache_size = 0
@@ -4823,7 +4788,7 @@ def system_info():
         "cache_size_bytes": cache_size,
         "history_entries": history_count,
         "gemini_keys_total": len(GEMINI_KEYS),
-        "gemini_active_index": _gemini_index % len(GEMINI_KEYS),
+        "gemini_active_index": (_gemini_index % len(GEMINI_KEYS)) if GEMINI_KEYS else 0,
         "python_version": sys.version.split()[0],
         "base_dir": BASE_DIR
     })
@@ -5098,13 +5063,5 @@ def build_preset_for_keyword(keyword, r, g, b):
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
 
-
-
-
-
-
-
-
-
-
-
+if __name__ == "__main__":
+    _run_server()

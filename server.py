@@ -355,7 +355,7 @@ def _find_blender_exe():
             return sorted(win)[-1]
         return r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"
 
-BLENDER_EXE = _find_blender_exe()
+BLENDER_EXE = os.environ.get("BLENDER_PATH", r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe")
 BLENDER_PATH = BLENDER_EXE  # alias for Railway compatibility
 VERSION         = "7.0"
 MAX_HISTORY     = 200
@@ -5094,6 +5094,7 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+
 
 
 

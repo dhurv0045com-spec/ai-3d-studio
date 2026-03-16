@@ -67,7 +67,47 @@ def save_index(idx):
     except Exception:
         pass
 
+def call_anthropic_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    import requests as _requests
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        return None
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    payload = {
+        "model": "claude-3-5-haiku-20241022",
+        "max_tokens": int(max_tokens),
+        "temperature": float(temperature),
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    try:
+        r = _requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=180)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        content = data.get("content", [])
+        if not content:
+            return None
+        parts = [c.get("text", "") for c in content if c.get("type") == "text"]
+        out = "".join(parts).strip()
+        return out or None
+    except Exception:
+        return None
+
+
 def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    # 1st priority: Anthropic Claude
+    claude_result = call_anthropic_llm(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+    if claude_result:
+        log_gen("[LLM] Using Anthropic Claude")
+        return claude_result
+    log_gen("[LLM] Claude failed, trying Gemini")
+
+    # 2nd priority: Gemini fallback
     import requests as _requests
     import time as _time
     models = [
@@ -88,6 +128,13 @@ def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
             return None
         for model in models:
             try:
+                key_info = get_gemini_key_info()
+                if key_info and key_info.get("key") == key_val:
+                    used = _gemini_inc_daily_used(key_info)
+                    if used >= _GEMINI_DAILY_LIMIT:
+                        log_gen(f"[LLM] daily quota reached for {key_info.get('name','key')}, switching key")
+                        rotate_gemini_key()
+                        break
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key_val}"
                 payload = {
                     "system_instruction": {"parts": [{"text": system_prompt}]},
@@ -123,6 +170,8 @@ def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
                 rotate_gemini_key()
                 log_error(f"[LLM] Gemini request exception: {e}")
                 break
+
+    # 3rd priority: None -> fallback GLB in pipeline
     return None
 
 def mark_key_failed(name_or_val):
@@ -216,6 +265,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # GEMINI_KEY_5          = your fifth Gemini API key
 # GEMINI_KEY_6          = your sixth Gemini API key
 # GEMINI_KEY_7          = your seventh Gemini API key
+# ANTHROPIC_API_KEY     = your anthropic key
 #
 # CLOUDINARY_CLOUD_NAME = your cloud name (e.g. root)
 # CLOUDINARY_API_KEY    = your cloudinary api key
@@ -481,13 +531,33 @@ def _build_gemini_keys():
             continue
         seen.add(key_val)
         result.append({"name": name, "key": key_val,
-                       "fails": 0, "dead": False, "last_used": 0.0})
+                       "fails": 0, "dead": False, "last_used": 0.0,
+                       "day": time.strftime("%Y-%m-%d"), "daily_used": 0})
 
     return result
 
 GEMINI_KEYS = _build_gemini_keys()
 _gemini_index = 0
 _gemini_lock  = threading.Lock()
+_GEMINI_DAILY_LIMIT = int((os.environ.get("GEMINI_DAILY_LIMIT") or "200").strip() or "200")
+
+
+def _gemini_today_key():
+    return time.strftime("%Y-%m-%d")
+
+
+def _gemini_daily_used(key_info):
+    day = _gemini_today_key()
+    if key_info.get("day") != day:
+        key_info["day"] = day
+        key_info["daily_used"] = 0
+    return int(key_info.get("daily_used", 0))
+
+
+def _gemini_inc_daily_used(key_info):
+    used = _gemini_daily_used(key_info) + 1
+    key_info["daily_used"] = used
+    return used
 
 
 def get_gemini_key():
@@ -502,8 +572,13 @@ def get_gemini_key():
                 k["fails"] = 0
             alive = list(GEMINI_KEYS)
             log_srv("[GEMINI] All keys reset - fresh rotation started")
-        alive.sort(key=lambda x: x["last_used"])
-        return alive[0]["key"]
+
+        quota_alive = [k for k in alive if _gemini_daily_used(k) < _GEMINI_DAILY_LIMIT]
+        if not quota_alive:
+            return ""
+
+        quota_alive.sort(key=lambda x: x["last_used"])
+        return quota_alive[0]["key"]
 
 
 def get_gemini_key_info():
@@ -514,8 +589,11 @@ def get_gemini_key_info():
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             return GEMINI_KEYS[0]
-        alive.sort(key=lambda x: x["last_used"])
-        return alive[0]
+        quota_alive = [k for k in alive if _gemini_daily_used(k) < _GEMINI_DAILY_LIMIT]
+        if not quota_alive:
+            return None
+        quota_alive.sort(key=lambda x: x["last_used"])
+        return quota_alive[0]
 
 
 def rotate_gemini_key():
@@ -1085,13 +1163,9 @@ def check_cache(prompt):
     if os.path.exists(path):
         ok, msg = validate_glb(path)
         if ok:
-            score, _detail = score_glb_quality(path)
-            if score >= 1:
-                log_gen(f"[CACHE] hit hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
-                return path
-            log_gen(f"[CACHE] stale low-quality entry, removing: score={score}")
-        else:
-            log_gen(f"[CACHE] stale entry, removing: {msg}")
+            log_gen(f"[CACHE] hit hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
+            return path
+        log_gen(f"[CACHE] stale entry, removing: {msg}")
         try:
             os.remove(path)
         except Exception as e:
@@ -1366,7 +1440,7 @@ def extract_key_error(stderr):
     return "Script execution failed"
 
 
-def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2):
+def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=1):
     """Run a Blender script with up to max_retries Gemini-powered auto-fix attempts."""
     current_script  = script
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
@@ -3435,7 +3509,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                           quality_score=score_glb_quality(ROCKET_GLB)[0])
                 return
         set_state(progress=15, step="cache_miss")
-        log_gen("[CACHE] miss - proceeding to generation")
+        log_gen("[CACHE] miss - proceeding to generation (Gemini may be used)")
 
         # ------------------------------------------------------------------
         # STEP 1: Prompt interpreter
@@ -3448,6 +3522,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         if library_mode:
             interp = interpret_prompt(prompt, color_hex)
         else:
+            log_gen("[INTERPRETER] skipped Gemini interpreter (library_mode=False)")
             color_word = color_name_from_hex(color_hex)
             words = prompt.lower().split()
             for w in words:
@@ -3691,6 +3766,17 @@ def health_check():
     })
 
 
+def _to_bool(val):
+    """Parse bool-like payload values safely (handles 'false' strings)."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (int, float)):
+        return bool(val)
+    if isinstance(val, str):
+        return val.strip().lower() in ("1", "true", "yes", "on")
+    return False
+
+
 @app.route("/generate", methods=["POST"])
 def generate():
     """Start a new generation. Body: prompt, color, folder, add, remove,
@@ -3703,7 +3789,7 @@ def generate():
 
     data = request.get_json(force=True, silent=True) or {}
 
-    is_edit        = bool(data.get("is_edit", False))
+    is_edit        = _to_bool(data.get("is_edit", False))
     base_prompt    = str(data.get("base_prompt", ""))
     edit_instr     = str(data.get("edit_instruction", ""))
     raw_prompt     = str(data.get("prompt", "a 3d object"))
@@ -3711,7 +3797,7 @@ def generate():
     folder         = str(data.get("folder", "default"))
     add_list       = data.get("add", [])
     remove_list    = data.get("remove", [])
-    library_mode   = bool(data.get("library_mode", False))
+    library_mode   = _to_bool(data.get("library_mode", False))
     style          = str(data.get("style", "realistic"))
     complexity     = int(data.get("complexity", 3))
     if style not in STYLE_DIRECTIVES:

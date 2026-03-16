@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxfixes3 \
     libxrender1 \
     libxrandr2 \
+    libxkbcommon0 \
     libxxf86vm1 \
     libglib2.0-0 \
     libgl1 \

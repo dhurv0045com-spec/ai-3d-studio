@@ -69,31 +69,33 @@ def save_index(idx):
 
 def call_anthropic_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
     import requests as _requests
-    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
-    if not api_key:
+    ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not ANTHROPIC_API_KEY:
         return None
+
+    url = "https://api.anthropic.com/v1/messages"
     headers = {
-        "x-api-key": api_key,
+        "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
+        "content-type": "application/json"
     }
     payload = {
         "model": "claude-3-5-haiku-20241022",
-        "max_tokens": int(max_tokens),
-        "temperature": float(temperature),
+        "max_tokens": max_tokens,
         "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
+        "messages": [{"role": "user", "content": user_prompt}]
     }
+
     try:
-        r = _requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=180)
+        r = _requests.post(url, headers=headers, json=payload, timeout=180)
         if r.status_code != 200:
             return None
         data = r.json()
         content = data.get("content", [])
         if not content:
             return None
-        parts = [c.get("text", "") for c in content if c.get("type") == "text"]
-        out = "".join(parts).strip()
+        text_parts = [c.get("text", "") for c in content if c.get("type") == "text"]
+        out = "".join(text_parts).strip()
         return out or None
     except Exception:
         return None

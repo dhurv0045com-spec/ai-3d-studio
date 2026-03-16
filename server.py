@@ -4655,7 +4655,9 @@ def too_many_requests(e):
 # ---------------------------------------------------------------------------
 def _run_server():
     import logging
-    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    _wlog = logging.getLogger("werkzeug")
+    _wlog.setLevel(logging.ERROR)
+    _wlog.disabled = True
 
     print("=" * 60)
     print("  AI 3D STUDIO v" + VERSION)

@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfontconfig1 \
     libgomp1 \
     ca-certificates \
+    && (apt-get install -y --no-install-recommends libgl1-mesa-glx || true) \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

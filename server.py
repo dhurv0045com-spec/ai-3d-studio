@@ -1,130 +1,3 @@
-﻿# LINUX PATCH - DO NOT REMOVE
-import json as _jp, threading as _tp, os as _op
-
-COLOR_MAP = {"red":(1.0,0.0,0.0),"green":(0.0,0.8,0.0),"blue":(0.0,0.3,1.0),"yellow":(1.0,0.9,0.0),"orange":(1.0,0.5,0.0),"purple":(0.5,0.0,0.8),"pink":(1.0,0.4,0.7),"cyan":(0.0,0.9,1.0),"white":(1.0,1.0,1.0),"black":(0.05,0.05,0.05),"gray":(0.5,0.5,0.5),"grey":(0.5,0.5,0.5),"brown":(0.4,0.2,0.1),"gold":(1.0,0.8,0.0),"silver":(0.75,0.75,0.75)}
-_hl = _tp.Lock()
-
-def load_history():
-    try:
-        if _op.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE,"r",encoding="utf-8") as f:
-                d=_jp.load(f)
-            return d if isinstance(d,list) else []
-    except Exception:
-        pass
-    return []
-
-def save_history(hist):
-    try:
-        with _hl:
-            hist=sorted(hist,key=lambda x:x.get("id",0),reverse=True)
-            if len(hist)>MAX_HISTORY: hist=hist[:MAX_HISTORY]
-            with open(HISTORY_FILE,"w",encoding="utf-8") as f:
-                _jp.dump(hist,f,indent=2)
-    except Exception as e:
-        pass
-
-def add_history_entry(entry):
-    try:
-        h=load_history(); h.insert(0,entry); save_history(h)
-    except Exception:
-        pass
-
-def load_folders():
-    try:
-        if _op.path.exists(FOLDERS_FILE):
-            with open(FOLDERS_FILE,"r",encoding="utf-8") as f:
-                d=_jp.load(f)
-            return d if isinstance(d,list) else list(DEFAULT_FOLDERS)
-    except Exception:
-        pass
-    return list(DEFAULT_FOLDERS)
-
-def save_folders(folders):
-    try:
-        with open(FOLDERS_FILE,"w",encoding="utf-8") as f:
-            _jp.dump(folders,f,indent=2)
-    except Exception:
-        pass
-
-def load_index():
-    try:
-        if _op.path.exists(INDEX_FILE):
-            with open(INDEX_FILE,"r",encoding="utf-8") as f:
-                d=_jp.load(f)
-            return d if isinstance(d,list) else []
-    except Exception:
-        pass
-    return []
-
-def save_index(idx):
-    try:
-        with open(INDEX_FILE,"w",encoding="utf-8") as f:
-            _jp.dump(idx[:MAX_HISTORY],f,indent=2)
-    except Exception:
-        pass
-
-def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
-    import requests as _rq, urllib3 as _u3
-    _u3.disable_warnings(_u3.exceptions.InsecureRequestWarning)
-    _base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-    for _i in range(max(len(GEMINI_KEYS),1)):
-        _k = get_gemini_key()
-        _pl = {"contents":[{"parts":[{"text":system_msg+"\n\n"+user_msg}]}],"generationConfig":{"temperature":temperature,"maxOutputTokens":max_tokens,"candidateCount":1}}
-        try:
-            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=180,verify=False)
-            if _r.status_code==200:
-                _c=_r.json().get("candidates",[])
-                if _c:
-                    _p=_c[0].get("content",{}).get("parts",[])
-                    if _p:
-                        mark_key_success(_k)
-                        return _p[0].get("text","")
-            elif _r.status_code in (401,403):
-                mark_key_dead(_k)
-            elif _r.status_code == 429:
-                import time; time.sleep(5)
-            else:
-                rotate_gemini_key()
-        except Exception as _e:
-            try:
-                log_error("[LLM] request exception: " + str(_e))
-            except Exception:
-                pass
-    return None
-
-def mark_key_failed(name_or_val):
-    try:
-        for _k in GEMINI_KEYS:
-            if _k.get("key")==name_or_val or _k.get("name")==name_or_val:
-                _k["fails"]=_k.get("fails",0)+1
-                if _k["fails"]>=3: _k["dead"]=True
-                break
-    except Exception:
-        pass
-
-def run_blender_script(script_text, output_path):
-    import tempfile, subprocess as _sp
-    if not _op.path.isfile(BLENDER_EXE): return False
-    try:
-        full = "import bpy,math,os\nOUTPUT_PATH=r'" + output_path.replace("\\","/") + "'\n" + script_text
-        with tempfile.NamedTemporaryFile(mode="w",suffix=".py",delete=False,encoding="utf-8") as tf:
-            tf.write(full); tmp=tf.name
-        cf = 0x08000000 if _op.name=="nt" else 0
-        r = _sp.run([BLENDER_EXE,"--background","--python",tmp],capture_output=True,text=True,timeout=120,creationflags=cf)
-        try:
-            _op.unlink(tmp)
-        except Exception as _e:
-            try:
-                log_error("[BLENDER] temp script cleanup failed: " + str(_e))
-            except Exception:
-                pass
-        if r.returncode==0 and _op.path.exists(output_path):
-            ok,msg=validate_glb(output_path)
-            return ok
-        return False
-    except Exception:
-        return False
 # LINUX PATCH - DO NOT REMOVE
 import json as _jp, threading as _tp, os as _op
 
@@ -148,7 +21,7 @@ def save_history(hist):
             if len(hist)>MAX_HISTORY: hist=hist[:MAX_HISTORY]
             with open(HISTORY_FILE,"w",encoding="utf-8") as f:
                 _jp.dump(hist,f,indent=2)
-    except Exception as e:
+    except Exception:
         pass
 
 def add_history_entry(entry):
@@ -191,33 +64,45 @@ def save_index(idx):
     except Exception:
         pass
 
-def call_llm(system_msg, user_msg, max_tokens=2000, temperature=0.2):
-    import requests as _rq, urllib3 as _u3
-    _u3.disable_warnings(_u3.exceptions.InsecureRequestWarning)
-    _base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-    for _i in range(max(len(GEMINI_KEYS),1)):
-        _k = get_gemini_key()
-        _pl = {"contents":[{"parts":[{"text":system_msg+"\n\n"+user_msg}]}],"generationConfig":{"temperature":temperature,"maxOutputTokens":max_tokens,"candidateCount":1}}
+def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    import requests as _requests
+    import time as _time
+    tries = max(len(GEMINI_KEYS), 1)
+    for _ in range(tries):
+        key_val = get_gemini_key()
         try:
-            _r = _rq.post(_base+_k,headers={"Content-Type":"application/json"},json=_pl,timeout=180,verify=False)
-            if _r.status_code==200:
-                _c=_r.json().get("candidates",[])
-                if _c:
-                    _p=_c[0].get("content",{}).get("parts",[])
-                    if _p:
-                        mark_key_success(_k)
-                        return _p[0].get("text","")
-            elif _r.status_code in (401,403):
-                mark_key_dead(_k)
-            elif _r.status_code == 429:
-                import time; time.sleep(5)
-            else:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key_val}"
+            payload = {
+                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"parts": [{"text": user_prompt}]}],
+                "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
+            }
+            r = _requests.post(url, json=payload, timeout=180)
+            if r.status_code == 429:
+                log_gen("[LLM] Gemini returned 429, sleeping 5s")
+                _time.sleep(5)
+                continue
+            if r.status_code in (401, 403):
+                mark_key_dead(key_val)
+                log_error(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
+                continue
+            if r.status_code != 200:
                 rotate_gemini_key()
-        except Exception as _e:
-            try:
-                log_error("[LLM] request exception: " + str(_e))
-            except Exception:
-                pass
+                log_error(f"[LLM] Gemini API HTTP {r.status_code}: {r.text[:300]}")
+                continue
+            result = r.json()
+            candidates = result.get("candidates", [])
+            if not candidates:
+                rotate_gemini_key(); log_error("[LLM] Gemini response missing candidates"); continue
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if not parts:
+                rotate_gemini_key(); log_error("[LLM] Gemini response missing content parts"); continue
+            mark_key_success(key_val)
+            return parts[0].get("text", "")
+        except Exception as e:
+            rotate_gemini_key()
+            log_error(f"[LLM] Gemini request exception: {e}")
+            continue
     return None
 
 def mark_key_failed(name_or_val):
@@ -232,7 +117,9 @@ def mark_key_failed(name_or_val):
 
 def run_blender_script(script_text, output_path):
     import tempfile, subprocess as _sp
-    if not _op.path.isfile(BLENDER_EXE): return False
+    if not _op.path.isfile(BLENDER_EXE):
+        log_error("[BLENDER] executable not found: " + str(BLENDER_EXE))
+        return False
     try:
         full = "import bpy,math,os\nOUTPUT_PATH=r'" + output_path.replace("\\","/") + "'\n" + script_text
         with tempfile.NamedTemporaryFile(mode="w",suffix=".py",delete=False,encoding="utf-8") as tf:
@@ -242,67 +129,18 @@ def run_blender_script(script_text, output_path):
         try:
             _op.unlink(tmp)
         except Exception as _e:
-            try:
-                log_error("[BLENDER] temp script cleanup failed: " + str(_e))
-            except Exception:
-                pass
+            log_error("[BLENDER] temp script cleanup failed: " + str(_e))
         if r.returncode==0 and _op.path.exists(output_path):
             ok,msg=validate_glb(output_path)
+            if not ok:
+                log_error("[BLENDER] invalid GLB after run: " + msg)
             return ok
+        log_error("[BLENDER] run failed rc=" + str(r.returncode) + " stderr=" + (r.stderr or "")[-300:])
         return False
-    except Exception:
+    except Exception as e:
+        log_error("[BLENDER] run exception: " + str(e))
         return False
-import subprocess, tempfile, os as _os
-import requests as _requests
-def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
-    import time as _time
-    tries = max(len(GEMINI_KEYS), 1)
-    for _ in range(tries):
-        key_val = get_gemini_key()
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_val}"
-            payload = {
-                "system_instruction": {"parts": [{"text": system_prompt}]},
-                "contents": [{"parts": [{"text": user_prompt}]}],
-                "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
-            }
-            r = _requests.post(url, json=payload, timeout=180)
 
-            if r.status_code == 429:
-                log_gen("[LLM] Gemini returned 429, sleeping 5s")
-                _time.sleep(5)
-                continue
-
-            if r.status_code in (401, 403):
-                mark_key_dead(key_val)
-                log_error(f"[LLM] Gemini auth failed for key: HTTP {r.status_code}")
-                continue
-
-            if r.status_code != 200:
-                rotate_gemini_key()
-                log_error(f"[LLM] Gemini API HTTP {r.status_code}: {r.text[:300]}")
-                continue
-
-            result = r.json()
-            candidates = result.get("candidates", [])
-            if not candidates:
-                rotate_gemini_key()
-                log_error("[LLM] Gemini response missing candidates")
-                continue
-            parts = candidates[0].get("content", {}).get("parts", [])
-            if not parts:
-                rotate_gemini_key()
-                log_error("[LLM] Gemini response missing content parts")
-                continue
-
-            mark_key_success(key_val)
-            return parts[0].get("text", "")
-        except Exception as e:
-            rotate_gemini_key()
-            log_error(f"[LLM] Gemini request exception: {e}")
-            continue
-    return None
-COLOR_MAP = {'red': (1,0,0), 'blue': (0,0,1), 'green': (0,1,0), 'yellow': (1,1,0), 'white': (1,1,1), 'black': (0,0,0), 'orange': (1,0.5,0), 'purple': (0.5,0,0.5), 'pink': (1,0.5,0.5), 'gray': (0.5,0.5,0.5)}
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
@@ -396,6 +234,7 @@ SHAPEE_FLAG     = os.path.join(BASE_DIR, "shapee_installed.flag")
 def _find_blender_exe():
     """Auto-detect Blender. Works on Windows local AND Railway Linux cloud."""
     import glob
+    import shutil as _shutil
     env_path = os.environ.get("BLENDER_PATH", "/app/blender/blender")
     if env_path and os.path.isfile(env_path):
         return env_path
@@ -403,6 +242,9 @@ def _find_blender_exe():
         for p in ["/app/blender/blender", "/usr/bin/blender", "/usr/local/bin/blender"]:
             if os.path.isfile(p):
                 return p
+        found = _shutil.which("blender")
+        if found:
+            return found
         return "/app/blender/blender"
     else:
         import glob as _glob

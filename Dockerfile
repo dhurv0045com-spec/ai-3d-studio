@@ -6,8 +6,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxi6 \
     libxfixes3 \
     libxrender1 \
+    libxrandr2 \
+    libxxf86vm1 \
+    libglib2.0-0 \
+    libxkbcommon0 \
     libgl1 \
-    libglu1-mesa \
     libsm6 \
     libice6 \
     libx11-6 \
@@ -16,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfontconfig1 \
     libgomp1 \
     ca-certificates \
+    && (apt-get install -y --no-install-recommends libglu1-mesa || true) \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

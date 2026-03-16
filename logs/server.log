@@ -2683,3 +2683,9 @@ RuntimeError: Error: File format is not supported in file "C:\Users\user\Desktop
 RuntimeError: Error: File format is not supported in file "C:\Users\user\Desktop\ai-3d-project\rocket.glb"
 
 
+[16:53:55] INFO  SERVER: [START] Server startup - state reset to idle
+[16:53:55] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[16:53:55] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[16:53:55] INFO  SERVER: [HTTP] GET /status 200 0ms
+[16:53:55] INFO  SERVER: [HTTP] GET /folders 200 2ms
+[16:53:55] INFO  SERVER: [HTTP] GET /history 200 1ms

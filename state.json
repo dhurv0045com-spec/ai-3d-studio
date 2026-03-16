@@ -9,5 +9,9 @@
   "log": [],
   "last_model": "",
   "cached": false,
-  "glb_size": 0
+  "glb_size": 0,
+  "quality_score": 0,
+  "cloud_url": "",
+  "style": "",
+  "complexity": 3
 }

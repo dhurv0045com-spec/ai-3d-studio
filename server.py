@@ -1782,9 +1782,9 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
     script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=4000, temperature=0.2)
         log_gen("[MODEL_B] Gemini returned: " + str(script_raw)[:80] if script_raw else "[MODEL_B] GEMINI RETURNED NONE")
-        if not script_raw: log_gen("[MODEL_B] Gemini returned no script"); return False
-        return False
-
+        if not script_raw:
+            log_gen("[MODEL_B] Gemini returned no script")
+            return False
     script  = strip_md_fences(script_raw)
     preview = script[:300].replace("\n", " | ")
     log_gen("[MODEL_B] Script " + str(len(script)) + " chars: " + preview)

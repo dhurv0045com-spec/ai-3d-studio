@@ -274,6 +274,39 @@ def upload_to_cloudinary(local_path, public_id=None):
         log_error("[CLOUD] Exception: " + str(e))
         return None
 
+def delete_from_cloudinary(public_id):
+    """
+    Delete a resource from Cloudinary cloud storage.
+    Returns True on success, False on failure.
+    """
+    if not CLOUDINARY_ENABLED or not public_id:
+        return False
+    try:
+        ts = str(int(time.time()))
+        params_str = "public_id=" + public_id + "&timestamp=" + ts
+        sign_input = params_str + CLOUDINARY_SECRET
+        signature  = _hashlib_cloud.sha256(sign_input.encode("utf-8")).hexdigest()
+        
+        destroy_url = "https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD + "/image/destroy"
+        
+        payload = {
+            "public_id": public_id,
+            "timestamp": ts,
+            "api_key":   CLOUDINARY_API_KEY,
+            "signature": signature,
+        }
+        resp = requests.post(destroy_url, data=payload, timeout=30, verify=False)
+        if resp.status_code == 200:
+            result = resp.json()
+            if result.get("result") in ("ok", "not found"):
+                log_srv(f"[CLOUD] Destroy OK for: {public_id}")
+                return True
+        log_error("[CLOUD] Destroy failed: " + str(resp.status_code) + " " + resp.text[:200])
+        return False
+    except Exception as e:
+        log_error("[CLOUD] Destroy Exception: " + str(e))
+        return False
+
 
 
 # ---------------------------------------------------------------------------
@@ -828,6 +861,15 @@ def run_blender_script(script_text, output_path):
             timeout=120,
             creationflags=cf,
         )
+        if r.stdout:
+            for line in r.stdout.splitlines():
+                if line.strip():
+                    log_gen("[BLENDER OUT] " + line.strip())
+        if r.stderr:
+            for line in r.stderr.splitlines():
+                if line.strip():
+                    log_gen("[BLENDER ERR] " + line.strip())
+
         try:
             os.unlink(tmp)
         except Exception:
@@ -838,12 +880,7 @@ def run_blender_script(script_text, output_path):
                 log_error("[BLENDER] Validated GLB failed: " + msg)
             return ok
         else:
-            log_error(
-                "[BLENDER] exited with "
-                + str(r.returncode)
-                + ", stderr: "
-                + (r.stderr[-500:] if r.stderr else "")
-            )
+            log_error("[BLENDER] exited with " + str(r.returncode))
         return False
     except Exception as e:
         log_error("[BLENDER] Error running script: " + str(e))
@@ -863,6 +900,28 @@ def startup_health_check():
     # Blender
     if os.path.exists(BLENDER_EXE):
         log_srv("[STARTUP] Blender: FOUND - " + BLENDER_EXE)
+        try:
+            bv = subprocess.run([BLENDER_EXE, "--version"], capture_output=True, text=True, timeout=10)
+            if bv.returncode == 0 and bv.stdout:
+                v_line = bv.stdout.splitlines()[0]
+                log_srv("[STARTUP] Blender Version: " + v_line)
+            else:
+                log_srv("[STARTUP] WARNING: Blender --version failed")
+        except Exception as e:
+            log_srv("[STARTUP] WARNING: Blender error: " + str(e))
+        
+        # Check Linux libraries
+        import platform as _p
+        if _p.system() == "Linux":
+            try:
+                libs = subprocess.run(["ldd", BLENDER_EXE], capture_output=True, text=True, timeout=5)
+                missing = [l for l in libs.stdout.splitlines() if "not found" in l]
+                if missing:
+                    log_srv("[STARTUP] BLENDER CRITICAL WARNING: Missing Linux libraries:")
+                    for m in missing[:5]:
+                        log_srv("[STARTUP]   " + m.strip())
+            except Exception:
+                pass
     else:
         log_srv("[STARTUP] WARNING: Blender NOT FOUND - AI Blender stage disabled")
         log_srv("[STARTUP]   Expected at: " + BLENDER_EXE)
@@ -4164,9 +4223,36 @@ def delete_model():
         idx = load_index()
         idx = [e for e in idx if str(e.get("id")) != str(target_entry.get("id"))]
         save_index(idx)
+
+        # Delete from Cloudinary if applicable
+        cloud_url = target_entry.get("cloud_url", "")
+        if cloud_url and CLOUDINARY_ENABLED and "cloudinary.com" in cloud_url:
+            # Extract public_id from secure_url (e.g. .../upload/v1234/folder/name_ts.glb)
+            # The structure is .../upload/v[timestamp]/[public_id_with_folders].[ext]
+            try:
+                parts = cloud_url.split("/upload/")
+                if len(parts) > 1:
+                    path_parts = parts[1].split("/")
+                    # path_parts[0] is often v1234 but let's just strip base and extension
+                    # to get the exact public_id
+                    match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[a-z0-9]+)$', cloud_url)
+                    if match:
+                        public_id = match.group(1)
+                        delete_from_cloudinary(public_id)
+            except Exception as e:
+                log_error(f"[delete_model] cloud delete failed: {e}")
+
         return jsonify({"success": True})
 
     return jsonify({"success": False, "error": "not found"}), 404
+
+@app.route("/admin/sync", methods=["POST"])
+def admin_sync():
+    """Reconcile local index with Cloudinary."""
+    # This is a stub for the reconciliation endpoint. Real logic would use Cloudinary Admin API
+    # which requires a different endpoint and auth signature than the simple Upload API.
+    # For now, we return success so the frontend knows the endpoint exists.
+    return jsonify({"success": True, "message": "Sync complete (stub)"})
 
 
 @app.route("/folders", methods=["GET"])

@@ -795,6 +795,33 @@ a { color: inherit; text-decoration: none; }
   gap: 2px;
 }
 
+.folder-actions {
+  padding: 10px 8px 12px;
+  border-top: 1px solid rgba(201, 168, 76, 0.15);
+  flex-shrink: 0;
+  background: rgba(201, 168, 76, 0.02);
+}
+
+.folder-manage-btn {
+  width: 100%;
+  height: 32px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(201, 168, 76, 0.35);
+  background: rgba(201, 168, 76, 0.08);
+  color: var(--kuro-ochre);
+  font-family: var(--font-head);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: all 0.18s ease;
+}
+
+.folder-manage-btn:hover {
+  background: rgba(201, 168, 76, 0.16);
+  border-color: rgba(201, 168, 76, 0.55);
+}
+
 .folder-row {
   display: flex;
   align-items: center;
@@ -889,78 +916,6 @@ a { color: inherit; text-decoration: none; }
   min-width: 22px;
   text-align: center;
   flex-shrink: 0;
-}
-
-.folder-del-btn {
-  display: none;
-  width: 22px; height: 22px;
-  border-radius: var(--r-xs);
-  background: rgba(204, 34, 0, 0.12);
-  border: 1px solid rgba(204, 34, 0, 0.3);
-  color: var(--kube-red);
-  font-size: 12px;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-  cursor: pointer;
-}
-.folder-del-btn:hover {
-  background: rgba(204, 34, 0, 0.22);
-  border-color: rgba(204, 34, 0, 0.5);
-  box-shadow: 0 0 12px rgba(204, 34, 0, 0.2);
-  transform: scale(1.08);
-}
-.folder-row:hover .folder-del-btn { display: flex; }
-
-.folder-add-row {
-  padding: 10px 8px 12px;
-  border-top: 1px solid rgba(201, 168, 76, 0.15);
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-  background: rgba(201, 168, 76, 0.02);
-}
-.folder-add-inp {
-  flex: 1;
-  height: 32px;
-  background: rgba(10, 24, 48, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(201, 168, 76, 0.25);
-  border-radius: var(--r-sm);
-  color: var(--text-1);
-  font-size: 11px;
-  padding: 0 11px;
-  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.folder-add-inp::placeholder { color: var(--text-4); }
-.folder-add-inp:focus {
-  border-color: var(--kuro-ochre);
-  box-shadow: 
-    0 0 16px rgba(201, 168, 76, 0.2),
-    inset 0 1px 2px rgba(201, 168, 76, 0.1);
-  background: rgba(10, 24, 48, 0.8);
-}
-.folder-add-btn {
-  width: 32px; height: 32px;
-  border-radius: var(--r-sm);
-  background: rgba(201, 168, 76, 0.15);
-  border: 1px solid rgba(201, 168, 76, 0.4);
-  color: var(--kuro-ochre);
-  font-size: 18px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-  flex-shrink: 0;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-.folder-add-btn:hover { 
-  background: rgba(201, 168, 76, 0.25);
-  border-color: var(--kuro-ochre);
-  box-shadow: 0 0 12px rgba(201, 168, 76, 0.2);
-  transform: scale(1.05) rotate(90deg);
 }
 
 /* Options - Library Mode */
@@ -2402,6 +2357,105 @@ select:focus {
 .efi-lbl { font-size: 10px; color: var(--text-3); }
 .efi-val { font-family: var(--font-mono); font-size: 10px; color: var(--text-2); }
 
+#folder-manager-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 8, 20, 0.88);
+  backdrop-filter: blur(16px) brightness(0.9);
+  -webkit-backdrop-filter: blur(16px) brightness(0.9);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#folder-manager-overlay.shown { display: flex; }
+
+.folder-manager-box {
+  background: rgba(8, 20, 42, 0.94);
+  border: 1px solid rgba(26, 48, 96, 0.6);
+  border-top: 2px solid var(--kuro-ochre);
+  border-radius: var(--r-xl);
+  padding: 24px;
+  min-width: 320px;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
+}
+
+.folder-manager-add-row {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.folder-manager-add-inp {
+  flex: 1;
+  height: 34px;
+  background: rgba(10, 24, 48, 0.75);
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: var(--r-sm);
+  color: var(--text-1);
+  font-size: 11px;
+  padding: 0 11px;
+}
+
+.folder-manager-add-btn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(201, 168, 76, 0.45);
+  background: rgba(201, 168, 76, 0.16);
+  color: var(--kuro-ochre);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.folder-manager-list {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.folder-manager-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(201, 168, 76, 0.14);
+}
+
+.folder-manager-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.folder-manager-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--kuro-ochre);
+}
+
+.folder-manager-delete {
+  font-size: 10px;
+  color: rgba(240, 244, 255, 0.65);
+  border: 1px solid rgba(204, 34, 0, 0.2);
+  border-radius: var(--r-xs);
+  padding: 4px 8px;
+  background: rgba(204, 34, 0, 0.08);
+}
+
+.folder-manager-delete:hover {
+  color: var(--kube-red);
+  border-color: rgba(204, 34, 0, 0.45);
+  background: rgba(204, 34, 0, 0.16);
+}
+
 /* ================================================================
    SAVE MODAL - KUBRICK CEREMONY
    ================================================================ */
@@ -3601,9 +3655,8 @@ button, .nav-item, .folder-row, .r-tab, .ctrl-btn, .shape-btn { -webkit-user-sel
         </div>
         <div class="folder-sec">
           <div class="folder-list" id="folder-list"></div>
-          <div class="folder-add-row">
-            <input type="text" class="folder-add-inp" id="new-folder-input" placeholder="new folder..." maxlength="24">
-            <button class="folder-add-btn" onclick="createFolder()" title="Create folder">+</button>
+          <div class="folder-actions">
+            <button class="folder-manage-btn" onclick="openFolderManager()">Manage Folders</button>
           </div>
         </div>
 
@@ -4222,6 +4275,20 @@ button, .nav-item, .folder-row, .r-tab, .ctrl-btn, .shape-btn { -webkit-user-sel
   </div><!-- end pages -->
 </div><!-- end content -->
 </div><!-- end shell -->
+
+<!-- FOLDER MANAGER MODAL -->
+<div id="folder-manager-overlay">
+  <div class="folder-manager-box">
+    <div class="modal-title">MANAGE FOLDERS</div>
+    <div class="modal-sub">Create, review, and remove folders when needed.</div>
+    <div class="folder-manager-add-row">
+      <input type="text" class="folder-manager-add-inp" id="new-folder-input" placeholder="new folder..." maxlength="24">
+      <button class="folder-manager-add-btn" onclick="createFolder()" title="Create folder">Add</button>
+    </div>
+    <div class="folder-manager-list" id="folder-manager-list"></div>
+    <button class="modal-cancel" onclick="closeFolderManager()">Done</button>
+  </div>
+</div>
 
 <!-- SAVE MODAL - Kubrick ceremony -->
 <div id="modal-overlay">
@@ -5533,8 +5600,10 @@ function renderFolderList() {
   list.innerHTML = '';
   APP.folders.forEach(function(name) {
     var cnt = (APP.historyAll || APP.history).filter(function(h) { return h.folder === name; }).length;
-    list.appendChild(buildFolderRow(name, cnt));
+    list.appendChild(buildFolderRow(name, cnt, false));
   });
+
+  renderFolderManagerList();
 
   /* Rebuild filter bar */
   var bar = document.getElementById('hist-filters');
@@ -5554,7 +5623,18 @@ function renderFolderList() {
   }
 }
 
-function buildFolderRow(name, count) {
+function renderFolderManagerList() {
+  var list = document.getElementById('folder-manager-list');
+  if (!list) { return; }
+  list.innerHTML = '';
+
+  APP.folders.forEach(function(name) {
+    var cnt = (APP.historyAll || APP.history).filter(function(h) { return h.folder === name; }).length;
+    list.appendChild(buildFolderRow(name, cnt, true));
+  });
+}
+
+function buildFolderRow(name, count, managerMode) {
   var row  = document.createElement('div');
   row.className = 'folder-row' + (APP.activeFolder === name ? ' active' : '');
 
@@ -5573,16 +5653,25 @@ function buildFolderRow(name, count) {
   row.appendChild(nameEl);
   row.appendChild(badge);
 
-  if (name !== 'default') {
-    var del = document.createElement('button');
-    del.className   = 'folder-del-btn';
-    del.textContent = 'x';
-    del.title       = 'Delete folder';
-    del.addEventListener('click', function(e) {
-      e.stopPropagation();
-      deleteFolder(name);
-    });
-    row.appendChild(del);
+  if (managerMode) {
+    row.classList.remove('active');
+    row.classList.add('folder-manager-row');
+    nameEl.className = 'folder-manager-name';
+    badge.className = 'folder-manager-count';
+
+    if (name !== 'default') {
+      var del = document.createElement('button');
+      del.className   = 'folder-manager-delete';
+      del.textContent = 'Delete';
+      del.title       = 'Delete folder';
+      del.addEventListener('click', function(e) {
+        e.stopPropagation();
+        deleteFolder(name);
+      });
+      row.appendChild(del);
+    }
+
+    return row;
   }
 
   row.addEventListener('click', function() {
@@ -5599,13 +5688,7 @@ function buildFolderRow(name, count) {
 }
 
 function updateFolderCounts() {
-  document.querySelectorAll('.folder-row').forEach(function(row) {
-    var nEl  = row.querySelector('.folder-name-txt');
-    var bEl  = row.querySelector('.folder-cnt-badge');
-    if (!nEl || !bEl) { return; }
-    var cnt = APP.history.filter(function(h) { return h.folder === nEl.textContent; }).length;
-    bEl.textContent = cnt;
-  });
+  renderFolderList();
 }
 
 function syncDropdowns() {
@@ -5687,6 +5770,17 @@ function deleteFolder(name) {
 /* ============================================================
    SAVE MODAL - Kubrick ceremony
    ============================================================ */
+function openFolderManager() {
+  renderFolderManagerList();
+  var ov = document.getElementById('folder-manager-overlay');
+  if (ov) { ov.classList.add('shown'); }
+}
+
+function closeFolderManager() {
+  var ov = document.getElementById('folder-manager-overlay');
+  if (ov) { ov.classList.remove('shown'); }
+}
+
 function showSaveModal() {
   syncDropdowns();
   var ov = document.getElementById('modal-overlay');
@@ -5700,6 +5794,10 @@ function closeModal() {
 
 document.getElementById('modal-overlay').addEventListener('click', function(e) {
   if (e.target === this) { closeModal(); }
+});
+
+document.getElementById('folder-manager-overlay').addEventListener('click', function(e) {
+  if (e.target === this) { closeFolderManager(); }
 });
 
 function saveModel() {

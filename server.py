@@ -317,7 +317,8 @@ def _build_gemini_keys():
         seen.add(key_val)
         result.append({"name": name, "key": key_val,
                        "fails": 0, "dead": False, "last_used": 0.0,
-                       "day": time.strftime("%Y-%m-%d"), "daily_used": 0})
+                       "day": time.strftime("%Y-%m-%d"), "daily_used": 0,
+                       "rate_limited_until": 0.0, "death_reason": ""})
 
     return result
 
@@ -393,19 +394,23 @@ def rotate_gemini_key():
                 k["last_used"] = time.time()
                 if k["fails"] >= 3:
                     k["dead"] = True
+                    k["death_reason"] = "error"
                     log_srv("[GEMINI] Key " + k["name"] + " dead after 3 fails")
                 break
     log_srv("[GEMINI] Rotated - next key queued")
 
 
-def mark_key_dead(key_val):
-    """Kill a key immediately on 401/403."""
+def mark_key_dead(key_val, reason="auth"):
+    """Kill a key immediately. reason='auth' for 401/403, '429' for rate limit."""
     with _gemini_lock:
         for k in GEMINI_KEYS:
             if k["key"] == key_val:
                 k["dead"] = True
-                k["fails"] = 99
-                log_srv("[GEMINI] Key " + k["name"] + " killed on auth error")
+                k["fails"] = 99 if reason == "auth" else k["fails"]
+                k["death_reason"] = reason
+                if reason == "429":
+                    k["rate_limited_until"] = time.time() + 60
+                log_srv("[GEMINI] Key " + k["name"] + " killed: " + reason)
                 break
 
 
@@ -424,6 +429,35 @@ def get_gemini_key_status():
     alive = [k["name"] for k in GEMINI_KEYS if not k["dead"]]
     dead  = [k["name"] for k in GEMINI_KEYS if k["dead"]]
     return alive, dead
+
+
+# ---------------------------------------------------------------------------
+#  KEY RESURRECTION THREAD - Auto-revive 429-dead keys after 60s
+# ---------------------------------------------------------------------------
+_resurrection_running = False
+
+def _key_resurrection_loop():
+    """Background thread: every 30s, check for keys killed by 429 and revive them."""
+    global _resurrection_running
+    _resurrection_running = True
+    while True:
+        time.sleep(30)
+        now = time.time()
+        with _gemini_lock:
+            for k in GEMINI_KEYS:
+                if k["dead"] and k.get("death_reason") == "429":
+                    if now >= k.get("rate_limited_until", 0):
+                        k["dead"] = False
+                        k["fails"] = 0
+                        k["death_reason"] = ""
+                        k["rate_limited_until"] = 0.0
+                        log_srv("[GEMINI] Key " + k["name"] + " resurrected (429 cooldown expired)")
+
+def start_key_resurrection():
+    if not _resurrection_running:
+        t = threading.Thread(target=_key_resurrection_loop, daemon=True)
+        t.start()
+        log_srv("[GEMINI] Key resurrection thread started")
 
 
 # ---------------------------------------------------------------------------
@@ -695,9 +729,14 @@ def save_index(idx):
 #  GEMINI LLM CALL
 # ---------------------------------------------------------------------------
 def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
-    """Call Gemini API with system_instruction field and proper retry/rotation."""
+    """Call Gemini API with system_instruction field and proper retry/rotation.
+    On 429: retries same key up to 3 times with escalating sleep (3s, 8s, 15s).
+    On 401/403: marks key permanently dead.
+    On other errors: rotates to next key.
+    """
     _base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-    for _i in range(max(len(GEMINI_KEYS), 1)):
+    _429_counts = {}  # key_val -> retry count for 429s
+    for _i in range(max(len(GEMINI_KEYS), 1) + 3):  # extra 3 for 429 retries
         _k = get_gemini_key()
         if not _k:
             return None
@@ -724,13 +763,22 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
                     p = c[0].get("content", {}).get("parts", [])
                     if p:
                         mark_key_success(_k)
+                        _gemini_inc_daily_used_by_key(_k)
                         return p[0].get("text", "")
             elif r.status_code == 429:
-                log_srv("[GEMINI] 429 Too Many Requests. Sleeping 5s...")
-                time.sleep(5)
-                continue
+                key_429_count = _429_counts.get(_k, 0)
+                sleep_times = [3, 8, 15]
+                if key_429_count < len(sleep_times):
+                    sleep_s = sleep_times[key_429_count]
+                    log_srv(f"[GEMINI] 429 on key - retry {key_429_count+1}/3 after {sleep_s}s sleep")
+                    _429_counts[_k] = key_429_count + 1
+                    time.sleep(sleep_s)
+                    continue  # retry same key
+                else:
+                    log_srv("[GEMINI] 429 persistent - marking key rate-limited")
+                    mark_key_dead(_k, reason="429")
             elif r.status_code in (401, 403):
-                mark_key_dead(_k)
+                mark_key_dead(_k, reason="auth")
             else:
                 log_srv("[GEMINI] status " + str(r.status_code) + ": " + r.text[:200])
                 rotate_gemini_key()
@@ -738,6 +786,15 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
             log_srv("[GEMINI] exception: " + str(e))
             rotate_gemini_key()
     return None
+
+
+def _gemini_inc_daily_used_by_key(key_val):
+    """Increment daily usage for a key by its value string."""
+    with _gemini_lock:
+        for k in GEMINI_KEYS:
+            if k["key"] == key_val:
+                _gemini_inc_daily_used(k)
+                break
 
 
 # ---------------------------------------------------------------------------
@@ -3717,7 +3774,7 @@ def serve_manifest():
 
 @app.route("/health")
 def health_check():
-    """Railway health check endpoint. Returns 200 when app is alive."""
+    """Railway health check endpoint. Returns 200 with comprehensive status."""
     try:
         alive_keys = len([k for k in GEMINI_KEYS if not k.get("dead", False)])
     except Exception:
@@ -3730,13 +3787,34 @@ def health_check():
         cloud_ok = CLOUDINARY_ENABLED
     except Exception:
         cloud_ok = False
+    # Per-key status
+    keys_status = []
+    for k in GEMINI_KEYS:
+        status = "alive"
+        if k.get("dead"):
+            reason = k.get("death_reason", "unknown")
+            if reason == "429":
+                status = "rate-limited"
+            elif reason == "auth":
+                status = "dead-auth"
+            else:
+                status = "dead-error"
+        keys_status.append({
+            "name": k.get("name", "?"),
+            "status": status,
+            "fails": k.get("fails", 0),
+            "death_reason": k.get("death_reason", ""),
+        })
     return jsonify({
-        "status":      "healthy",
-        "version":     VERSION,
-        "blender":     blender_ok,
-        "gemini_keys": alive_keys,
-        "cloudinary":  cloud_ok,
-        "uptime":      "ok"
+        "status":          "healthy",
+        "version":         VERSION,
+        "blender":         blender_ok,
+        "blender_path":    BLENDER_EXE,
+        "gemini_keys_total": len(GEMINI_KEYS),
+        "gemini_keys_alive": alive_keys,
+        "gemini_keys":     keys_status,
+        "cloudinary":      cloud_ok,
+        "uptime":          "ok"
     })
 
 
@@ -4736,6 +4814,9 @@ def _run_server():
 
     # Setup directories and reset state
     setup_dirs()
+
+    # Start background threads
+    start_key_resurrection()
 
     print(f"Server log: {SERVER_LOG}")
     port = int(os.environ.get("PORT", 8080))

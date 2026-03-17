@@ -1852,6 +1852,44 @@ input[type="color"] { display: none; }
   gap: 6px;
   margin-top: 6px;
 }
+
+.color-control-entry { margin: 10px 14px 0; }
+#color-control-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(0,180,216,0.25);
+  background: rgba(6,16,30,0.88);
+  color: var(--text-1);
+  font-family: var(--font-head); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+#color-control-trigger:hover { border-color: var(--tara-amber); box-shadow: 0 0 0 3px var(--tara-soft); }
+.color-control-preview {
+  width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.35);
+}
+#color-control-panel {
+  margin: 10px 14px 0;
+  border: 1px solid var(--br-2);
+  border-radius: var(--r-md);
+  background: var(--bg-panel);
+  padding: 10px;
+  display: none;
+}
+#color-control-panel.open { display: block; }
+.color-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.color-mode-btn {
+  border: 1px solid var(--br-3);
+  border-radius: var(--r-xs);
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--text-2);
+  background: var(--bg-input);
+}
+.color-mode-btn.active {
+  border-color: var(--tara-amber);
+  color: var(--tara-yellow);
+  background: rgba(255,140,0,0.12);
+}
 .swatch {
   aspect-ratio: 1;
   border-radius: 50%;
@@ -3689,6 +3727,24 @@ button, .nav-item, .folder-row, .r-tab, .ctrl-btn, .shape-btn { -webkit-user-sel
           <button class="r-tab" data-rtab="export"  onclick="goRTab('export')">EXPORT</button>
         </div>
 
+        <div id="color-control-panel" aria-hidden="true">
+          <div class="color-mode-switch">
+            <button class="color-mode-btn active" id="color-mode-create" onclick="switchColorControlMode('create')">Create</button>
+            <button class="color-mode-btn" id="color-mode-edit" onclick="switchColorControlMode('edit')">Edit</button>
+          </div>
+          <div class="color-row">
+            <div class="color-preview" id="color-preview" onclick="document.getElementById('color-picker').click()"></div>
+            <input type="color" id="color-picker" value="#00d4ff">
+            <input type="text" class="color-hex-inp" id="color-hex" value="#00D4FF" maxlength="7" spellcheck="false">
+          </div>
+          <div class="color-row" id="edit-color-row" style="display:none;margin-top:8px">
+            <div class="color-preview" id="edit-color-preview" onclick="document.getElementById('edit-color-picker').click()"></div>
+            <input type="color" id="edit-color-picker" value="#ff6b35">
+            <input type="text" class="color-hex-inp" id="edit-color-hex" value="#FF6B35" maxlength="7">
+          </div>
+          <div class="swatches-grid" id="swatches"></div>
+        </div>
+
         <!-- ===== CREATE TAB - Tarantino Zone ===== -->
         <div class="r-tab-content active" id="rtc-create">
           <div id="tab-create">
@@ -3813,14 +3869,11 @@ button, .nav-item, .folder-row, .r-tab, .ctrl-btn, .shape-btn { -webkit-user-sel
               </div>
             </div>
 
-            <div class="f-wrap">
-              <div class="f-lbl"><div class="f-dot amber"></div>Color</div>
-              <div class="color-row">
-                <div class="color-preview" id="color-preview" onclick="document.getElementById('color-picker').click()"></div>
-                <input type="color" id="color-picker" value="#00d4ff">
-                <input type="text" class="color-hex-inp" id="color-hex" value="#00D4FF" maxlength="7" spellcheck="false">
-              </div>
-              <div class="swatches-grid" id="swatches"></div>
+            <div class="color-control-entry">
+              <button id="color-control-trigger" onclick="toggleColorControlPanel()" aria-expanded="false" aria-controls="color-control-panel">
+                <span>Color</span>
+                <span class="color-control-preview" id="color-entry-preview"></span>
+              </button>
             </div>
 
             <div class="f-wrap">
@@ -3902,14 +3955,11 @@ button, .nav-item, .folder-row, .r-tab, .ctrl-btn, .shape-btn { -webkit-user-sel
                 style="min-height:96px"></textarea>
             </div>
 
-            <div class="f-wrap">
-              <div class="f-lbl"><div class="f-dot orange"></div>New Color</div>
-              <div class="color-row">
-                <div class="color-preview" id="edit-color-preview" onclick="document.getElementById('edit-color-picker').click()"></div>
-                <input type="color" id="edit-color-picker" value="#ff6b35">
-                <input type="text" class="color-hex-inp" id="edit-color-hex" value="#FF6B35" maxlength="7">
-              </div>
-              <div class="swatches-grid" id="edit-swatches"></div>
+            <div class="color-control-entry">
+              <button id="edit-color-control-trigger" onclick="toggleColorControlPanel('edit')" aria-expanded="false" aria-controls="color-control-panel">
+                <span>Color</span>
+                <span class="color-control-preview" id="edit-color-entry-preview"></span>
+              </button>
             </div>
 
             <div class="f-wrap">
@@ -4281,6 +4331,8 @@ var APP = {
   shortcutHoldTimer:null
 };
 
+APP.colorControl = { open: false, mode: 'create' };
+
 /* ============================================================
    THREE.JS GLOBALS
    ============================================================ */
@@ -4588,6 +4640,8 @@ function goRTab(name) {
   document.querySelectorAll('.r-tab-content').forEach(function(el) {
     el.classList.toggle('active', el.id === 'rtc-' + name);
   });
+  if (name === 'edit') { switchColorControlMode('edit'); }
+  if (name === 'create') { switchColorControlMode('create'); }
   if (name === 'history') { refreshHistory(); }
 }
 
@@ -4600,7 +4654,7 @@ var SWATCHES = [
   '#ffffff','#cccccc','#888888','#444444','#cc8833','#ff9966'
 ];
 
-function buildSwatches(gridId, pickerId, previewId, hexId, mode) {
+function buildSwatches(gridId) {
   var grid = document.getElementById(gridId);
   if (!grid) { return; }
   grid.innerHTML = '';
@@ -4610,26 +4664,34 @@ function buildSwatches(gridId, pickerId, previewId, hexId, mode) {
     sw.style.background = c;
     sw.title            = c;
     sw.addEventListener('click', function() {
-      setColor(c, pickerId, previewId, hexId, mode);
+      setModelColor(c, APP.colorControl.mode);
     });
     grid.appendChild(sw);
   });
 }
 
-function setColor(hex, pickerId, previewId, hexId, mode) {
-  if (mode === 'edit') { APP.editColor = hex; }
-  else                 { APP.selectedColor = hex; }
-  var picker  = document.getElementById(pickerId);
-  var preview = document.getElementById(previewId);
-  var hexInp  = document.getElementById(hexId);
-  if (picker)  { picker.value = hex; }
-  if (preview) { preview.style.background = hex; }
-  if (hexInp)  { hexInp.value = hex.toUpperCase(); }
-  var grid = document.getElementById(mode === 'edit' ? 'edit-swatches' : 'swatches');
+function setModelColor(hex, mode) {
+  mode = mode === 'edit' ? 'edit' : 'create';
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex || '')) { return; }
+  var normalized = hex.toLowerCase();
+  if (mode === 'edit') { APP.editColor = normalized; }
+  else                 { APP.selectedColor = normalized; }
+
+  var picker  = document.getElementById(mode === 'edit' ? 'edit-color-picker' : 'color-picker');
+  var preview = document.getElementById(mode === 'edit' ? 'edit-color-preview' : 'color-preview');
+  var hexInp  = document.getElementById(mode === 'edit' ? 'edit-color-hex' : 'color-hex');
+  var entryPreview = document.getElementById(mode === 'edit' ? 'edit-color-entry-preview' : 'color-entry-preview');
+
+  if (picker)       { picker.value = normalized; }
+  if (preview)      { preview.style.background = normalized; }
+  if (hexInp)       { hexInp.value = normalized.toUpperCase(); }
+  if (entryPreview) { entryPreview.style.background = normalized; }
+
+  var grid = document.getElementById('swatches');
   if (grid) {
     grid.querySelectorAll('.swatch').forEach(function(sw) {
       sw.classList.toggle('on',
-        sw.style.background === hex || sw.style.background === hexRgbStr(hex)
+        APP.colorControl.mode === mode && (sw.style.background === normalized || sw.style.background === hexRgbStr(normalized))
       );
     });
   }
@@ -4644,32 +4706,58 @@ function hexRgbStr(hex) {
 }
 
 function initColorSwatches() {
-  buildSwatches('swatches',     'color-picker',      'color-preview',      'color-hex',      'create');
-  buildSwatches('edit-swatches','edit-color-picker', 'edit-color-preview', 'edit-color-hex', 'edit');
+  buildSwatches('swatches');
 
-  function wirePicker(pid, pvid, hid, mode) {
+  function wirePicker(pid, hid, mode) {
     var picker = document.getElementById(pid);
     var hexInp = document.getElementById(hid);
     if (picker) {
       picker.addEventListener('input', function() {
-        setColor(picker.value, pid, pvid, hid, mode);
+        setModelColor(picker.value, mode);
       });
     }
     if (hexInp) {
       hexInp.addEventListener('input', function() {
         var v = hexInp.value.trim();
         if (/^#[0-9a-fA-F]{6}$/.test(v)) {
-          setColor(v, pid, pvid, hid, mode);
+          setModelColor(v, mode);
         }
       });
     }
   }
 
-  wirePicker('color-picker',      'color-preview',      'color-hex',      'create');
-  wirePicker('edit-color-picker', 'edit-color-preview', 'edit-color-hex', 'edit');
+  wirePicker('color-picker',      'color-hex',      'create');
+  wirePicker('edit-color-picker', 'edit-color-hex', 'edit');
 
-  setColor(APP.selectedColor, 'color-picker',      'color-preview',      'color-hex',      'create');
-  setColor(APP.editColor,     'edit-color-picker', 'edit-color-preview', 'edit-color-hex', 'edit');
+  setModelColor(APP.selectedColor, 'create');
+  setModelColor(APP.editColor, 'edit');
+  switchColorControlMode('create');
+}
+
+function switchColorControlMode(mode) {
+  APP.colorControl.mode = mode === 'edit' ? 'edit' : 'create';
+  var createBtn = document.getElementById('color-mode-create');
+  var editBtn   = document.getElementById('color-mode-edit');
+  var createRow = document.getElementById('color-preview') ? document.getElementById('color-preview').parentElement : null;
+  var editRow   = document.getElementById('edit-color-row');
+  if (createBtn) { createBtn.classList.toggle('active', APP.colorControl.mode === 'create'); }
+  if (editBtn)   { editBtn.classList.toggle('active', APP.colorControl.mode === 'edit'); }
+  if (createRow) { createRow.style.display = APP.colorControl.mode === 'create' ? 'flex' : 'none'; }
+  if (editRow)   { editRow.style.display = APP.colorControl.mode === 'edit' ? 'flex' : 'none'; }
+  setModelColor(APP.colorControl.mode === 'edit' ? APP.editColor : APP.selectedColor, APP.colorControl.mode);
+}
+
+function toggleColorControlPanel(mode) {
+  if (mode) { switchColorControlMode(mode); }
+  var panel = document.getElementById('color-control-panel');
+  if (!panel) { return; }
+  APP.colorControl.open = !APP.colorControl.open;
+  panel.classList.toggle('open', APP.colorControl.open);
+  panel.setAttribute('aria-hidden', APP.colorControl.open ? 'false' : 'true');
+  ['color-control-trigger','edit-color-control-trigger'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.setAttribute('aria-expanded', APP.colorControl.open ? 'true' : 'false'); }
+  });
 }
 
 /* ============================================================
@@ -5419,7 +5507,7 @@ function viewHistModel(item) {
   });
   APP.selectedModel = item;
   APP.lastPrompt    = item.prompt || '';
-  APP.selectedColor = item.color  || '#00d4ff';
+  setModelColor(item.color || '#00d4ff', 'create');
   renderEditInfo();
   goPage('studio');
   goRTab('create');
@@ -5427,6 +5515,7 @@ function viewHistModel(item) {
 
 function editHistModel(item) {
   APP.selectedModel = item;
+  setModelColor(item.color || '#ff6b35', 'edit');
   loadHistoryModelToViewer(item, function() {
     renderEditInfo();
     goPage('studio');

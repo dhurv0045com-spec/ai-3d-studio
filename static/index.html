@@ -140,6 +140,14 @@
   --r-lg:         16px;
   --r-xl:         24px;
   --r-full:       9999px;
+
+  /* ---- SPACING + CONTEXT ACCENTS ---- */
+  --panel-pad:    12px;
+  --row-gap:      8px;
+  --control-h:    36px;
+  --accent-generate: var(--tara-yellow);
+  --accent-history:  var(--nolan-cyan);
+  --accent-edit:     var(--scott-orange);
 }
 
 /* ================================================================
@@ -708,18 +716,6 @@ a { color: inherit; text-decoration: none; }
   border-radius: 50%;
   flex-shrink: 0;
   transition: all 0.22s ease;
-  animation: dotPulse 2s ease-in-out infinite;
-}
-
-@keyframes dotPulse {
-  0%, 100% { 
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% { 
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
 }
 
 .sec-dot.cyan   { 
@@ -761,10 +757,10 @@ a { color: inherit; text-decoration: none; }
 
 /* Pipeline stats */
 .left-stats {
-  padding: 10px 12px;
+  padding: var(--panel-pad);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--row-gap);
   border-bottom: 1px solid var(--br-1);
   flex-shrink: 0;
 }
@@ -929,16 +925,16 @@ a { color: inherit; text-decoration: none; }
 .folder-row:hover .folder-del-btn { display: flex; }
 
 .folder-add-row {
-  padding: 10px 8px 12px;
+  padding: var(--panel-pad) var(--row-gap);
   border-top: 1px solid rgba(201, 168, 76, 0.15);
   display: flex;
-  gap: 6px;
+  gap: var(--row-gap);
   flex-shrink: 0;
   background: rgba(201, 168, 76, 0.02);
 }
 .folder-add-inp {
   flex: 1;
-  height: 32px;
+  height: var(--control-h);
   background: rgba(10, 24, 48, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -958,7 +954,7 @@ a { color: inherit; text-decoration: none; }
   background: rgba(10, 24, 48, 0.8);
 }
 .folder-add-btn {
-  width: 32px; height: 32px;
+  width: var(--control-h); height: var(--control-h);
   border-radius: var(--r-sm);
   background: rgba(201, 168, 76, 0.15);
   border: 1px solid rgba(201, 168, 76, 0.4);
@@ -1083,8 +1079,8 @@ a { color: inherit; text-decoration: none; }
   );
   pointer-events: none;
   z-index: 3;
-  animation: scanlineFloat 20s linear infinite;
-  opacity: 0.75;
+  animation: none;
+  opacity: 0.38;
 }
 #three-canvas {
   position: absolute; inset: 0;
@@ -1124,7 +1120,7 @@ a { color: inherit; text-decoration: none; }
   gap: 20px;
   z-index: 5; pointer-events: none;
   transition: opacity 0.5s, visibility 0.5s;
-  animation: tarkovsky-breathe 4s ease-in-out infinite;
+  animation: tarkovsky-breathe 9s ease-in-out infinite;
 }
 @keyframes tarkovsky-breathe {
   0%,100% { opacity: 0.85; }
@@ -1133,7 +1129,7 @@ a { color: inherit; text-decoration: none; }
 #empty-state.gone { opacity: 0; visibility: hidden; animation: none; }
 
 .es-cube-wrap {
-  animation: tarkovsky-float 4s ease-in-out infinite alternate;
+  animation: tarkovsky-float 9s ease-in-out infinite alternate;
   position: relative;
 }
 @keyframes tarkovsky-float {
@@ -1532,15 +1528,15 @@ a { color: inherit; text-decoration: none; }
 }
 /* Each tab gets its director's color underline */
 .r-tab.active { 
-  color: var(--tara-yellow);
+  color: var(--accent-generate);
   background: rgba(255, 215, 0, 0.04);
 }
 .r-tab[data-rtab="history"].active { 
-  color: var(--nolan-cyan);
+  color: var(--accent-history);
   background: rgba(0, 180, 216, 0.04);
 }
 .r-tab[data-rtab="edit"].active    { 
-  color: var(--scott-orange);
+  color: var(--accent-edit);
   background: rgba(255, 107, 53, 0.04);
 }
 .r-tab[data-rtab="export"].active  { 
@@ -1658,8 +1654,8 @@ textarea {
    CREATE TAB - TARANTINO ZONE
    ================================================================ */
 #tab-create {
-  padding: 14px;
-  gap: 16px;
+  padding: var(--panel-pad);
+  gap: calc(var(--row-gap) + 2px);
   overflow-y: auto;
 }
 
@@ -1681,10 +1677,11 @@ textarea {
 .style-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: var(--row-gap);
 }
 .style-btn {
-  padding: 9px 6px;
+  min-height: var(--control-h);
+  padding: 8px 6px;
   background: rgba(8, 20, 42, 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -1771,7 +1768,7 @@ input[type="range"]::-moz-range-progress {
 .shapes-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  gap: var(--row-gap);
 }
 .shape-btn {
   aspect-ratio: 1;
@@ -1812,13 +1809,11 @@ input[type="range"]::-moz-range-progress {
 }
 /* Wes Anderson hover - delightful lift + Enhanced */
 .shape-btn:hover {
-  background: rgba(255, 215, 0, 0.1);
-  border-color: rgba(255, 215, 0, 0.4);
+  background: rgba(255, 215, 0, 0.08);
+  border-color: rgba(255, 215, 0, 0.32);
   color: var(--tara-yellow);
-  transform: translateY(-3px) scale(1.08) rotate(2deg);
-  box-shadow: 
-    0 8px 24px rgba(255, 140, 0, 0.2),
-    0 0 12px rgba(255, 215, 0, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 140, 0, 0.12);
 }
 .shape-btn:hover::before {
   opacity: 1;
@@ -2205,7 +2200,7 @@ select:focus {
 #tab-history { display: flex; flex-direction: column; flex: 1; }
 
 .hist-header {
-  padding: 10px 14px 8px;
+  padding: var(--panel-pad) var(--panel-pad) 8px;
   border-bottom: 1px solid var(--br-1);
   flex-shrink: 0;
 }
@@ -2231,8 +2226,8 @@ select:focus {
 
 .hist-list {
   flex: 1; overflow-y: auto;
-  padding: 8px;
-  display: flex; flex-direction: column; gap: 5px;
+  padding: var(--row-gap);
+  display: flex; flex-direction: column; gap: var(--row-gap);
 }
 
 /* History card - classified mission file */
@@ -2254,8 +2249,7 @@ select:focus {
 .hist-card:hover {
   background: var(--bg-hover);
   border-color: var(--br-2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 22px rgba(0,0,0,0.4), -2px 0 10px rgba(0,180,216,0.08);
+  box-shadow: 0 2px 14px rgba(0,0,0,0.32), -1px 0 8px rgba(0,180,216,0.08);
 }
 .hist-card:hover .hist-accent { opacity: 1; width: 4px; }
 
@@ -2290,10 +2284,14 @@ select:focus {
   cursor: pointer; transition: all 0.10s;
   background: transparent; color: var(--text-3);
 }
-.hist-act.view:hover { color:var(--nolan-cyan);  background:var(--nolan-soft);  border-color:rgba(0,180,216,0.3); }
-.hist-act.edit:hover { color:var(--scott-orange);background:var(--scott-soft); border-color:rgba(255,107,53,0.3); }
-.hist-act.dl:hover   { color:var(--success);     background:var(--success-soft);border-color:rgba(0,200,150,0.3); }
-.hist-act.del:hover  { color:var(--kube-red);    background:var(--kube-red-soft);border-color:rgba(204,34,0,0.3); }
+.hist-act.view:hover,
+.hist-act.edit:hover,
+.hist-act.dl:hover,
+.hist-act.del:hover {
+  color: var(--accent-history);
+  background: rgba(0, 180, 216, 0.08);
+  border-color: rgba(0, 180, 216, 0.24);
+}
 
 .hist-empty {
   display: flex; flex-direction: column;
@@ -2317,7 +2315,7 @@ select:focus {
 /* ================================================================
    EDIT TAB - RIDLEY SCOTT TRANSFORMATION
    ================================================================ */
-#tab-edit { padding: 14px; gap: 14px; overflow-y: auto; }
+#tab-edit { padding: var(--panel-pad); gap: calc(var(--row-gap) + 2px); overflow-y: auto; }
 
 .edit-model-box {
   background: rgba(255,107,53,0.04);
@@ -2372,7 +2370,23 @@ select:focus {
 /* ================================================================
    EXPORT TAB
    ================================================================ */
-#tab-export { padding: 14px; gap: 10px; overflow-y: auto; }
+#tab-export { padding: var(--panel-pad); gap: var(--row-gap); overflow-y: auto; }
+
+/* Minimal mode trims helper ornaments without removing controls. */
+.ui-minimal .vp-corner,
+.ui-minimal .vp-vignette,
+.ui-minimal .es-chips,
+.ui-minimal .prompt-hint,
+.ui-minimal .prompt-counter,
+.ui-minimal .f-dot,
+.ui-minimal .sec-dot {
+  display: none !important;
+}
+
+.ui-minimal #studio-center::before {
+  opacity: 0.14;
+}
+
 
 .export-card {
   background: var(--bg-card);
@@ -3332,7 +3346,7 @@ select:focus {
    SPIELBERG - Empty state - wonder before magic
    ================================================================ */
 #empty-state {
-  animation: tarkovsky-breathe 5s ease-in-out infinite;
+  animation: tarkovsky-breathe 9s ease-in-out infinite;
 }
 .es-cube-glow {
   background: radial-gradient(ellipse at bottom center, rgba(255,180,0,0.08) 0%, transparent 65%);

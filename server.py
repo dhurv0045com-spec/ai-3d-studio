@@ -202,7 +202,7 @@ CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER", "ai3d_studio").strip() 
 CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY_SECRET)
 
 
-def upload_to_cloudinary(local_path, public_id=None):
+def upload_to_cloudinary(local_path, public_id=None, metadata=None):
     """
     Upload a GLB file to Cloudinary cloud storage.
     Returns the secure_url string on success, None on failure.
@@ -221,7 +221,17 @@ def upload_to_cloudinary(local_path, public_id=None):
             date_path = _dt.datetime.now().strftime("%Y/%m/%d")
             public_id = CLOUDINARY_FOLDER + "/" + date_path + "/" + fname + "_" + ts
 
-        params_str = (
+        params_str = ""
+        context_str = ""
+        if metadata:
+            context_parts = []
+            for k, v in sorted(metadata.items()):
+                safe_v = str(v).replace("|", "\\|").replace("=", "\\=")
+                context_parts.append(f"{k}={safe_v}")
+            context_str = "|".join(context_parts)
+            params_str += "context=" + context_str + "&"
+
+        params_str += (
             "folder=" + CLOUDINARY_FOLDER +
             "&public_id=" + public_id +
             "&resource_type=raw" +
@@ -252,6 +262,8 @@ def upload_to_cloudinary(local_path, public_id=None):
             "signature":     signature,
             "secure":        "true",
         }
+        if context_str:
+            payload["context"] = context_str
 
         resp = requests.post(
             upload_url,
@@ -305,6 +317,62 @@ def delete_from_cloudinary(public_id):
         return False
     except Exception as e:
         log_error("[CLOUD] Destroy Exception: " + str(e))
+        return False
+
+def sync_cloudinary_history():
+    """Fetch all GLB files from Cloudinary folder and rebuild local index.json / history.json"""
+    if not CLOUDINARY_ENABLED:
+        return False
+    try:
+        url = f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD}/resources/search"
+        payload = {
+            "expression": f"folder:{CLOUDINARY_FOLDER}*",
+            "with_field": ["context"],
+            "max_results": 500
+        }
+        resp = requests.post(url, json=payload, auth=(CLOUDINARY_API_KEY, CLOUDINARY_SECRET), timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            resources = data.get("resources", [])
+            new_history = []
+            for r in resources:
+                ctx = r.get("context", {})
+                if not ctx: continue
+                
+                # Some APIs nest within 'custom'
+                if "custom" in ctx and isinstance(ctx["custom"], dict):
+                    ctx = ctx["custom"]
+
+                ts_str = ctx.get("id", "0")
+                try: ts_int = int(ts_str)
+                except: ts_int = int(time.time())
+                
+                entry = {
+                    "id": ts_int,
+                    "prompt": ctx.get("prompt", "imported from cloud"),
+                    "color": ctx.get("color", "#aaaaaa"),
+                    "folder": ctx.get("folder", "default"),
+                    "service": "Cloudinary Sync",
+                    "file": "", # Since it's from cloud, local file might not exist
+                    "cloud_url": r.get("secure_url", ""),
+                    "created": r.get("created_at", str(ts_int)),
+                    "size": r.get("bytes", 0),
+                    "quality_score": 0
+                }
+                new_history.append(entry)
+            
+            # Sort by ID descending
+            new_history.sort(key=lambda x: x["id"], reverse=True)
+            if new_history:
+                save_history(new_history)
+                save_index(new_history[:MAX_HISTORY])
+                log_srv(f"[SYNC] Recovered {len(new_history)} models from Cloudinary.")
+            return True
+        else:
+            log_error(f"[SYNC] Cloudinary search failed: {resp.status_code} {resp.text[:200]}")
+            return False
+    except Exception as e:
+        log_error(f"[SYNC] Cloudinary exception: {e}")
         return False
 
 
@@ -721,14 +789,22 @@ def add_history_entry(entry):
 
 
 def load_folders():
+    folders = set(DEFAULT_FOLDERS)
     try:
+        # 1. Add any folders currently in history
+        for e in load_index():
+            if e.get("folder"):
+                folders.add(e["folder"])
+        
+        # 2. Add any empty folders saved locally
         if os.path.exists(FOLDERS_FILE):
             with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
                 d = json.load(f)
-            return d if isinstance(d, list) else list(DEFAULT_FOLDERS)
+            if isinstance(d, list):
+                folders.update(d)
     except Exception:
         pass
-    return list(DEFAULT_FOLDERS)
+    return sorted(list(folders))
 
 
 def save_folders(folders):
@@ -4130,7 +4206,8 @@ def save_model():
     if not cloud_url:
         cloud_url = upload_to_cloudinary(
             dest,
-            CLOUDINARY_FOLDER + "/" + folder + "_" + str(ts)
+            CLOUDINARY_FOLDER + "/" + folder + "_" + str(ts),
+            metadata={"prompt": prompt, "color": color, "folder": folder, "id": str(ts)}
         ) or ""
     if cloud_url:
         log_srv("[SAVE] Cloud URL: " + cloud_url[:80])

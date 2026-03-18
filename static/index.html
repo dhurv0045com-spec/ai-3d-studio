@@ -4216,6 +4216,10 @@ select:focus {
 }
 /* END 2026 PREMIUM UI */
 
+
+/* COLLAPSIBLE */
+.collapsed{max-height:0!important;}
+.arrow-up{transform:rotate(-90deg)!important;}
 </style>
 </head>
 <body>
@@ -4325,7 +4329,7 @@ select:focus {
       </div>
       <div class="model-counter"><em id="mc-count">0</em> MODELS</div>
       <button id="install-btn" onclick="triggerPwaInstall()">INSTALL</button>
-      <div class="online-dot" id="online-dot" title="Server connection"></div>
+      <div id="user-avatar-wrap" style="display:none;align-items:center;gap:8px;cursor:pointer" onclick="window.location='/auth/logout'" title="Logout"><img id="user-avatar" src="" style="width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,215,0,0.4);object-fit:cover" alt="avatar"><span id="user-name" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:rgba(255,215,0,0.7);letter-spacing:1px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div><div class="online-dot" id="online-dot" title="Server connection"></div>
     </div>
   </div>
 
@@ -4490,8 +4494,8 @@ select:focus {
             </div>
 
             <div class="f-wrap">
-              <div class="f-lbl"><div class="f-dot teal"></div>Quick Shapes</div>
-              <div class="shapes-grid">
+              <div class="f-lbl" onclick="toggleSection('shapes-body','shapes-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot teal"></div>Quick Shapes</span><span id="shapes-arrow" style="font-size:9px;color:var(--nolan-cyan);transition:transform 0.2s">&#9660;</span></div>
+              <div id="shapes-body" style="overflow:hidden;max-height:600px;transition:max-height 0.3s ease"><div class="shapes-grid">
                 <button class="shape-btn" onclick="loadQuickShape('cube')">
                   <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                   CUBE
@@ -4572,35 +4576,14 @@ select:focus {
                   <svg viewBox="0 0 24 24"><line x1="3" y1="21" x2="21" y2="3"/><line x1="10" y1="10" x2="3" y2="17"/><line x1="14" y1="6" x2="21" y2="13"/></svg>
                   SWORD
                 </button>
-              </div>
-            </div>
-
-            <div class="f-wrap">
-              <div class="f-lbl"><div class="f-dot amber"></div>Color</div>
-              <div class="color-row">
+              </div></div></div><div class="f-wrap">
+              <div class="f-lbl" onclick="toggleSection('color-body','color-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot amber"></div>Color</span><span id="color-arrow" style="font-size:9px;color:var(--tara-amber);transition:transform 0.2s">&#9660;</span></div>
+              <div id="color-body" style="overflow:hidden;max-height:300px;transition:max-height 0.3s ease"><div class="color-row">
                 <div class="color-preview" id="color-preview" onclick="document.getElementById('color-picker').click()"></div>
                 <input type="color" id="color-picker" value="#00d4ff">
                 <input type="text" class="color-hex-inp" id="color-hex" value="#00D4FF" maxlength="7" spellcheck="false">
               </div>
-              <div class="swatches-grid" id="swatches"></div>
-            </div>
-
-            <div class="f-wrap">
-              <div class="f-lbl" style="color:var(--success)"><div class="f-dot success"></div>Add Features</div>
-              <div class="tag-input-row mt6">
-                <input type="text" id="add-tag-inp" placeholder="glowing eyes...">
-                <button class="tag-add-btn green" onclick="addTag('add')">ADD</button>
-              </div>
-              <div class="tags-area mt6" id="add-tags"></div>
-            </div>
-
-            <div class="f-wrap">
-              <div class="f-lbl" style="color:var(--kube-red)"><div class="f-dot red"></div>Remove Features</div>
-              <div class="tag-input-row mt6">
-                <input type="text" id="rem-tag-inp" placeholder="wings...">
-                <button class="tag-add-btn red" onclick="addTag('rem')">ADD</button>
-              </div>
-              <div class="tags-area mt6" id="rem-tags"></div>
+              <div class="swatches-grid" id="swatches"></div></div>
             </div>
 
             <div class="f-wrap">

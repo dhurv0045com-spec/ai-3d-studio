@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 3D Studio — Enter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════════
+   VILLENEUVE LOGIN — ARRAKIS MEETS BLADE RUNNER
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --gold:   #FFD700;
+  --amber:  #FF8C00;
+  --cyan:   #00B4D8;
+  --void:   #010814;
+  --deep:   #040C1A;
+  --text1:  #EEF4FF;
+  --text2:  #8AAABF;
+  --text3:  #3A5A7A;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { width:100%; height:100%; overflow:hidden; background:var(--void); }
+body { font-family:'Inter',sans-serif; color:var(--text1); }
+
+/* ── CURSOR ── */
+* { cursor: none !important; }
+#cdot { position:fixed; width:8px; height:8px; border-radius:50%;
+  background:radial-gradient(circle,#FFE55C,#FFD700); pointer-events:none; z-index:99999;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 14px #FFD700,0 0 28px rgba(255,215,0,.5); transition:transform .1s; }
+#cring { position:fixed; width:30px; height:30px; border-radius:50%; border:1.5px solid rgba(255,215,0,.5);
+  pointer-events:none; z-index:99998; transform:translate(-50%,-50%);
+  transition:width .2s,height .2s,border-color .2s; }
+
+/* ── PARALLAX LAYERS ── */
+#scene { position:fixed; inset:0; }
+
+/* Layer 0 — void gradient */
+#layer-void {
+  position:absolute; inset:0;
+  background: radial-gradient(ellipse 120% 80% at 50% 110%, rgba(60,20,5,.4) 0%, transparent 55%),
+              radial-gradient(ellipse 80% 60% at 20% 20%, rgba(0,50,80,.3) 0%, transparent 50%),
+              linear-gradient(180deg, #010814 0%, #040C1A 50%, #020A14 100%);
+}
+
+/* Layer 1 — star field (canvas) */
+#layer-stars { position:absolute; inset:0; }
+
+/* Layer 2 — grid lines (Villeneuve landing field) */
+#layer-grid {
+  position:absolute; inset:0;
+  background:
+    linear-gradient(rgba(0,180,216,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,180,216,.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform-origin: 50% 120%;
+  transform: perspective(800px) rotateX(55deg) translateY(10%);
+  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.8) 30%, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.8) 30%, black 60%, transparent 100%);
+}
+
+/* Layer 3 — floating particles */
+#layer-particles { position:absolute; inset:0; pointer-events:none; }
+
+/* Layer 4 — aurora glow */
+#layer-aurora {
+  position:absolute; inset:-50%;
+  background:
+    radial-gradient(ellipse 70% 50% at 30% 40%, rgba(0,180,216,.06) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 70% at 75% 60%, rgba(255,215,0,.04) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 40% at 50% 80%, rgba(255,107,53,.03) 0%, transparent 55%);
+  animation: auroraFloat 20s ease-in-out infinite alternate;
+}
+@keyframes auroraFloat {
+  0%   { transform:rotate(0deg) scale(1); }
+  50%  { transform:rotate(6deg) scale(1.04); }
+  100% { transform:rotate(-3deg) scale(.97); }
+}
+
+/* Layer 5 — scanlines */
+#layer-scan {
+  position:absolute; inset:0; pointer-events:none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.04) 2px, rgba(0,0,0,.04) 4px);
+  animation: scanFloat 25s linear infinite;
+  opacity:.6;
+}
+@keyframes scanFloat { 0%{transform:translateY(0)} 100%{transform:translateY(8px)} }
+
+/* ── VIGNETTE ── */
+#vignette {
+  position:fixed; inset:0; pointer-events:none; z-index:10;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(1,8,20,.75) 100%);
+}
+
+/* ── CONTENT ── */
+#content {
+  position:relative; z-index:20;
+  width:100%; height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:0;
+}
+
+/* ── LOGO BLOCK ── */
+.logo-block {
+  text-align:center;
+  animation: logoReveal 1.2s cubic-bezier(.34,1.56,.64,1) .3s both;
+  margin-bottom: 48px;
+}
+@keyframes logoReveal {
+  from { opacity:0; transform:translateY(-40px) scale(.85); filter:blur(8px); }
+  to   { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+}
+.logo-wordmark {
+  font-family:'Orbitron',sans-serif;
+  font-size: clamp(52px,8vw,90px);
+  font-weight:900;
+  letter-spacing:.06em;
+  background: linear-gradient(135deg, #FFF5CC 0%, #FFD700 30%, #FF8C00 60%, #FFD700 100%);
+  background-size:200%;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation: goldSheen 4s ease-in-out infinite;
+  line-height:1;
+  filter: drop-shadow(0 0 40px rgba(255,215,0,.25));
+}
+@keyframes goldSheen {
+  0%,100%{background-position:0%} 50%{background-position:100%}
+}
+.logo-sub {
+  font-family:'JetBrains Mono',monospace;
+  font-size: clamp(9px,1.5vw,12px);
+  letter-spacing:.4em;
+  color:var(--text3);
+  text-transform:uppercase;
+  margin-top:10px;
+  animation: subReveal .8s ease 1s both;
+}
+@keyframes subReveal { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.logo-line {
+  width:120px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 16px auto 0;
+  animation: lineExpand .8s ease 1.2s both;
+  box-shadow:0 0 8px rgba(255,215,0,.3);
+}
+@keyframes lineExpand { from{width:0;opacity:0} to{width:120px;opacity:1} }
+
+/* ── LOGIN CARD ── */
+.login-card {
+  background: rgba(4,10,24,.85);
+  backdrop-filter:blur(24px) saturate(1.8);
+  -webkit-backdrop-filter:blur(24px) saturate(1.8);
+  border:1px solid rgba(0,180,216,.15);
+  border-top:2px solid rgba(255,215,0,.4);
+  border-radius:20px;
+  padding: clamp(28px,4vw,44px) clamp(28px,5vw,52px);
+  min-width: clamp(280px,90vw,420px);
+  box-shadow:
+    0 40px 100px rgba(0,0,0,.7),
+    0 0 60px rgba(255,215,0,.05),
+    0 0 0 1px rgba(0,180,216,.08),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  animation: cardReveal .9s cubic-bezier(.34,1.56,.64,1) .6s both;
+  position:relative;
+  overflow:hidden;
+}
+.login-card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,215,0,.5),transparent);
+  animation:cardSheen 3s ease-in-out infinite;
+}
+@keyframes cardSheen {
+  0%,100%{transform:translateX(-100%)} 50%{transform:translateX(100%)}
+}
+@keyframes cardReveal {
+  from{opacity:0;transform:translateY(30px) scale(.94);filter:blur(4px)}
+  to  {opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
+
+.card-eyebrow {
+  font-family:'Orbitron',sans-serif;
+  font-size:9px; font-weight:700; letter-spacing:.3em;
+  color:var(--text3); text-transform:uppercase;
+  text-align:center; margin-bottom:8px;
+}
+.card-title {
+  font-family:'Orbitron',sans-serif;
+  font-size: clamp(14px,2.5vw,18px); font-weight:800; letter-spacing:.08em;
+  color:var(--text1); text-align:center; margin-bottom:6px;
+}
+.card-sub {
+  font-size:12px; color:var(--text3); text-align:center;
+  line-height:1.6; margin-bottom:28px;
+}
+
+/* ── GOOGLE BUTTON ── */
+.btn-google {
+  width:100%; height:50px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:12px;
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+  color:var(--text1); cursor:none;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  position:relative; overflow:hidden;
+  text-decoration:none;
+  margin-bottom:14px;
+}
+.btn-google::before {
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 100%);
+  opacity:0; transition:opacity .2s;
+}
+.btn-google:hover {
+  background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.3);
+  transform:translateY(-3px) scale(1.02);
+  box-shadow:0 12px 32px rgba(0,0,0,.4),0 0 20px rgba(255,255,255,.06);
+}
+.btn-google:hover::before{opacity:1}
+.btn-google svg { flex-shrink:0; width:20px; height:20px; }
+
+/* ── GUEST BUTTON ── */
+.btn-guest {
+  width:100%; height:44px;
+  background:linear-gradient(135deg,#FFD700 0%,#FF8C00 60%,#CC4400 100%);
+  border:none; border-radius:10px;
+  font-family:'Orbitron',sans-serif; font-size:10px; font-weight:900;
+  letter-spacing:.18em; color:#0A0A0A; cursor:none;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  position:relative; overflow:hidden; text-decoration:none;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 1px rgba(255,215,0,.3),0 4px 20px rgba(255,215,0,.2),0 8px 40px rgba(255,140,0,.1);
+}
+.btn-guest::before {
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.3) 50%,transparent 70%);
+  transform:translateX(-120%);
+  transition:transform .7s ease;
+}
+.btn-guest:hover::before{transform:translateX(120%)}
+.btn-guest:hover {
+  transform:translateY(-3px) scale(1.02);
+  box-shadow:0 0 0 2px rgba(255,215,0,.5),0 8px 28px rgba(255,215,0,.3),0 20px 50px rgba(255,140,0,.15);
+  filter:brightness(1.08);
+}
+
+.divider {
+  display:flex; align-items:center; gap:12px;
+  margin:18px 0; color:var(--text3); font-size:11px;
+}
+.divider::before,.divider::after {
+  content:''; flex:1; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(26,48,96,.8),transparent);
+}
+
+/* ── TECH LINES decoration ── */
+.tech-lines {
+  position:absolute; inset:0; pointer-events:none; overflow:hidden;
+  border-radius:20px;
+}
+.tech-line {
+  position:absolute; background:rgba(0,180,216,.04);
+}
+.tl-h { left:0;right:0; height:1px; }
+.tl-v { top:0;bottom:0; width:1px; }
+.tl-1 { top:33%; animation:tlPulse 4s ease-in-out infinite; }
+.tl-2 { top:66%; animation:tlPulse 4s ease-in-out 1.3s infinite; }
+.tl-3 { left:33%; animation:tlPulse 4s ease-in-out .6s infinite; }
+.tl-4 { left:66%; animation:tlPulse 4s ease-in-out 2s infinite; }
+@keyframes tlPulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+/* ── CORNER SIGNATURE ── */
+#signature {
+  position:fixed; bottom:20px; right:24px; z-index:30;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px; letter-spacing:.15em;
+  color:var(--text3);
+  animation: sigReveal 1s ease 2s both;
+  transition:color .3s;
+}
+#signature:hover { color:var(--gold); }
+#signature::before {
+  content:'//';
+  color:var(--cyan);
+  margin-right:6px;
+}
+@keyframes sigReveal { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+
+/* ── BOTTOM STATUS ── */
+#bottom-status {
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  z-index:30; display:flex; align-items:center; gap:8px;
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  letter-spacing:.12em; color:var(--text3);
+  animation: sigReveal 1s ease 2.2s both;
+}
+.status-pip {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 6px var(--cyan);
+  animation:pipPulse 2s ease-in-out infinite;
+}
+@keyframes pipPulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+/* ── MOBILE ── */
+@media(max-width:480px) {
+  * { cursor:auto !important; }
+  #cdot,#cring { display:none; }
+  .logo-wordmark { font-size:44px; }
+  #layer-grid { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- CUSTOM CURSOR -->
+<div id="cdot"></div>
+<div id="cring"></div>
+
+<!-- PARALLAX SCENE -->
+<div id="scene">
+  <div id="layer-void"></div>
+  <canvas id="layer-stars"></canvas>
+  <div id="layer-grid"></div>
+  <canvas id="layer-particles"></canvas>
+  <div id="layer-aurora"></div>
+  <div id="layer-scan"></div>
+</div>
+
+<!-- VIGNETTE -->
+<div id="vignette"></div>
+
+<!-- MAIN CONTENT -->
+<div id="content">
+  <div class="logo-block">
+    <div class="logo-wordmark">AI 3D</div>
+    <div class="logo-sub">Studio &nbsp;·&nbsp; v7</div>
+    <div class="logo-line"></div>
+  </div>
+
+  <div class="login-card">
+    <!-- Tech decoration lines -->
+    <div class="tech-lines">
+      <div class="tech-line tl-h tl-1"></div>
+      <div class="tech-line tl-h tl-2"></div>
+      <div class="tech-line tl-v tl-3"></div>
+      <div class="tech-line tl-v tl-4"></div>
+    </div>
+
+    <div class="card-eyebrow">Generate 3D Worlds</div>
+    <div class="card-title">Enter the Studio</div>
+    <div class="card-sub">Sign in to save your models<br>across all devices</div>
+
+    <!-- Google Login -->
+    <a class="btn-google" href="/auth/google">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </a>
+
+    <div class="divider">or</div>
+
+    <!-- Guest Access -->
+    <a class="btn-guest" href="/studio">
+      ENTER AS GUEST
+    </a>
+  </div>
+</div>
+
+<!-- CORNER SIGNATURE -->
+<div id="signature">TENGEN</div>
+
+<!-- BOTTOM STATUS -->
+<div id="bottom-status">
+  <div class="status-pip"></div>
+  <span id="srv-status">CONNECTING TO STUDIO...</span>
+</div>
+
+<script>
+/* ── CURSOR ── */
+(function() {
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  if (isMobile) return;
+  var dot = document.getElementById('cdot');
+  var ring = document.getElementById('cring');
+  var mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', function(e) {
+    mx=e.clientX; my=e.clientY;
+    dot.style.left=mx+'px'; dot.style.top=my+'px';
+  });
+  (function l(){ rx+=(mx-rx)*.14; ry+=(my-ry)*.14;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    requestAnimationFrame(l); })();
+  document.addEventListener('mouseover', function(e) {
+    if (e.target.closest('a,button')) {
+      ring.style.width='48px'; ring.style.height='48px';
+      ring.style.borderColor='rgba(255,215,0,.8)';
+    } else {
+      ring.style.width='30px'; ring.style.height='30px';
+      ring.style.borderColor='rgba(255,215,0,.5)';
+    }
+  });
+})();
+
+/* ── PARALLAX on mouse move ── */
+(function() {
+  var layers = [
+    { el: document.getElementById('layer-aurora'),     strength: 12 },
+    { el: document.getElementById('layer-grid'),       strength: 6 },
+    { el: document.getElementById('layer-scan'),       strength: 3 },
+  ];
+  var cx = window.innerWidth/2, cy = window.innerHeight/2;
+  var tx=0, ty=0, cx2=0, cy2=0;
+  document.addEventListener('mousemove', function(e) {
+    tx = (e.clientX - cx) / cx;
+    ty = (e.clientY - cy) / cy;
+  });
+  (function animate() {
+    cx2 += (tx - cx2) * .06;
+    cy2 += (ty - cy2) * .06;
+    layers.forEach(function(l) {
+      var x = cx2 * l.strength;
+      var y = cy2 * l.strength;
+      if (l.el.id === 'layer-grid') {
+        l.el.style.transform = 'perspective(800px) rotateX(55deg) translateY(10%) translate('+x+'px,'+y+'px)';
+      } else {
+        l.el.style.transform = 'translate('+x+'px,'+y+'px)';
+      }
+    });
+    requestAnimationFrame(animate);
+  })();
+})();
+
+/* ── STAR FIELD ── */
+(function() {
+  var c = document.getElementById('layer-stars');
+  var ctx = c.getContext('2d');
+  c.width = window.innerWidth; c.height = window.innerHeight;
+  var stars = [];
+  for (var i=0; i<200; i++) {
+    stars.push({
+      x: Math.random()*c.width, y: Math.random()*c.height,
+      r: Math.random()*1.4+.2,
+      a: Math.random()*.7+.1,
+      speed: Math.random()*.15+.03,
+      twinkle: Math.random()*Math.PI*2
+    });
+  }
+  var frame = 0;
+  (function draw() {
+    ctx.clearRect(0,0,c.width,c.height);
+    frame += .015;
+    stars.forEach(function(s) {
+      var alpha = s.a * (.6 + .4*Math.sin(frame + s.twinkle));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,'+alpha+')';
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+  window.addEventListener('resize', function() {
+    c.width = window.innerWidth; c.height = window.innerHeight;
+  });
+})();
+
+/* ── FLOATING PARTICLES ── */
+(function() {
+  var c = document.getElementById('layer-particles');
+  var ctx = c.getContext('2d');
+  c.width = window.innerWidth; c.height = window.innerHeight;
+  var pts = [];
+  for (var i=0; i<60; i++) {
+    pts.push({
+      x: Math.random()*c.width, y: Math.random()*c.height,
+      r: Math.random()*2+.5,
+      vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4,
+      a: Math.random()*.4+.1,
+      col: Math.random()>.5 ? '0,180,216' : '255,215,0'
+    });
+  }
+  (function draw() {
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(function(p) {
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=c.width; if(p.x>c.width)p.x=0;
+      if(p.y<0)p.y=c.height; if(p.y>c.height)p.y=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba('+p.col+','+p.a+')'; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+})();
+
+/* ── SERVER STATUS CHECK ── */
+fetch('/health').then(function(r){ return r.json(); }).then(function(d) {
+  document.getElementById('srv-status').textContent =
+    d.blender ? 'STUDIO ONLINE — READY TO CREATE' : 'STUDIO LOADING...';
+}).catch(function() {
+  document.getElementById('srv-status').textContent = 'STUDIO ONLINE';
+});
+
+/* ── CARD TILT on hover ── */
+(function() {
+  var card = document.querySelector('.login-card');
+  if (!card) return;
+  card.addEventListener('mousemove', function(e) {
+    var r = card.getBoundingClientRect();
+    var x = (e.clientX - r.left)/r.width  - .5;
+    var y = (e.clientY - r.top) /r.height - .5;
+    card.style.transform = 'perspective(800px) rotateY('+(x*8)+'deg) rotateX('+(-y*6)+'deg)';
+  });
+  card.addEventListener('mouseleave', function() {
+    card.style.transform = '';
+    card.style.transition = 'transform .5s cubic-bezier(.34,1.56,.64,1)';
+    setTimeout(function(){ card.style.transition=''; }, 500);
+  });
+})();
+</script>
+</body>
+</html>

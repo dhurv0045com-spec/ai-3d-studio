@@ -213,12 +213,12 @@ def auth_google():
     redirect_uri = url_for('auth_callback', _external=True)
     if "up.railway.app" in request.host:
         redirect_uri = "https://" + request.host + "/auth/callback"
-    return google.authorize_redirect(redirect_uri)
+    import secrets; nonce = secrets.token_urlsafe(16); session["nonce"] = nonce; return google.authorize_redirect(redirect_uri, nonce=nonce)
 
 @app.route('/auth/callback')
 def auth_callback():
     token = google.authorize_access_token()
-    user = google.parse_id_token(token)
+    nonce = session.pop("nonce", None); user = google.parse_id_token(token, nonce=nonce)
     session['user'] = user
     return redirect('/')
 
@@ -5574,5 +5574,7 @@ def build_preset_for_keyword(keyword, r, g, b):
 
 if __name__ == "__main__":
     _run_server()
+
+
 
 

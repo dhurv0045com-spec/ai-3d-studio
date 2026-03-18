@@ -83,6 +83,7 @@ LOGS_DIR        = os.path.join(BASE_DIR, "logs")
 STORAGE_DIR     = os.path.join(BASE_DIR, "storage", "users", "user")
 ROCKET_GLB      = os.path.join(BASE_DIR, "rocket.glb")
 HISTORY_FILE    = os.path.join(BASE_DIR, "history.json")
+DELETED_IDS_FILE = os.path.join(BASE_DIR, "deleted_ids.json")
 FOLDERS_FILE    = os.path.join(BASE_DIR, "folders.json")
 INDEX_FILE      = os.path.join(STORAGE_DIR, "index.json")
 STATE_FILE      = os.path.join(BASE_DIR, "state.json")
@@ -226,6 +227,11 @@ def auth_callback():
 def auth_logout():
     session.pop('user', None)
     return redirect('/')
+@app.route('/guest')
+def guest_login():
+    session['user'] = {'sub': 'anonymous', 'name': 'Guest', 'email': '', 'picture': ''}
+    return redirect('/')
+
 
 @app.route('/auth/me')
 def auth_me():
@@ -418,17 +424,22 @@ def sync_cloudinary_history():
                 except Exception:
                     ts_int = int(time.time())
                 
+                # Skip permanently deleted models
+                deleted_ids = load_deleted_ids()
+                if str(ts_int) in deleted_ids:
+                    continue
                 entry = {
                     "id": ts_int,
                     "prompt": ctx.get("prompt", "imported from cloud"),
                     "color": ctx.get("color", "#aaaaaa"),
                     "folder": ctx.get("folder", "default"),
                     "service": "Cloudinary Sync",
-                    "file": "", # Since it's from cloud, local file might not exist
+                    "file": "",
                     "cloud_url": r.get("secure_url", ""),
                     "created": r.get("created_at", str(ts_int)),
                     "size": r.get("bytes", 0),
-                    "quality_score": 0
+                    "quality_score": 0,
+                    "user_id": ctx.get("user_id", "anonymous")
                 }
                 new_history.append(entry)
             
@@ -849,6 +860,24 @@ def save_history(hist):
     except Exception as _e:
             log_srv(f"[EXCEPTION] {_e}")
 
+
+def load_deleted_ids():
+    try:
+        if os.path.exists(DELETED_IDS_FILE):
+            with open(DELETED_IDS_FILE, 'r', encoding='utf-8') as f:
+                return set(json.load(f))
+    except Exception:
+        pass
+    return set()
+
+def save_deleted_id(model_id):
+    try:
+        ids = load_deleted_ids()
+        ids.add(str(model_id))
+        with open(DELETED_IDS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(list(ids), f)
+    except Exception as e:
+        log_srv('[DELETED_IDS] save failed: ' + str(e))
 
 def add_history_entry(entry):
     try:
@@ -3991,6 +4020,10 @@ def favicon():
 
 @app.route("/")
 def index():
+    user = session.get('user')
+    if not user:
+        return redirect('/login')
+
     """Serve the main index.html from static directory."""
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
@@ -4493,6 +4526,8 @@ def delete_model():
                     log_srv(f"[delete_model] removed: {resolved}")
                 except Exception as e:
                     log_error(f"[delete_model] remove failed: {e}")
+        # Track deleted ID so sync never brings it back
+        save_deleted_id(str(target_entry.get('id', '')))
         # Remove from history
         h = [e for e in h if str(e.get("id")) != str(target_entry.get("id"))]
         save_history(h)
@@ -4592,7 +4627,7 @@ def folders_delete(name):
                 h_new.append(e)
         else:
             h_new.append(e)
-    save_history(h)
+    save_history(h_new)
 
     # Remove from index
     idx = load_index()

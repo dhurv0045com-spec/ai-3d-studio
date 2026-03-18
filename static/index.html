@@ -118,14 +118,14 @@ input,textarea,select{font-family:inherit;color:var(--tx-1)}
   z-index:999999;transform:translate(-50%,-50%);
 }
 #cursor-dot{
-  width:8px;height:8px;background:var(--gold);
-  box-shadow:0 0 8px var(--gold),0 0 16px rgba(255,215,0,.5);
+  width:12px;height:12px;background:var(--gold);
+  box-shadow:0 0 12px var(--gold),0 0 28px rgba(255,215,0,.7),0 0 50px rgba(255,215,0,.2);
   transition:transform .08s ease,background .2s;
 }
 #cursor-ring{
-  width:32px;height:32px;
-  border:1px solid rgba(0,212,255,.5);
-  box-shadow:0 0 8px rgba(0,212,255,.2);
+  width:36px;height:36px;
+  border:1.5px solid rgba(0,212,255,.7);
+  box-shadow:0 0 12px rgba(0,212,255,.35),inset 0 0 8px rgba(0,212,255,.1);
   transition:width .15s,height .15s,border-color .15s;
 }
 body:has(button:hover) #cursor-dot,
@@ -5384,7 +5384,7 @@ function initOverlayCanvas() {
 // Remove default empty folders from display if user hasn't used them
 function filterEmptyDefaultFolders() {
   var defaults = ['vehicles','creatures','buildings','misc','bingoo','unchained'];
-  setTimeout(function() {
+  function doFilter() {
     var items = document.querySelectorAll('.folder-row');
     items.forEach(function(item) {
       var nameEl = item.querySelector('.folder-name-txt');
@@ -5396,7 +5396,10 @@ function filterEmptyDefaultFolders() {
         item.style.display = 'none';
       }
     });
-  }, 1500);
+  }
+  setTimeout(doFilter, 800);
+  setTimeout(doFilter, 2000);
+  setTimeout(doFilter, 4000);
 }
 document.addEventListener('DOMContentLoaded', filterEmptyDefaultFolders);
 
@@ -5413,20 +5416,6 @@ function patchFolderDropdown() {
   });
 }
 
- else {
-    // Temporarily remove max-height to measure real scrollHeight
-    el.style.maxHeight = 'none';
-    var h = el.scrollHeight;
-    el.style.maxHeight = '0px';
-    // Force reflow
-    el.offsetHeight;
-    el.style.maxHeight = (h + 20) + 'px';
-    el.setAttribute('data-open', '1');
-    if (ar) ar.style.transform = 'rotate(0deg)';
-  }
-  el.style.overflow = 'hidden';
-  el.style.transition = 'max-height 0.3s ease';
-}
 
 function loadUserInfo() {
   fetch('/auth/me').then(function(r) { return r.json(); }).then(function(d) {
@@ -5449,39 +5438,6 @@ document.addEventListener('DOMContentLoaded', function() {
   filterEmptyDefaultFolders();
 });
 
-/* ================================================================
-   TOGGLE SECTION — Rock solid implementation
-   Uses actual height measurement, not scrollHeight (which fails on hidden elements)
-   ================================================================ */
-
-
-  // Check current state via data attribute (reliable, not affected by CSS)
-  var isOpen = el.getAttribute('data-ts-open') === '1';
-
-  if (isOpen) {
-    // CLOSE: animate to 0
-    el.style.maxHeight = el.scrollHeight + 'px'; // set current first
-    el.offsetHeight; // force reflow
-    el.style.transition = 'max-height 0.3s ease';
-    el.style.maxHeight = '0px';
-    el.style.overflow = 'hidden';
-    el.setAttribute('data-ts-open', '0');
-    if (ar) ar.style.transform = 'rotate(-90deg)';
-  } else {
-    // OPEN: measure real height by temporarily removing max-height
-    el.style.transition = 'none';
-    el.style.maxHeight = 'none';
-    el.style.overflow = 'visible';
-    var h = el.scrollHeight;
-    el.style.maxHeight = '0px';
-    el.style.overflow = 'hidden';
-    el.offsetHeight; // force reflow
-    el.style.transition = 'max-height 0.32s cubic-bezier(0.4,0,0.2,1)';
-    el.style.maxHeight = (h + 20) + 'px';
-    el.setAttribute('data-ts-open', '1');
-    if (ar) ar.style.transform = 'rotate(0deg)';
-  }
-}
 
 /* Run on load to set correct initial arrow states */
 document.addEventListener('DOMContentLoaded', function() {

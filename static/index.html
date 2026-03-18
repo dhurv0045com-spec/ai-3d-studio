@@ -4468,7 +4468,7 @@ select:focus {
       </div>
       <div class="model-counter"><em id="mc-count">0</em> MODELS</div>
       <button id="install-btn" onclick="triggerPwaInstall()">INSTALL</button>
-      <div id="user-avatar-wrap" style="display:none;align-items:center;gap:8px;cursor:pointer" title="Click to logout" onclick="if(confirm('Logout?')) window.location='/auth/logout'"><img id="user-avatar" src="" style="width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,215,0,0.4);object-fit:cover" alt="avatar"><span id="user-name" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:rgba(255,215,0,0.7);letter-spacing:1px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div><div class="online-dot" id="online-dot" title="Server connection"></div>
+      <div id="user-avatar-wrap" style="display:none;align-items:center;gap:6px;cursor:pointer;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.15);border-radius:20px;padding:3px 10px 3px 4px;" title="Click to logout" onclick="if(confirm('Logout from Aurex 3D?')) window.location='/auth/logout'"><img id="user-avatar" src="" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,215,0,0.5);object-fit:cover" alt="avatar"><div style="display:flex;flex-direction:column;gap:0"><span id="user-name" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:rgba(255,215,0,0.9);letter-spacing:1px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2"></span><span id="user-email" style="font-size:8px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2"></span></div></div><div class="online-dot" id="online-dot" title="Server connection"></div>
     </div>
   </div>
 
@@ -7881,7 +7881,30 @@ function filterEmptyDefaultFolders() {
   }, 1500);
 }
 document.addEventListener('DOMContentLoaded', filterEmptyDefaultFolders);
+
+// Hide empty default folders from save dropdown
+function patchFolderDropdown() {
+  var sel = document.getElementById('folder-select');
+  if (!sel) return;
+  var defaults = ['bingoo','buildings','creatures','misc','unchained','vehicles'];
+  Array.from(sel.options).forEach(function(opt) {
+    if (defaults.indexOf(opt.value.toLowerCase()) !== -1) {
+      // only hide if no models in that folder
+      opt.style.display = '';
+    }
+  });
+}
 </script>
+
+
+// Force show login overlay on every page load
+(function(){
+  var ov = document.getElementById('login-overlay');
+  if (ov) {
+    ov.style.display = 'flex';
+    ov.classList.remove('hidden');
+  }
+})();
 
 </body>
 </html>

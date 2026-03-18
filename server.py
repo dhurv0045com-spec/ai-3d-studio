@@ -63,7 +63,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ============================================================
 
 
-from flask import Flask, request, jsonify, send_file, abort, send_from_directory
+from flask import Flask, request, jsonify, send_file, abort, send_from_directory, redirect, url_for, session
 from flask_cors import CORS
 
 # ---------------------------------------------------------------------------
@@ -122,14 +122,50 @@ MAX_HISTORY     = 200
 MAX_LOG_LINES   = 80
 
 # ---------------------------------------------------------------------------
-#  FLASK APP
+#  FLASK APP & GOOGLE OAUTH
 # ---------------------------------------------------------------------------
 app = Flask(__name__, static_folder=STATIC_DIR)
+app.secret_key = os.environ.get("SECRET_KEY", "aurex3d_super_secret_key_2026")
 CORS(app)
 
+from authlib.integrations.flask_client import OAuth
+oauth = OAuth(app)
+
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get("GOOGLE_CLIENT_ID", ""),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'},
+)
+
 # ---------------------------------------------------------------------------
-#  CORS HEADERS - Allow all origins (Railway + any browser)
+#  ENVIRONMENT VALIDATION
 # ---------------------------------------------------------------------------
+def validate_env():
+    """Ensure all required secrets are present before starting."""
+    required = [
+        "CLOUDINARY_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "SECRET_KEY"
+    ]
+    missing = [v for v in required if not os.environ.get(v)]
+    
+    # Check for at least one Gemini key
+    gemini_found = any(os.environ.get(f"GEMINI_KEY_{i}") for i in range(1, 8))
+    if not gemini_found:
+        missing.append("GEMINI_KEY_1-7 (at least one)")
+
+    if missing:
+        print(f"CRITICAL: Missing environment variables: {', '.join(missing)}")
+        if os.environ.get("RAILWAY_ENVIRONMENT"):
+            # Exit in production if secrets are missing
+            sys.exit(1)
+        else:
+            print("WARNING: Missing secrets. Running in degraded mode (local only).")
+
+validate_env()
 from collections import defaultdict as _defaultdict
 
 @app.after_request
@@ -166,6 +202,36 @@ def check_rate_limit(ip):
 
 
 # ---------------------------------------------------------------------------
+#  GOOGLE OAUTH ROUTES
+# ---------------------------------------------------------------------------
+@app.route('/auth/google')
+def auth_google():
+    redirect_uri = url_for('auth_callback', _external=True)
+    if "up.railway.app" in request.host:
+        redirect_uri = "https://" + request.host + "/auth/callback"
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/auth/callback')
+def auth_callback():
+    token = google.authorize_access_token()
+    user = google.parse_id_token(token)
+    session['user'] = user
+    return redirect('/')
+
+@app.route('/auth/logout')
+def auth_logout():
+    session.pop('user', None)
+    return redirect('/')
+
+@app.route('/auth/me')
+def auth_me():
+    user = session.get('user')
+    if user:
+        return jsonify({"logged_in": True, "user": user})
+    return jsonify({"logged_in": False})
+
+
+# ---------------------------------------------------------------------------
 #  REQUEST LOGGING - Logs every request with timing
 # ---------------------------------------------------------------------------
 @app.before_request
@@ -184,8 +250,8 @@ def after_request_logger(response):
         ms      = round(elapsed * 1000)
         log_srv("[HTTP] " + request.method + " " + request.path +
                 " " + str(response.status_code) + " " + str(ms) + "ms")
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
     return response
 
 
@@ -345,7 +411,8 @@ def sync_cloudinary_history():
 
                 ts_str = ctx.get("id", "0")
                 try: ts_int = int(ts_str)
-                except: ts_int = int(time.time())
+                except Exception:
+                    ts_int = int(time.time())
                 
                 entry = {
                     "id": ts_int,
@@ -576,8 +643,8 @@ def _write_log(filepath, message):
         with _log_lock:
             with open(filepath, "a", encoding="ascii", errors="replace") as f:
                 f.write(message + "\n")
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
 
 
 def log_srv(msg):
@@ -762,8 +829,8 @@ def load_history():
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
                 d = json.load(f)
             return d if isinstance(d, list) else []
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
     return []
 
 
@@ -775,8 +842,8 @@ def save_history(hist):
                 hist = hist[:MAX_HISTORY]
             with open(HISTORY_FILE, "w", encoding="utf-8") as f:
                 json.dump(hist, f, indent=2)
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
 
 
 def add_history_entry(entry):
@@ -784,15 +851,21 @@ def add_history_entry(entry):
         h = load_history()
         h.insert(0, entry)
         save_history(h)
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
 
 
-def load_folders():
+def load_folders(user_id=None):
     folders = set(DEFAULT_FOLDERS)
     try:
-        # 1. Add any folders currently in history
+        # 1. Add any folders currently in history matching user
         for e in load_index():
+            e_user = e.get("user_id", "anonymous")
+            if user_id and user_id != "anonymous":
+                if e_user != "anonymous" and e_user != user_id: continue
+            else:
+                if e_user != "anonymous": continue
+                
             if e.get("folder"):
                 folders.add(e["folder"])
         
@@ -802,8 +875,8 @@ def load_folders():
                 d = json.load(f)
             if isinstance(d, list):
                 folders.update(d)
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
     return sorted(list(folders))
 
 
@@ -811,8 +884,8 @@ def save_folders(folders):
     try:
         with open(FOLDERS_FILE, "w", encoding="utf-8") as f:
             json.dump(folders, f, indent=2)
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
 
 
 def load_index():
@@ -821,8 +894,8 @@ def load_index():
             with open(INDEX_FILE, "r", encoding="utf-8") as f:
                 d = json.load(f)
             return d if isinstance(d, list) else []
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
     return []
 
 
@@ -830,8 +903,8 @@ def save_index(idx):
     try:
         with open(INDEX_FILE, "w", encoding="utf-8") as f:
             json.dump(idx[:MAX_HISTORY], f, indent=2)
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
 
 
 # ---------------------------------------------------------------------------
@@ -948,8 +1021,8 @@ def run_blender_script(script_text, output_path):
 
         try:
             os.unlink(tmp)
-        except Exception:
-            pass
+        except Exception as _e:
+                log_srv(f"[EXCEPTION] {_e}")
         if r.returncode == 0 and os.path.exists(output_path):
             ok, msg = validate_glb(output_path)
             if not ok:
@@ -996,8 +1069,8 @@ def startup_health_check():
                     log_srv("[STARTUP] BLENDER CRITICAL WARNING: Missing Linux libraries:")
                     for m in missing[:5]:
                         log_srv("[STARTUP]   " + m.strip())
-            except Exception:
-                pass
+            except Exception as _e:
+                    log_srv(f"[EXCEPTION] {_e}")
     else:
         log_srv("[STARTUP] WARNING: Blender NOT FOUND - AI Blender stage disabled")
         log_srv("[STARTUP]   Expected at: " + BLENDER_EXE)
@@ -1023,8 +1096,8 @@ def startup_health_check():
             log_srv("[STARTUP] WARNING: Low disk space: " + str(free_gb) + "GB free")
         else:
             log_srv("[STARTUP] Disk free: " + str(free_gb) + "GB")
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
 
     check_shap_e()
     load_settings()
@@ -1155,8 +1228,8 @@ def hex_to_rgb_float(hexstr):
             g = int(h[2:4], 16) / 255.0
             b = int(h[4:6], 16) / 255.0
             return (r, g, b)
-        except Exception:
-            pass
+        except Exception as _e:
+                log_srv(f"[EXCEPTION] {_e}")
     return (0.5, 0.5, 0.5)
 
 
@@ -1319,8 +1392,8 @@ def cleanup_cache_if_needed():
         try:
             os.remove(fp)
             deleted += 1
-        except Exception:
-            pass
+        except Exception as _e:
+                log_srv(f"[EXCEPTION] {_e}")
     log_srv("[CACHE] Deleted " + str(deleted) + " old cache files")
 
 
@@ -1763,6 +1836,11 @@ BLENDER_SYSTEM = (
     "QUALITY: Minimum 20 separate mesh objects. Aim for 30-40 on complex models. "
     "Every major part its own object. Realistic proportions. "
     "Objects must NOT all stack at origin. Place each part at its correct 3D position. "
+    "ORGANIC/COMPLEX SHAPES (Animals, Humans, Plants, Food): You CANNOT use complex modifiers. "
+    "You MUST build complex/organic shapes by aggressively OVERLAPPING dozens of basic primitives. "
+    "Example: A dog's curved leg is 3-4 overlapping stretched spheres (thigh, calf, paw). "
+    "Example: A face is a large sphere with smaller spheres embedded for snout/eyes/ears. "
+    "Do NOT try to reshape a single mesh! Sculpt by assembling overlapping primitives! "
     "MENTAL CHECK BEFORE WRITING: "
     "1. What are all the main parts? "
     "2. What size is each part? "
@@ -1898,15 +1976,64 @@ def get_parts_hint(obj_name, parts_override=None):
             "mid section slightly narrower, upper section with arrow slits, "
             "stepped battlements crown, arched entrance, windows, flag pole, flag plane"
         ),
+        "dog": (
+            "large oval torso sphere (stretched), rounded neck, spherical head, "
+            "elongated cylindrical snout, 2 folded triangular ears, "
+            "4 thick angled legs (overlapping spheres/cylinders), 4 paws, tail"
+        ),
+        "cat": (
+            "slender oval torso, arched back sphere, small round head, "
+            "2 sharp triangular ears, short snout, "
+            "4 thin legs with knee joints, small round paws, long sweeping tail"
+        ),
+        "elephant": (
+            "massive rounded torso, large thick head, long drooping trunk (multiple spheres), "
+            "2 giant flat ears (scaled planes/flattened spheres), 2 curved tusks (cones), "
+            "4 thick pillar legs, small tail"
+        ),
+        "bird": (
+            "egg-shaped body, small round head, sharp pointed beak (cone), "
+            "2 large swept wings (flattened stretched spheres), tail feather fan (planes), "
+            "2 thin legs, 2 clawed feet"
+        ),
+        "human": (
+            "oval head, cylindrical neck, wide upper torso, narrower lower torso, "
+            "2 shoulder joints (spheres), 2 upper arms (cylinders), 2 forearms, 2 hands, "
+            "2 hips (spheres), 2 thighs, 2 calves, 2 feet"
+        ),
+        "person": (
+            "oval head, cylindrical neck, wide upper torso, narrower lower torso, "
+            "2 shoulder joints (spheres), 2 upper arms (cylinders), 2 forearms, 2 hands, "
+            "2 hips (spheres), 2 thighs, 2 calves, 2 feet"
+        ),
+        "pizza": (
+            "wide flat cylinder (crust), raised outer torus (edge), "
+            "large flat red cylinder (sauce), white flattened blobs (cheese), "
+            "many small red cylinders (pepperoni scattered randomly)"
+        ),
+        "hamburger": (
+            "curved top bun (half-sphere), flat bottom bun (cylinder), "
+            "thick brown patty cylinder, crinkled green planes (lettuce), "
+            "red flat cylinders (tomato), yellow square plane (cheese)"
+        ),
+        "mountain": (
+            "massive wide cone base, several overlapping jagged cones for peaks, "
+            "smaller cones scattered at base for foothills, textured rocky outcroppings"
+        ),
+        "plant": (
+            "Central stalk (cylinder), multiple branching stems, "
+            "many leaf planes angled outwards, central flower bulb if applicable, "
+            "pot or soil base at bottom"
+        ),
     }
     name_lower = obj_name.lower()
     for key, parts in parts_map.items():
         if key in name_lower:
             return parts
     return (
-        "all major visible structural parts of a "
-        + obj_name
-        + " - model each part as a separate mesh with correct proportions and 3D positions"
+        "Deconstruct " + obj_name + " into its fundamental geometric parts! "
+        "List 15-20 distinct sub-components. If organic, assemble it using overlapping spheres and curved cylinders. "
+        "Model each part as a separate mesh correctly positioned in 3D space."
     )
 
 
@@ -1994,9 +2121,25 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     ok, final_script = run_blender_with_retry(script, prompt, color_hex, output_path)
     if ok:
         log_gen("[MODEL_B] Success")
-    else:
-        log_gen("[MODEL_B] All retries failed")
-    return ok
+        return True
+        
+    log_gen("[MODEL_B] Initial generation failed. Attempting extremely simplified fallback...")
+    simp_complexity = max(1, complexity - 2)
+    user_msg_simp = build_blender_user_prompt(interp, color_hex, style, simp_complexity)
+    user_msg_simp += " PREVIOUS ATTEMPT CRASHED. THIS MUST BE EXTREMELY SIMPLE AND RELIABLE. USE ONLY A FEW OBJECTS."
+    
+    script_raw_simp = call_llm(BLENDER_SYSTEM, user_msg_simp, max_tokens=2500, temperature=0.1)
+    if script_raw_simp:
+        script_simp = strip_md_fences(script_raw_simp)
+        if "import bpy" in script_simp and "export_scene.gltf" in script_simp:
+            # Try once with no internal Gemini retries (fast fail)
+            ok_simp, _ = run_blender_with_retry(script_simp, prompt, color_hex, output_path, max_retries=0)
+            if ok_simp:
+                log_gen("[MODEL_B] Simplified fallback succeeded")
+                return True
+
+    log_gen("[MODEL_B] All retries and fallbacks failed")
+    return False
 
 # ---------------------------------------------------------------------------
 #  PRESET BLENDER SCRIPTS  (40 shapes, 20+ primitives each)
@@ -3552,8 +3695,8 @@ def load_saved_script(prompt):
                 script = f.read()
             log_gen("[SCRIPT_LIB] Found saved script: " + key)
             return script
-    except Exception:
-        pass
+    except Exception as _e:
+            log_srv(f"[EXCEPTION] {_e}")
     return None
 
 
@@ -3853,23 +3996,55 @@ def index():
 
 @app.route("/ping", methods=["GET"])
 def ping():
-    """Health check and key status."""
+    """Health check and comprehensive system status."""
     alive_keys, dead_keys = get_gemini_key_status()
+    
+    # Blender info
+    blender_version = "unknown"
+    try:
+        if os.path.exists(BLENDER_EXE):
+            bv = subprocess.check_output([BLENDER_EXE, "--version"], stderr=subprocess.STDOUT, timeout=5).decode()
+            blender_version = bv.split("\n")[0].strip()
+    except Exception as _e:
+        blender_version = f"error: {_e}"
+
+    # Disk info
+    try:
+        import shutil as _shutil
+        usage = _shutil.disk_usage(BASE_DIR)
+        disk_free_gb = usage.free // (1024**3)
+    except Exception as _e:
+        disk_free_gb = -1
+
     return jsonify({
-        "ok":                   True,
+        "status":               "ok",
         "version":              VERSION,
-        "gemini_keys_total":    len(GEMINI_KEYS),
-        "gemini_keys_alive":    alive_keys,
-        "gemini_keys_dead":     dead_keys,
-        "last_quality_score":   _last_quality_score,
-        "cache_hits":           _cache_hits,
-        "cache_misses":         _cache_misses,
-        "cache_size_mb":        get_cache_size_mb(),
-        "shap_e_available":     shap_e_available,
-        "blender_found":        os.path.exists(BLENDER_EXE),
-        "cloudinary_enabled":   CLOUDINARY_ENABLED,
-        "cloudinary_cloud":     CLOUDINARY_CLOUD,
-        "model_count":        0,
+        "timestamp":            datetime.datetime.now().isoformat(),
+        "blender": {
+            "found":            os.path.exists(BLENDER_EXE),
+            "version":          blender_version,
+            "path":             BLENDER_EXE
+        },
+        "gemini": {
+            "total_keys":       len(GEMINI_KEYS),
+            "alive":            alive_keys,
+            "dead":             dead_keys
+        },
+        "cloudinary": {
+            "enabled":          CLOUDINARY_ENABLED,
+            "cloud":            CLOUDINARY_CLOUD
+        },
+        "system": {
+            "disk_free_gb":     disk_free_gb,
+            "platform":         sys.platform,
+            "python":           sys.version.split(" ")[0]
+        },
+        "usage": {
+            "cache_hits":       _cache_hits,
+            "cache_misses":     _cache_misses,
+            "cache_size_mb":    get_cache_size_mb(),
+            "last_quality":     _last_quality_score
+        }
     })
 
 
@@ -3990,6 +4165,8 @@ def generate():
     if style not in STYLE_DIRECTIVES:
         style = "realistic"
     complexity = max(1, min(5, complexity))
+    
+    log_srv(f"[generate] request from {_ip}: prompt='{raw_prompt}', color='{color_hex}', folder='{folder}', is_edit={is_edit}")
 
     # Build combined prompt for edits
     if is_edit and base_prompt and edit_instr:
@@ -4150,8 +4327,8 @@ def export_model(fmt):
         def _cleanup():
             try:
                 os.remove(out_path)
-            except Exception:
-                pass
+            except Exception as _e:
+                    log_srv(f"[EXCEPTION] {_e}")
         return resp
 
     except subprocess.TimeoutExpired:
@@ -4163,13 +4340,16 @@ def export_model(fmt):
     finally:
         try:
             os.remove(script_path)
-        except Exception:
-            pass
+        except Exception as _e:
+                log_srv(f"[EXCEPTION] {_e}")
 
 
 @app.route("/save", methods=["POST"])
 def save_model():
     """Save current rocket.glb into user storage."""
+    user = session.get('user', {})
+    user_id = user.get('sub', 'anonymous')
+    
     data = request.get_json(force=True, silent=True) or {}
     folder  = str(data.get("folder", "default"))
     prompt  = str(data.get("prompt", "untitled"))
@@ -4207,7 +4387,7 @@ def save_model():
         cloud_url = upload_to_cloudinary(
             dest,
             CLOUDINARY_FOLDER + "/" + folder + "_" + str(ts),
-            metadata={"prompt": prompt, "color": color, "folder": folder, "id": str(ts)}
+            metadata={"prompt": prompt, "color": color, "folder": folder, "id": str(ts), "user_id": user_id}
         ) or ""
     if cloud_url:
         log_srv("[SAVE] Cloud URL: " + cloud_url[:80])
@@ -4223,6 +4403,7 @@ def save_model():
         "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         "size":          size,
         "quality_score": get_state().get("quality_score", 0),
+        "user_id":       user_id,
     }
     add_history_entry(entry)
 
@@ -4238,8 +4419,18 @@ def save_model():
 @app.route("/history", methods=["GET"])
 def history():
     """Return history entries, optionally filtered by folder."""
+    user = session.get('user', {})
+    user_id = user.get('sub', 'anonymous')
+    
     folder_filter = request.args.get("folder", None)
     h = load_history()
+    
+    # Filter by user
+    if user_id != 'anonymous':
+        h = [e for e in h if e.get("user_id") == user_id or "user_id" not in e]
+    else:
+        h = [e for e in h if e.get("user_id", "anonymous") == "anonymous"]
+        
     if folder_filter:
         h = [e for e in h if e.get("folder") == folder_filter]
     return jsonify(h)
@@ -4281,6 +4472,11 @@ def delete_model():
         return jsonify({"success": True})
 
     if target_entry:
+        user = session.get('user', {})
+        user_id = user.get('sub', 'anonymous')
+        entry_user = target_entry.get("user_id", "anonymous")
+        if entry_user != "anonymous" and entry_user != user_id:
+            return jsonify({"success": False, "error": "Unauthorized to delete this model."}), 403
         # Delete file
         file_path = target_entry.get("file", "")
         if file_path:
@@ -4335,7 +4531,9 @@ def admin_sync():
 @app.route("/folders", methods=["GET"])
 def folders_get():
     """Return current folders list."""
-    f = load_folders()
+    user = session.get('user', {})
+    user_id = user.get('sub', 'anonymous')
+    f = load_folders(user_id)
     return jsonify(f)
 
 
@@ -4348,6 +4546,9 @@ def folders_list():
 @app.route("/folders", methods=["POST"])
 def folders_post():
     """Create a new folder."""
+    user = session.get('user', {})
+    user_id = user.get('sub', 'anonymous')
+    
     data = request.get_json(force=True, silent=True) or {}
     name = str(data.get("name", "new_folder"))
     # Sanitize
@@ -4355,38 +4556,38 @@ def folders_post():
     if not name:
         return jsonify({"success": False, "error": "empty name"}), 400
 
-    folders = load_folders()
+    folders = load_folders(user_id)
     if name not in folders:
-        folders.append(name)
-        save_folders(folders)
+        # We don't save to global folders.json anymore to avoid cross-user pollution.
+        # It will be dynamically created when a model is saved to it.
         folder_dir = os.path.join(STORAGE_DIR, name)
         os.makedirs(folder_dir, exist_ok=True)
-        log_srv(f"[folders] created: {name}")
-    return jsonify({"success": True, "folders": folders})
+        log_srv(f"[folders] created temp directory: {name} for user {user_id}")
+    return jsonify({"success": True, "folders": list(folders) + [name]})
 
 
 @app.route("/folders/<name>", methods=["DELETE"])
 def folders_delete(name):
     """Delete a folder and all its contents."""
+    user = session.get('user', {})
+    user_id = user.get('sub', 'anonymous')
+    
     if name == "default":
         return jsonify({"success": False, "error": "cannot delete default"}), 400
 
-    folders = load_folders()
-    if name in folders:
-        folders.remove(name)
-        save_folders(folders)
-
-    folder_dir = os.path.join(STORAGE_DIR, name)
-    if os.path.exists(folder_dir):
-        try:
-            shutil.rmtree(folder_dir)
-            log_srv(f"[folders] deleted directory: {folder_dir}")
-        except Exception as e:
-            log_error(f"[folders] rmtree failed: {e}")
-
-    # Remove history entries for this folder
+    # Remove history entries for this folder belonging to this user
     h = load_history()
-    h = [e for e in h if e.get("folder") != name]
+    h_new = []
+    for e in h:
+        e_user = e.get("user_id", "anonymous")
+        if e.get("folder") == name:
+            if (user_id != "anonymous" and (e_user == user_id or e_user == "anonymous")) or (user_id == "anonymous" and e_user == "anonymous"):
+                # Belongs to user and folder, so delete it (skip adding to h_new)
+                pass
+            else:
+                h_new.append(e)
+        else:
+            h_new.append(e)
     save_history(h)
 
     # Remove from index
@@ -4394,7 +4595,7 @@ def folders_delete(name):
     idx = [e for e in idx if e.get("folder") != name]
     save_index(idx)
 
-    return jsonify({"success": True, "folders": folders})
+    return jsonify({"success": True, "folders": load_folders(user_id)})
 
 
 @app.route("/quick_shape/<name>", methods=["GET"])
@@ -5057,8 +5258,8 @@ def clear_cache():
             try:
                 os.remove(os.path.join(CACHE_DIR, fname))
                 count += 1
-            except Exception:
-                pass
+            except Exception as _e:
+                    log_srv(f"[EXCEPTION] {_e}")
     log_srv(f"[cache] cleared {count} entries")
     return jsonify({"success": True, "cleared": count})
 

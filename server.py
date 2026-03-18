@@ -126,6 +126,8 @@ MAX_LOG_LINES   = 80
 #  FLASK APP & GOOGLE OAUTH
 # ---------------------------------------------------------------------------
 app = Flask(__name__, static_folder=STATIC_DIR)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True
 app.secret_key = os.environ.get("SECRET_KEY", "aurex3d_super_secret_key_2026")
 CORS(app)
 
@@ -5609,6 +5611,7 @@ def build_preset_for_keyword(keyword, r, g, b):
 
 if __name__ == "__main__":
     _run_server()
+
 
 
 

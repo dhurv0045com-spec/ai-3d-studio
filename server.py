@@ -204,6 +204,10 @@ def check_rate_limit(ip):
 # ---------------------------------------------------------------------------
 #  GOOGLE OAUTH ROUTES
 # ---------------------------------------------------------------------------
+@app.route('/login')
+def login_page():
+    return send_from_directory(STATIC_DIR, 'login.html')
+
 @app.route('/auth/google')
 def auth_google():
     redirect_uri = url_for('auth_callback', _external=True)
@@ -5570,4 +5574,5 @@ def build_preset_for_keyword(keyword, r, g, b):
 
 if __name__ == "__main__":
     _run_server()
+
 

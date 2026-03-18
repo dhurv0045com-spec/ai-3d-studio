@@ -1,4 +1,4 @@
-
+﻿
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
@@ -145,7 +145,7 @@ google = oauth.register(
 def validate_env():
     """Ensure all required secrets are present before starting."""
     required = [
-        "CLOUDINARY_URL",
+        
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "SECRET_KEY"
@@ -5570,3 +5570,4 @@ def build_preset_for_keyword(keyword, r, g, b):
 
 if __name__ == "__main__":
     _run_server()
+

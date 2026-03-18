@@ -4504,7 +4504,7 @@ select:focus {
           <span style="display:flex;align-items:center;gap:6px"><div class="sec-dot ochre"></div>Workspace</span>
           <span id="folder-panel-arrow" style="font-size:9px;color:var(--kuro-ochre);transition:transform 0.2s">&#9660;</span>
         </div>
-        <div id="folder-panel-body" style="overflow:hidden;max-height:600px;transition:max-height 0.3s ease">
+        <div id="folder-panel-body" style="max-height:600px;overflow:hidden;transition:max-height 0.3s ease">
         <div class="folder-sec">
           <div class="folder-list" id="folder-list"></div>
           <div class="folder-add-row">
@@ -4614,8 +4614,8 @@ select:focus {
             </div>
 
             <div class="f-wrap">
-              <div class="f-lbl" onclick="toggleSection('style-body','style-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot amber"></div>Style</span><span id="style-arrow" style="font-size:9px;color:var(--tara-amber);transition:transform 0.2s">&#9660;</span></div>
-<div id="style-body" style="max-height:200px;overflow:hidden;transition:max-height 0.3s ease">
+              <div class="f-lbl" onclick="toggleSection('style-body','style-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot amber"></div>Style</span><span id="style-arrow" style="font-size:9px;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span></div>
+<div id="style-body" style="max-height:0px;overflow:hidden;transition:max-height 0.3s ease">
               <div class="style-grid">
                 <button class="style-btn active" data-style="realistic">Realistic</button>
                 <button class="style-btn" data-style="lowpoly">Low-Poly</button>
@@ -4637,8 +4637,8 @@ select:focus {
             </div>
 
             <div class="f-wrap">
-              <div class="f-lbl" onclick="toggleSection('shapes-body','shapes-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot teal"></div>Quick Shapes</span><span id="shapes-arrow" style="font-size:9px;color:var(--nolan-cyan);transition:transform 0.2s">&#9660;</span></div>
-              <div id="shapes-body" style="overflow:hidden;max-height:600px;transition:max-height 0.3s ease"><div class="shapes-grid">
+              <div class="f-lbl" onclick="toggleSection('shapes-body','shapes-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot teal"></div>Quick Shapes</span><span id="shapes-arrow" style="font-size:9px;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span></div>
+              <div id="shapes-body" style="max-height:0px;overflow:hidden;transition:max-height 0.3s ease"><div class="shapes-grid">
                 <button class="shape-btn" onclick="loadQuickShape('cube')">
                   <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                   CUBE
@@ -4720,8 +4720,8 @@ select:focus {
                   SWORD
                 </button>
               </div></div></div><div class="f-wrap">
-              <div class="f-lbl" onclick="toggleSection('color-body','color-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot amber"></div>Color</span><span id="color-arrow" style="font-size:9px;color:var(--tara-amber);transition:transform 0.2s">&#9660;</span></div>
-              <div id="color-body" style="overflow:hidden;max-height:300px;transition:max-height 0.3s ease"><div class="color-row">
+              <div class="f-lbl" onclick="toggleSection('color-body','color-arrow')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none"><span style="display:flex;align-items:center;gap:6px"><div class="f-dot amber"></div>Color</span><span id="color-arrow" style="font-size:9px;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span></div>
+              <div id="color-body" style="max-height:0px;overflow:hidden;transition:max-height 0.3s ease"><div class="color-row">
                 <div class="color-preview" id="color-preview" onclick="document.getElementById('color-picker').click()"></div>
                 <input type="color" id="color-picker" value="#00d4ff">
                 <input type="text" class="color-hex-inp" id="color-hex" value="#00D4FF" maxlength="7" spellcheck="false">
@@ -7730,31 +7730,40 @@ document.head.appendChild(_rs);
 console.log('%c 2026 PREMIUM UI LOADED ', 'background:#FFD700;color:#000;font-weight:900;font-size:14px;padding:4px 12px;border-radius:4px;');
 
 /* ── LOGIN OVERLAY ─────────────────────────────────────────── */
+
 function initLoginOverlay() {
-  // Always show overlay first, then hide if logged in
   var ov = document.getElementById('login-overlay');
-  if (ov) ov.classList.remove('hidden');
-  fetch('/auth/me').then(function(r){return r.json();}).then(function(d){
-    if (!ov) return;
-    if (d.logged_in && d.user && d.user.sub !== 'anonymous') {
+  if (!ov) return;
+  // Always show first
+  ov.style.display = 'flex';
+  ov.classList.remove('hidden');
+  // Then check if logged in
+  fetch('/auth/me').then(function(r) { return r.json(); }).then(function(d) {
+    if (d.logged_in && d.user && d.user.sub && d.user.sub !== 'anonymous') {
+      ov.style.display = 'none';
       ov.classList.add('hidden');
-      // Show user avatar
-      var w=document.getElementById('user-avatar-wrap');
-      var img=document.getElementById('user-avatar');
-      var nm=document.getElementById('user-name');
-      if(w) w.style.display='flex';
-      if(img&&d.user&&d.user.picture) img.src=d.user.picture;
-      if(nm&&d.user&&d.user.name) nm.textContent=d.user.name;
+      loadUserInfo();
     } else {
-      ov.classList.remove('hidden');
       initOverlayCanvas();
     }
-  }).catch(function(){
-    // If auth fails, still show overlay
-    var ov=document.getElementById('login-overlay');
-    if(ov) { ov.classList.remove('hidden'); initOverlayCanvas(); }
+  }).catch(function() {
+    initOverlayCanvas();
   });
 }
+function guestLogin() {
+  fetch('/guest').then(function() {
+    var ov = document.getElementById('login-overlay');
+    if (ov) { ov.style.display='none'; ov.classList.add('hidden'); }
+    var nm = document.getElementById('user-name');
+    var wrap = document.getElementById('user-avatar-wrap');
+    if (nm) nm.textContent = 'Guest';
+    if (wrap) wrap.style.display = 'flex';
+  }).catch(function() {
+    var ov = document.getElementById('login-overlay');
+    if (ov) { ov.style.display='none'; ov.classList.add('hidden'); }
+  });
+}
+
 
 function guestLogin() {
   fetch('/guest').then(function(){
@@ -7842,26 +7851,10 @@ function initOverlayCanvas() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', function(){
-  initLoginOverlay();
-  if (typeof loadUserInfo === 'function') loadUserInfo();
-});
 
 
-function toggleSection(bodyId, arrowId) {
-  var el = document.getElementById(bodyId);
-  var ar = document.getElementById(arrowId);
-  if (!el) return;
-  if (el.style.maxHeight && el.style.maxHeight !== '0px') {
-    el.style.maxHeight = '0px';
-    el.style.overflow = 'hidden';
-    if (ar) ar.style.transform = 'rotate(-90deg)';
-  } else {
-    el.style.maxHeight = el.scrollHeight + 200 + 'px';
-    el.style.overflow = 'visible';
-    if (ar) ar.style.transform = 'rotate(0deg)';
-  }
-}
+
+
 
 // Remove default empty folders from display if user hasn't used them
 function filterEmptyDefaultFolders() {
@@ -7894,17 +7887,40 @@ function patchFolderDropdown() {
     }
   });
 }
+
+function toggleSection(bodyId, arrowId) {
+  var el = document.getElementById(bodyId);
+  var ar = document.getElementById(arrowId);
+  if (!el) return;
+  var isOpen = el.style.maxHeight && el.style.maxHeight !== '0px';
+  el.style.maxHeight = isOpen ? '0px' : (el.scrollHeight + 400) + 'px';
+  el.style.overflow = 'hidden';
+  if (ar) ar.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
+}
+
+function loadUserInfo() {
+  fetch('/auth/me').then(function(r) { return r.json(); }).then(function(d) {
+    var wrap = document.getElementById('user-avatar-wrap');
+    var img  = document.getElementById('user-avatar');
+    var nm   = document.getElementById('user-name');
+    var em   = document.getElementById('user-email');
+    if (d.logged_in && d.user) {
+      if (wrap) wrap.style.display = 'flex';
+      if (img && d.user.picture) img.src = d.user.picture;
+      if (nm)  nm.textContent  = d.user.name  || 'User';
+      if (em)  em.textContent  = d.user.email || '';
+    }
+  }).catch(function() {});
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  initLoginOverlay();
+  loadUserInfo();
+  filterEmptyDefaultFolders();
+});
 </script>
 
 
-// Force show login overlay on every page load
-(function(){
-  var ov = document.getElementById('login-overlay');
-  if (ov) {
-    ov.style.display = 'flex';
-    ov.classList.remove('hidden');
-  }
-})();
 
 </body>
 </html>

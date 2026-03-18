@@ -3,531 +3,664 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 3D Studio — Enter</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#010814">
+<title>AUREX 3D — LOGIN</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ════════════════════════════════════════════════════════════
-   VILLENEUVE LOGIN — ARRAKIS MEETS BLADE RUNNER
-   ════════════════════════════════════════════════════════════ */
-:root {
-  --gold:   #FFD700;
-  --amber:  #FF8C00;
-  --cyan:   #00B4D8;
-  --void:   #010814;
-  --deep:   #040C1A;
-  --text1:  #EEF4FF;
-  --text2:  #8AAABF;
-  --text3:  #3A5A7A;
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#FFD700;
+  --gold2:#FFA500;
+  --cyan:#00D4FF;
+  --cyan2:#00FFF7;
+  --dark:#010814;
+  --dark2:#020c1b;
+  --card-bg:rgba(1,8,20,0.85);
+  --border:rgba(255,215,0,0.3);
 }
-*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-html,body { width:100%; height:100%; overflow:hidden; background:var(--void); }
-body { font-family:'Inter',sans-serif; color:var(--text1); }
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);cursor:none}
 
-/* ── CURSOR ── */
-* { cursor: none !important; }
-#cdot { position:fixed; width:8px; height:8px; border-radius:50%;
-  background:radial-gradient(circle,#FFE55C,#FFD700); pointer-events:none; z-index:99999;
-  transform:translate(-50%,-50%);
-  box-shadow:0 0 14px #FFD700,0 0 28px rgba(255,215,0,.5); transition:transform .1s; }
-#cring { position:fixed; width:30px; height:30px; border-radius:50%; border:1.5px solid rgba(255,215,0,.5);
-  pointer-events:none; z-index:99998; transform:translate(-50%,-50%);
-  transition:width .2s,height .2s,border-color .2s; }
+/* CUSTOM CURSOR */
+#cursor{position:fixed;width:12px;height:12px;border-radius:50%;background:var(--gold);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform 0.1s;box-shadow:0 0 10px var(--gold),0 0 20px var(--gold)}
+#cursor-ring{position:fixed;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,215,0,0.5);pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left 0.08s,top 0.08s}
 
-/* ── PARALLAX LAYERS ── */
-#scene { position:fixed; inset:0; }
+/* SCENE */
+#scene{position:fixed;inset:0;z-index:0}
 
-/* Layer 0 — void gradient */
-#layer-void {
-  position:absolute; inset:0;
-  background: radial-gradient(ellipse 120% 80% at 50% 110%, rgba(60,20,5,.4) 0%, transparent 55%),
-              radial-gradient(ellipse 80% 60% at 20% 20%, rgba(0,50,80,.3) 0%, transparent 50%),
-              linear-gradient(180deg, #010814 0%, #040C1A 50%, #020A14 100%);
+/* AURORA BACKGROUND */
+#aurora{position:absolute;inset:0;z-index:1}
+.aurora-layer{position:absolute;inset:0;opacity:0.15}
+.aurora-layer:nth-child(1){background:radial-gradient(ellipse 120% 60% at 20% 50%,#FFD700,transparent);animation:auroraDrift1 12s ease-in-out infinite alternate}
+.aurora-layer:nth-child(2){background:radial-gradient(ellipse 100% 50% at 80% 40%,#00D4FF,transparent);animation:auroraDrift2 15s ease-in-out infinite alternate}
+.aurora-layer:nth-child(3){background:radial-gradient(ellipse 80% 40% at 50% 80%,#FFA500,transparent);animation:auroraDrift3 18s ease-in-out infinite alternate}
+@keyframes auroraDrift1{from{transform:translate(0,0) scale(1)}to{transform:translate(3%,2%) scale(1.05)}}
+@keyframes auroraDrift2{from{transform:translate(0,0) scale(1)}to{transform:translate(-3%,-2%) scale(1.08)}}
+@keyframes auroraDrift3{from{transform:translate(0,0) scale(1)}to{transform:translate(2%,-3%) scale(1.03)}}
+
+/* STARS CANVAS */
+#stars{position:absolute;inset:0;z-index:2}
+
+/* TRON GRID CANVAS */
+#grid{position:absolute;inset:0;z-index:3}
+
+/* PARTICLES CANVAS */
+#particles{position:absolute;inset:0;z-index:4}
+
+/* SCANLINES */
+#scanlines{position:absolute;inset:0;z-index:5;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none}
+
+/* CORNER DECORATIONS */
+.corner{position:fixed;width:60px;height:60px;z-index:20;opacity:0.6}
+.corner-tl{top:20px;left:20px;border-top:1px solid var(--cyan);border-left:1px solid var(--cyan)}
+.corner-tr{top:20px;right:20px;border-top:1px solid var(--cyan);border-right:1px solid var(--cyan)}
+.corner-bl{bottom:20px;left:20px;border-bottom:1px solid var(--cyan);border-left:1px solid var(--cyan)}
+.corner-br{bottom:20px;right:20px;border-bottom:1px solid var(--cyan);border-right:1px solid var(--cyan)}
+.corner::after{content:'';position:absolute;width:6px;height:6px;background:var(--cyan);border-radius:50%;box-shadow:0 0 8px var(--cyan)}
+.corner-tl::after{top:-3px;left:-3px}
+.corner-tr::after{top:-3px;right:-3px}
+.corner-bl::after{bottom:-3px;left:-3px}
+.corner-br::after{bottom:-3px;right:-3px}
+
+/* HUD LINES */
+.hud-line-h{position:fixed;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.2),transparent);pointer-events:none;z-index:6}
+.hud-line-h.top{top:80px;left:0;right:0}
+.hud-line-h.bottom{bottom:80px;left:0;right:0}
+
+/* FLOATING LABEL TOP LEFT */
+#hud-label{position:fixed;top:28px;left:90px;z-index:20;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(0,212,255,0.5);letter-spacing:3px;text-transform:uppercase}
+
+/* STATUS BOTTOM */
+#status{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(0,212,255,0.6);letter-spacing:3px}
+#status-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:statusPulse 2s ease-in-out infinite}
+@keyframes statusPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
+
+/* SIGNATURE */
+#signature{position:fixed;bottom:28px;right:28px;z-index:20;font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,215,0,0.3);letter-spacing:2px;cursor:default;transition:color 0.3s,text-shadow 0.3s}
+#signature:hover{color:var(--gold);text-shadow:0 0 12px var(--gold)}
+
+/* VERSION */
+#version{position:fixed;bottom:28px;left:28px;z-index:20;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.15);letter-spacing:2px}
+
+/* MAIN CONTENT */
+#content{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center}
+
+/* LOGIN CARD */
+#card{
+  width:420px;
+  background:var(--card-bg);
+  border:1px solid var(--border);
+  border-top:2px solid var(--gold);
+  padding:48px 40px 40px;
+  position:relative;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  transform-style:preserve-3d;
+  transition:transform 0.1s ease-out;
+  will-change:transform;
 }
-
-/* Layer 1 — star field (canvas) */
-#layer-stars { position:absolute; inset:0; }
-
-/* Layer 2 — grid lines (Villeneuve landing field) */
-#layer-grid {
-  position:absolute; inset:0;
-  background:
-    linear-gradient(rgba(0,180,216,.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,180,216,.03) 1px, transparent 1px);
-  background-size: 60px 60px;
-  transform-origin: 50% 120%;
-  transform: perspective(800px) rotateX(55deg) translateY(10%);
-  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.8) 30%, black 60%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.8) 30%, black 60%, transparent 100%);
+#card::before{
+  content:'';position:absolute;top:0;left:-100%;width:60%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  animation:shimmer 3s ease-in-out infinite;
 }
+@keyframes shimmer{0%{left:-100%}100%{left:200%}}
 
-/* Layer 3 — floating particles */
-#layer-particles { position:absolute; inset:0; pointer-events:none; }
+/* CARD CORNER BRACKETS */
+#card::after{
+  content:'';position:absolute;inset:-1px;
+  background:linear-gradient(135deg,rgba(255,215,0,0.05) 0%,transparent 50%,rgba(0,212,255,0.05) 100%);
+  pointer-events:none;
+}
+.card-corner{position:absolute;width:12px;height:12px}
+.card-corner.tl{top:-1px;left:-1px;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan)}
+.card-corner.tr{top:-1px;right:-1px;border-top:2px solid var(--cyan);border-right:2px solid var(--cyan)}
+.card-corner.bl{bottom:-1px;left:-1px;border-bottom:2px solid var(--cyan);border-left:2px solid var(--cyan)}
+.card-corner.br{bottom:-1px;right:-1px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan)}
 
-/* Layer 4 — aurora glow */
-#layer-aurora {
-  position:absolute; inset:-50%;
-  background:
-    radial-gradient(ellipse 70% 50% at 30% 40%, rgba(0,180,216,.06) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 70% at 75% 60%, rgba(255,215,0,.04) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 40% at 50% 80%, rgba(255,107,53,.03) 0%, transparent 55%);
-  animation: auroraFloat 20s ease-in-out infinite alternate;
-}
-@keyframes auroraFloat {
-  0%   { transform:rotate(0deg) scale(1); }
-  50%  { transform:rotate(6deg) scale(1.04); }
-  100% { transform:rotate(-3deg) scale(.97); }
-}
-
-/* Layer 5 — scanlines */
-#layer-scan {
-  position:absolute; inset:0; pointer-events:none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.04) 2px, rgba(0,0,0,.04) 4px);
-  animation: scanFloat 25s linear infinite;
-  opacity:.6;
-}
-@keyframes scanFloat { 0%{transform:translateY(0)} 100%{transform:translateY(8px)} }
-
-/* ── VIGNETTE ── */
-#vignette {
-  position:fixed; inset:0; pointer-events:none; z-index:10;
-  background: radial-gradient(ellipse at center, transparent 35%, rgba(1,8,20,.75) 100%);
-}
-
-/* ── CONTENT ── */
-#content {
-  position:relative; z-index:20;
-  width:100%; height:100%;
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
-  gap:0;
-}
-
-/* ── LOGO BLOCK ── */
-.logo-block {
-  text-align:center;
-  animation: logoReveal 1.2s cubic-bezier(.34,1.56,.64,1) .3s both;
-  margin-bottom: 48px;
-}
-@keyframes logoReveal {
-  from { opacity:0; transform:translateY(-40px) scale(.85); filter:blur(8px); }
-  to   { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
-}
-.logo-wordmark {
+/* LOGO */
+#logo{text-align:center;margin-bottom:8px}
+#logo-main{
   font-family:'Orbitron',sans-serif;
-  font-size: clamp(52px,8vw,90px);
+  font-size:48px;
   font-weight:900;
-  letter-spacing:.06em;
-  background: linear-gradient(135deg, #FFF5CC 0%, #FFD700 30%, #FF8C00 60%, #FFD700 100%);
-  background-size:200%;
-  -webkit-background-clip:text; background-clip:text;
+  letter-spacing:8px;
+  background:linear-gradient(135deg,var(--gold) 0%,#fff 50%,var(--gold2) 100%);
+  -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
-  animation: goldSheen 4s ease-in-out infinite;
-  line-height:1;
-  filter: drop-shadow(0 0 40px rgba(255,215,0,.25));
+  background-clip:text;
+  text-shadow:none;
+  display:block;
+  animation:logoGlow 3s ease-in-out infinite alternate;
+  position:relative;
+  z-index:1;
 }
-@keyframes goldSheen {
-  0%,100%{background-position:0%} 50%{background-position:100%}
+@keyframes logoGlow{
+  from{filter:drop-shadow(0 0 8px rgba(255,215,0,0.3))}
+  to{filter:drop-shadow(0 0 20px rgba(255,215,0,0.7))}
 }
-.logo-sub {
+#logo-sub{
   font-family:'JetBrains Mono',monospace;
-  font-size: clamp(9px,1.5vw,12px);
-  letter-spacing:.4em;
-  color:var(--text3);
+  font-size:11px;
+  letter-spacing:6px;
+  color:rgba(0,212,255,0.7);
   text-transform:uppercase;
-  margin-top:10px;
-  animation: subReveal .8s ease 1s both;
+  margin-top:4px;
+  display:block;
 }
-@keyframes subReveal { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-.logo-line {
-  width:120px; height:1px;
-  background:linear-gradient(90deg, transparent, var(--gold), transparent);
-  margin: 16px auto 0;
-  animation: lineExpand .8s ease 1.2s both;
-  box-shadow:0 0 8px rgba(255,215,0,.3);
-}
-@keyframes lineExpand { from{width:0;opacity:0} to{width:120px;opacity:1} }
 
-/* ── LOGIN CARD ── */
-.login-card {
-  background: rgba(4,10,24,.85);
-  backdrop-filter:blur(24px) saturate(1.8);
-  -webkit-backdrop-filter:blur(24px) saturate(1.8);
-  border:1px solid rgba(0,180,216,.15);
-  border-top:2px solid rgba(255,215,0,.4);
-  border-radius:20px;
-  padding: clamp(28px,4vw,44px) clamp(28px,5vw,52px);
-  min-width: clamp(280px,90vw,420px);
-  box-shadow:
-    0 40px 100px rgba(0,0,0,.7),
-    0 0 60px rgba(255,215,0,.05),
-    0 0 0 1px rgba(0,180,216,.08),
-    inset 0 1px 0 rgba(255,255,255,.04);
-  animation: cardReveal .9s cubic-bezier(.34,1.56,.64,1) .6s both;
+/* DIVIDER */
+.divider{
+  width:100%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  margin:24px 0;
+  position:relative;
+}
+.divider::before{
+  content:'◆';
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  color:var(--gold);font-size:8px;
+  background:var(--card-bg);
+  padding:0 8px;
+}
+
+/* WELCOME TEXT */
+#welcome{
+  text-align:center;
+  font-family:'Rajdhani',sans-serif;
+  font-size:13px;
+  color:rgba(255,255,255,0.35);
+  letter-spacing:3px;
+  text-transform:uppercase;
+  margin-bottom:28px;
+}
+
+/* BUTTONS */
+.btn{
+  width:100%;
+  padding:14px 20px;
+  border:none;
+  border-radius:2px;
+  font-family:'Rajdhani',sans-serif;
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  cursor:none;
   position:relative;
   overflow:hidden;
-}
-.login-card::before {
-  content:'';
-  position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,215,0,.5),transparent);
-  animation:cardSheen 3s ease-in-out infinite;
-}
-@keyframes cardSheen {
-  0%,100%{transform:translateX(-100%)} 50%{transform:translateX(100%)}
-}
-@keyframes cardReveal {
-  from{opacity:0;transform:translateY(30px) scale(.94);filter:blur(4px)}
-  to  {opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
-}
-
-.card-eyebrow {
-  font-family:'Orbitron',sans-serif;
-  font-size:9px; font-weight:700; letter-spacing:.3em;
-  color:var(--text3); text-transform:uppercase;
-  text-align:center; margin-bottom:8px;
-}
-.card-title {
-  font-family:'Orbitron',sans-serif;
-  font-size: clamp(14px,2.5vw,18px); font-weight:800; letter-spacing:.08em;
-  color:var(--text1); text-align:center; margin-bottom:6px;
-}
-.card-sub {
-  font-size:12px; color:var(--text3); text-align:center;
-  line-height:1.6; margin-bottom:28px;
-}
-
-/* ── GOOGLE BUTTON ── */
-.btn-google {
-  width:100%; height:50px;
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.15);
-  border-radius:12px;
-  display:flex; align-items:center; justify-content:center; gap:12px;
-  font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
-  color:var(--text1); cursor:none;
-  transition:all .25s cubic-bezier(.34,1.56,.64,1);
-  position:relative; overflow:hidden;
+  transition:transform 0.2s,box-shadow 0.2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
   text-decoration:none;
-  margin-bottom:14px;
 }
-.btn-google::before {
-  content:'';
-  position:absolute; inset:0;
-  background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 100%);
-  opacity:0; transition:opacity .2s;
+.btn::before{
+  content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+  transition:left 0.4s;
 }
-.btn-google:hover {
-  background:rgba(255,255,255,.1);
-  border-color:rgba(255,255,255,.3);
-  transform:translateY(-3px) scale(1.02);
-  box-shadow:0 12px 32px rgba(0,0,0,.4),0 0 20px rgba(255,255,255,.06);
-}
-.btn-google:hover::before{opacity:1}
-.btn-google svg { flex-shrink:0; width:20px; height:20px; }
+.btn:hover::before{left:150%}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(0)}
 
-/* ── GUEST BUTTON ── */
-.btn-guest {
-  width:100%; height:44px;
-  background:linear-gradient(135deg,#FFD700 0%,#FF8C00 60%,#CC4400 100%);
-  border:none; border-radius:10px;
-  font-family:'Orbitron',sans-serif; font-size:10px; font-weight:900;
-  letter-spacing:.18em; color:#0A0A0A; cursor:none;
-  transition:all .25s cubic-bezier(.34,1.56,.64,1);
-  position:relative; overflow:hidden; text-decoration:none;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 0 0 1px rgba(255,215,0,.3),0 4px 20px rgba(255,215,0,.2),0 8px 40px rgba(255,140,0,.1);
+/* GOOGLE BTN */
+#btn-google{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.15);
+  color:rgba(255,255,255,0.85);
+  margin-bottom:12px;
 }
-.btn-guest::before {
-  content:'';
-  position:absolute; inset:0;
-  background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.3) 50%,transparent 70%);
-  transform:translateX(-120%);
-  transition:transform .7s ease;
+#btn-google:hover{
+  background:rgba(255,255,255,0.1);
+  border-color:rgba(255,255,255,0.3);
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
 }
-.btn-guest:hover::before{transform:translateX(120%)}
-.btn-guest:hover {
-  transform:translateY(-3px) scale(1.02);
-  box-shadow:0 0 0 2px rgba(255,215,0,.5),0 8px 28px rgba(255,215,0,.3),0 20px 50px rgba(255,140,0,.15);
-  filter:brightness(1.08);
+.google-icon{width:18px;height:18px;flex-shrink:0}
+
+/* GUEST BTN */
+#btn-guest{
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  color:#010814;
+  font-weight:700;
+}
+#btn-guest:hover{
+  box-shadow:0 4px 24px rgba(255,215,0,0.4),0 0 40px rgba(255,215,0,0.15);
 }
 
-.divider {
-  display:flex; align-items:center; gap:12px;
-  margin:18px 0; color:var(--text3); font-size:11px;
-}
-.divider::before,.divider::after {
-  content:''; flex:1; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(26,48,96,.8),transparent);
-}
-
-/* ── TECH LINES decoration ── */
-.tech-lines {
-  position:absolute; inset:0; pointer-events:none; overflow:hidden;
-  border-radius:20px;
-}
-.tech-line {
-  position:absolute; background:rgba(0,180,216,.04);
-}
-.tl-h { left:0;right:0; height:1px; }
-.tl-v { top:0;bottom:0; width:1px; }
-.tl-1 { top:33%; animation:tlPulse 4s ease-in-out infinite; }
-.tl-2 { top:66%; animation:tlPulse 4s ease-in-out 1.3s infinite; }
-.tl-3 { left:33%; animation:tlPulse 4s ease-in-out .6s infinite; }
-.tl-4 { left:66%; animation:tlPulse 4s ease-in-out 2s infinite; }
-@keyframes tlPulse { 0%,100%{opacity:.3} 50%{opacity:1} }
-
-/* ── CORNER SIGNATURE ── */
-#signature {
-  position:fixed; bottom:20px; right:24px; z-index:30;
+/* SEPARATOR */
+.sep{
+  display:flex;align-items:center;gap:12px;
+  margin:16px 0;
   font-family:'JetBrains Mono',monospace;
-  font-size:10px; letter-spacing:.15em;
-  color:var(--text3);
-  animation: sigReveal 1s ease 2s both;
-  transition:color .3s;
+  font-size:10px;
+  color:rgba(255,255,255,0.2);
+  letter-spacing:2px;
 }
-#signature:hover { color:var(--gold); }
-#signature::before {
-  content:'//';
-  color:var(--cyan);
-  margin-right:6px;
-}
-@keyframes sigReveal { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.08)}
 
-/* ── BOTTOM STATUS ── */
-#bottom-status {
-  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-  z-index:30; display:flex; align-items:center; gap:8px;
-  font-family:'JetBrains Mono',monospace; font-size:9px;
-  letter-spacing:.12em; color:var(--text3);
-  animation: sigReveal 1s ease 2.2s both;
+/* RIPPLE */
+.ripple{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,0.15);
+  transform:scale(0);
+  animation:rippleAnim 0.5s linear;
+  pointer-events:none;
 }
-.status-pip {
-  width:5px; height:5px; border-radius:50%;
-  background:var(--cyan);
-  box-shadow:0 0 6px var(--cyan);
-  animation:pipPulse 2s ease-in-out infinite;
-}
-@keyframes pipPulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+@keyframes rippleAnim{to{transform:scale(4);opacity:0}}
 
-/* ── MOBILE ── */
-@media(max-width:480px) {
-  * { cursor:auto !important; }
-  #cdot,#cring { display:none; }
-  .logo-wordmark { font-size:44px; }
-  #layer-grid { display:none; }
+/* CARD ENTRY ANIMATION */
+#card{animation:cardEntry 0.8s cubic-bezier(0.16,1,0.3,1) forwards}
+@keyframes cardEntry{
+  from{opacity:0;transform:translateY(30px) scale(0.95)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+/* FLOATING DATA POINTS */
+.data-point{
+  position:fixed;
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  color:rgba(0,212,255,0.2);
+  letter-spacing:1px;
+  pointer-events:none;
+  z-index:8;
+  animation:dataFloat 8s ease-in-out infinite;
+}
+@keyframes dataFloat{
+  0%,100%{opacity:0.2;transform:translateY(0)}
+  50%{opacity:0.4;transform:translateY(-8px)}
+}
+
+/* ENERGY LINES */
+.energy-line{
+  position:fixed;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  pointer-events:none;
+  z-index:7;
+  opacity:0;
+  animation:energyPulse 6s ease-in-out infinite;
+}
+@keyframes energyPulse{
+  0%,100%{opacity:0;transform:scaleX(0)}
+  50%{opacity:0.3;transform:scaleX(1)}
 }
 </style>
 </head>
 <body>
 
-<!-- CUSTOM CURSOR -->
-<div id="cdot"></div>
-<div id="cring"></div>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
 
-<!-- PARALLAX SCENE -->
 <div id="scene">
-  <div id="layer-void"></div>
-  <canvas id="layer-stars"></canvas>
-  <div id="layer-grid"></div>
-  <canvas id="layer-particles"></canvas>
-  <div id="layer-aurora"></div>
-  <div id="layer-scan"></div>
+  <div id="aurora">
+    <div class="aurora-layer"></div>
+    <div class="aurora-layer"></div>
+    <div class="aurora-layer"></div>
+  </div>
+  <canvas id="stars"></canvas>
+  <canvas id="grid"></canvas>
+  <canvas id="particles"></canvas>
+  <div id="scanlines"></div>
 </div>
 
-<!-- VIGNETTE -->
-<div id="vignette"></div>
+<!-- CORNER DECORATIONS -->
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<!-- HUD LINES -->
+<div class="hud-line-h top"></div>
+<div class="hud-line-h bottom"></div>
+
+<!-- HUD LABELS -->
+<div id="hud-label">AUREX · NEURAL CORE</div>
+<div id="version">V7.0</div>
+
+<!-- FLOATING DATA POINTS -->
+<div class="data-point" style="top:15%;left:8%;animation-delay:0s">SYS:ONLINE</div>
+<div class="data-point" style="top:25%;right:10%;animation-delay:1.5s">AI:READY</div>
+<div class="data-point" style="top:70%;left:6%;animation-delay:3s">3D:ACTIVE</div>
+<div class="data-point" style="top:60%;right:8%;animation-delay:2s">BLDR:OK</div>
+<div class="data-point" style="top:40%;left:5%;animation-delay:4s">NET:SECURE</div>
+<div class="data-point" style="top:80%;right:12%;animation-delay:0.5s">GEN:READY</div>
+
+<!-- ENERGY LINES -->
+<div class="energy-line" style="top:35%;left:0;right:0;animation-delay:0s"></div>
+<div class="energy-line" style="top:65%;left:0;right:0;animation-delay:3s"></div>
+
+<!-- STATUS -->
+<div id="status">
+  <div id="status-dot"></div>
+  <span id="status-text">STUDIO ONLINE</span>
+</div>
+
+<!-- SIGNATURE -->
+<div id="signature">// Ankit raj</div>
 
 <!-- MAIN CONTENT -->
 <div id="content">
-  <div class="logo-block">
-    <div class="logo-wordmark">AI 3D</div>
-    <div class="logo-sub">Studio &nbsp;·&nbsp; v7</div>
-    <div class="logo-line"></div>
-  </div>
+  <div id="card">
+    <div class="card-corner tl"></div>
+    <div class="card-corner tr"></div>
+    <div class="card-corner bl"></div>
+    <div class="card-corner br"></div>
 
-  <div class="login-card">
-    <!-- Tech decoration lines -->
-    <div class="tech-lines">
-      <div class="tech-line tl-h tl-1"></div>
-      <div class="tech-line tl-h tl-2"></div>
-      <div class="tech-line tl-v tl-3"></div>
-      <div class="tech-line tl-v tl-4"></div>
+    <div id="logo">
+      <span id="logo-main">AUREX 3D</span>
+      <span id="logo-sub">3D STUDIO · V7</span>
     </div>
 
-    <div class="card-eyebrow">Generate 3D Worlds</div>
-    <div class="card-title">Enter the Studio</div>
-    <div class="card-sub">Sign in to save your models<br>across all devices</div>
+    <div class="divider"></div>
 
-    <!-- Google Login -->
-    <a class="btn-google" href="/auth/google">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    <div id="welcome">Authenticate to continue</div>
+
+    <a href="/auth/google" id="btn-google" class="btn">
+      <svg class="google-icon" viewBox="0 0 48 48">
+        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
       </svg>
       Continue with Google
     </a>
 
-    <div class="divider">or</div>
+    <div class="sep">or</div>
 
-    <!-- Guest Access -->
-    <a class="btn-guest" href="/studio">
-      ENTER AS GUEST
+    <a href="/" id="btn-guest" class="btn">
+      Enter as Guest
     </a>
   </div>
 </div>
 
-<!-- CORNER SIGNATURE -->
-<div id="signature">TENGEN</div>
-
-<!-- BOTTOM STATUS -->
-<div id="bottom-status">
-  <div class="status-pip"></div>
-  <span id="srv-status">CONNECTING TO STUDIO...</span>
-</div>
-
 <script>
-/* ── CURSOR ── */
-(function() {
-  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-  if (isMobile) return;
-  var dot = document.getElementById('cdot');
-  var ring = document.getElementById('cring');
-  var mx=0,my=0,rx=0,ry=0;
-  document.addEventListener('mousemove', function(e) {
-    mx=e.clientX; my=e.clientY;
-    dot.style.left=mx+'px'; dot.style.top=my+'px';
-  });
-  (function l(){ rx+=(mx-rx)*.14; ry+=(my-ry)*.14;
-    ring.style.left=rx+'px'; ring.style.top=ry+'px';
-    requestAnimationFrame(l); })();
-  document.addEventListener('mouseover', function(e) {
-    if (e.target.closest('a,button')) {
-      ring.style.width='48px'; ring.style.height='48px';
-      ring.style.borderColor='rgba(255,215,0,.8)';
-    } else {
-      ring.style.width='30px'; ring.style.height='30px';
-      ring.style.borderColor='rgba(255,215,0,.5)';
-    }
-  });
-})();
+// ── CURSOR ──────────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=window.innerWidth/2, my=window.innerHeight/2;
+let rx=mx, ry=my;
 
-/* ── PARALLAX on mouse move ── */
-(function() {
-  var layers = [
-    { el: document.getElementById('layer-aurora'),     strength: 12 },
-    { el: document.getElementById('layer-grid'),       strength: 6 },
-    { el: document.getElementById('layer-scan'),       strength: 3 },
-  ];
-  var cx = window.innerWidth/2, cy = window.innerHeight/2;
-  var tx=0, ty=0, cx2=0, cy2=0;
-  document.addEventListener('mousemove', function(e) {
-    tx = (e.clientX - cx) / cx;
-    ty = (e.clientY - cy) / cy;
-  });
-  (function animate() {
-    cx2 += (tx - cx2) * .06;
-    cy2 += (ty - cy2) * .06;
-    layers.forEach(function(l) {
-      var x = cx2 * l.strength;
-      var y = cy2 * l.strength;
-      if (l.el.id === 'layer-grid') {
-        l.el.style.transform = 'perspective(800px) rotateX(55deg) translateY(10%) translate('+x+'px,'+y+'px)';
-      } else {
-        l.el.style.transform = 'translate('+x+'px,'+y+'px)';
-      }
-    });
-    requestAnimationFrame(animate);
-  })();
-})();
-
-/* ── STAR FIELD ── */
-(function() {
-  var c = document.getElementById('layer-stars');
-  var ctx = c.getContext('2d');
-  c.width = window.innerWidth; c.height = window.innerHeight;
-  var stars = [];
-  for (var i=0; i<200; i++) {
-    stars.push({
-      x: Math.random()*c.width, y: Math.random()*c.height,
-      r: Math.random()*1.4+.2,
-      a: Math.random()*.7+.1,
-      speed: Math.random()*.15+.03,
-      twinkle: Math.random()*Math.PI*2
-    });
-  }
-  var frame = 0;
-  (function draw() {
-    ctx.clearRect(0,0,c.width,c.height);
-    frame += .015;
-    stars.forEach(function(s) {
-      var alpha = s.a * (.6 + .4*Math.sin(frame + s.twinkle));
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,'+alpha+')';
-      ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  })();
-  window.addEventListener('resize', function() {
-    c.width = window.innerWidth; c.height = window.innerHeight;
-  });
-})();
-
-/* ── FLOATING PARTICLES ── */
-(function() {
-  var c = document.getElementById('layer-particles');
-  var ctx = c.getContext('2d');
-  c.width = window.innerWidth; c.height = window.innerHeight;
-  var pts = [];
-  for (var i=0; i<60; i++) {
-    pts.push({
-      x: Math.random()*c.width, y: Math.random()*c.height,
-      r: Math.random()*2+.5,
-      vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4,
-      a: Math.random()*.4+.1,
-      col: Math.random()>.5 ? '0,180,216' : '255,215,0'
-    });
-  }
-  (function draw() {
-    ctx.clearRect(0,0,c.width,c.height);
-    pts.forEach(function(p) {
-      p.x+=p.vx; p.y+=p.vy;
-      if(p.x<0)p.x=c.width; if(p.x>c.width)p.x=0;
-      if(p.y<0)p.y=c.height; if(p.y>c.height)p.y=0;
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle='rgba('+p.col+','+p.a+')'; ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  })();
-})();
-
-/* ── SERVER STATUS CHECK ── */
-fetch('/health').then(function(r){ return r.json(); }).then(function(d) {
-  document.getElementById('srv-status').textContent =
-    d.blender ? 'STUDIO ONLINE — READY TO CREATE' : 'STUDIO LOADING...';
-}).catch(function() {
-  document.getElementById('srv-status').textContent = 'STUDIO ONLINE';
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top = my + 'px';
 });
 
-/* ── CARD TILT on hover ── */
-(function() {
-  var card = document.querySelector('.login-card');
-  if (!card) return;
-  card.addEventListener('mousemove', function(e) {
-    var r = card.getBoundingClientRect();
-    var x = (e.clientX - r.left)/r.width  - .5;
-    var y = (e.clientY - r.top) /r.height - .5;
-    card.style.transform = 'perspective(800px) rotateY('+(x*8)+'deg) rotateX('+(-y*6)+'deg)';
+function animRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top = ry + 'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+// ── STARS ────────────────────────────────────────────────
+const starCanvas = document.getElementById('stars');
+const sCtx = starCanvas.getContext('2d');
+let stars = [];
+
+function resizeStars() {
+  starCanvas.width = window.innerWidth;
+  starCanvas.height = window.innerHeight;
+  stars = [];
+  for (let i = 0; i < 200; i++) {
+    stars.push({
+      x: Math.random() * starCanvas.width,
+      y: Math.random() * starCanvas.height,
+      r: Math.random() * 1.5 + 0.3,
+      alpha: Math.random(),
+      speed: Math.random() * 0.02 + 0.005,
+      phase: Math.random() * Math.PI * 2,
+      px: 0, py: 0
+    });
+  }
+}
+resizeStars();
+window.addEventListener('resize', resizeStars);
+
+function drawStars(t) {
+  sCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
+  stars.forEach(s => {
+    const a = 0.3 + 0.7 * Math.abs(Math.sin(t * s.speed + s.phase));
+    sCtx.beginPath();
+    sCtx.arc(s.x + s.px, s.y + s.py, s.r, 0, Math.PI * 2);
+    sCtx.fillStyle = `rgba(255,255,255,${a})`;
+    sCtx.fill();
   });
-  card.addEventListener('mouseleave', function() {
-    card.style.transform = '';
-    card.style.transition = 'transform .5s cubic-bezier(.34,1.56,.64,1)';
-    setTimeout(function(){ card.style.transition=''; }, 500);
+}
+
+// ── TRON GRID ─────────────────────────────────────────────
+const gridCanvas = document.getElementById('grid');
+const gCtx = gridCanvas.getContext('2d');
+let gridOffset = 0;
+
+function resizeGrid() {
+  gridCanvas.width = window.innerWidth;
+  gridCanvas.height = window.innerHeight;
+}
+resizeGrid();
+window.addEventListener('resize', resizeGrid);
+
+function drawGrid(t, parallaxX, parallaxY) {
+  const W = gridCanvas.width;
+  const H = gridCanvas.height;
+  gCtx.clearRect(0, 0, W, H);
+
+  const horizon = H * 0.48 + parallaxY * 0.3;
+  const vp = { x: W / 2 + parallaxX * 0.5, y: horizon };
+  const cellSize = 80;
+  const rows = 18;
+  const cols = 24;
+  gridOffset = (gridOffset + 0.4) % cellSize;
+
+  // Grid glow
+  gCtx.save();
+  gCtx.shadowColor = '#00D4FF';
+  gCtx.shadowBlur = 4;
+
+  // Vertical lines (converge to vanishing point)
+  for (let c = -cols; c <= cols; c++) {
+    const bx = W/2 + c * (W / cols);
+    const progress = Math.abs(c) / cols;
+    const alpha = Math.max(0, 0.5 - progress * 0.4);
+
+    gCtx.beginPath();
+    gCtx.moveTo(vp.x, vp.y);
+    gCtx.lineTo(bx, H + 20);
+    gCtx.strokeStyle = `rgba(0,212,255,${alpha})`;
+    gCtx.lineWidth = c === 0 ? 1.5 : 0.5;
+    gCtx.stroke();
+  }
+
+  // Horizontal lines (recede into distance)
+  for (let r = 0; r <= rows; r++) {
+    const progress = (r + (gridOffset / cellSize)) / rows;
+    const y = horizon + Math.pow(progress, 2) * (H + 20 - horizon);
+    if (y < horizon) continue;
+
+    // Width of line at this depth
+    const depthT = (y - horizon) / (H - horizon);
+    const lineW = W * 0.5 + depthT * W * 0.6;
+    const x0 = vp.x - lineW / 2;
+    const x1 = vp.x + lineW / 2;
+
+    const alpha = depthT * 0.6;
+    const isMajor = r % 3 === 0;
+    gCtx.beginPath();
+    gCtx.moveTo(x0, y);
+    gCtx.lineTo(x1, y);
+    gCtx.strokeStyle = isMajor ? `rgba(0,212,255,${alpha + 0.1})` : `rgba(0,180,220,${alpha * 0.6})`;
+    gCtx.lineWidth = isMajor ? 1 : 0.4;
+    gCtx.stroke();
+  }
+
+  // Center beam
+  const beamAlpha = 0.15 + 0.1 * Math.sin(t * 0.001);
+  const grad = gCtx.createLinearGradient(vp.x, vp.y, vp.x, H);
+  grad.addColorStop(0, `rgba(0,212,255,0)`);
+  grad.addColorStop(0.5, `rgba(0,212,255,${beamAlpha})`);
+  grad.addColorStop(1, `rgba(0,212,255,0)`);
+  gCtx.beginPath();
+  gCtx.moveTo(vp.x - 2, vp.y);
+  gCtx.lineTo(vp.x + 2, H);
+  gCtx.strokeStyle = grad;
+  gCtx.lineWidth = 4;
+  gCtx.stroke();
+
+  // Horizon glow line
+  gCtx.beginPath();
+  gCtx.moveTo(0, horizon);
+  gCtx.lineTo(W, horizon);
+  const hGrad = gCtx.createLinearGradient(0, horizon, W, horizon);
+  hGrad.addColorStop(0, 'transparent');
+  hGrad.addColorStop(0.3, `rgba(0,212,255,0.3)`);
+  hGrad.addColorStop(0.5, `rgba(255,215,0,0.5)`);
+  hGrad.addColorStop(0.7, `rgba(0,212,255,0.3)`);
+  hGrad.addColorStop(1, 'transparent');
+  gCtx.strokeStyle = hGrad;
+  gCtx.lineWidth = 1.5;
+  gCtx.shadowColor = '#FFD700';
+  gCtx.shadowBlur = 12;
+  gCtx.stroke();
+
+  gCtx.restore();
+
+  // Grid floor glow
+  const floorGrad = gCtx.createLinearGradient(0, horizon, 0, H);
+  floorGrad.addColorStop(0, 'rgba(0,212,255,0.04)');
+  floorGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  gCtx.fillStyle = floorGrad;
+  gCtx.fillRect(0, horizon, W, H - horizon);
+}
+
+// ── PARTICLES ─────────────────────────────────────────────
+const pCanvas = document.getElementById('particles');
+const pCtx = pCanvas.getContext('2d');
+let particles = [];
+
+function resizeParticles() {
+  pCanvas.width = window.innerWidth;
+  pCanvas.height = window.innerHeight;
+  particles = [];
+  for (let i = 0; i < 60; i++) {
+    spawnParticle(true);
+  }
+}
+
+function spawnParticle(init) {
+  const isGold = Math.random() > 0.5;
+  particles.push({
+    x: Math.random() * pCanvas.width,
+    y: init ? Math.random() * pCanvas.height : pCanvas.height + 10,
+    r: Math.random() * 2 + 0.5,
+    vy: -(Math.random() * 0.5 + 0.2),
+    vx: (Math.random() - 0.5) * 0.3,
+    alpha: Math.random() * 0.6 + 0.1,
+    color: isGold ? '#FFD700' : '#00D4FF',
+    life: 1
   });
-})();
+}
+
+resizeParticles();
+window.addEventListener('resize', resizeParticles);
+
+function drawParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.002;
+    if (p.y < -10 || p.life <= 0) {
+      particles.splice(i, 1);
+      spawnParticle(false);
+      continue;
+    }
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    pCtx.fillStyle = p.color;
+    pCtx.globalAlpha = p.alpha * p.life;
+    pCtx.fill();
+    pCtx.globalAlpha = 1;
+  }
+}
+
+// ── PARALLAX ─────────────────────────────────────────────
+let targetPX = 0, targetPY = 0;
+let currentPX = 0, currentPY = 0;
+const card = document.getElementById('card');
+
+document.addEventListener('mousemove', e => {
+  targetPX = (e.clientX / window.innerWidth - 0.5) * 30;
+  targetPY = (e.clientY / window.innerHeight - 0.5) * 30;
+
+  // Aurora parallax
+  document.querySelectorAll('.aurora-layer').forEach((el, i) => {
+    const factor = (i + 1) * 0.5;
+    el.style.transform = `translate(${targetPX * factor * 0.2}px, ${targetPY * factor * 0.2}px)`;
+  });
+
+  // Stars parallax
+  const starsShiftX = targetPX * 0.3;
+  const starsShiftY = targetPY * 0.3;
+  stars.forEach(s => {
+    s.px = starsShiftX * (s.r / 1.5);
+    s.py = starsShiftY * (s.r / 1.5);
+  });
+
+  // Card 3D tilt
+  const rect = card.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = (e.clientX - cx) / (rect.width / 2);
+  const dy = (e.clientY - cy) / (rect.height / 2);
+  card.style.transform = `perspective(800px) rotateY(${dx * 8}deg) rotateX(${-dy * 8}deg)`;
+});
+
+document.addEventListener('mouseleave', () => {
+  card.style.transform = 'perspective(800px) rotateY(0deg) rotateX(0deg)';
+  targetPX = 0; targetPY = 0;
+});
+
+// ── BUTTON RIPPLE ──────────────────────────────────────────
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    const size = Math.max(this.offsetWidth, this.offsetHeight);
+    const rect = this.getBoundingClientRect();
+    ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+    this.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 500);
+  });
+});
+
+// ── STATUS CHECK ───────────────────────────────────────────
+fetch('/health').then(r => r.json()).then(d => {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  if (d.blender) {
+    dot.style.background = '#00FF88';
+    dot.style.boxShadow = '0 0 8px #00FF88';
+    txt.textContent = 'STUDIO ONLINE';
+  }
+}).catch(() => {
+  document.getElementById('status-text').textContent = 'CONNECTING...';
+});
+
+// ── MAIN LOOP ─────────────────────────────────────────────
+function loop(t) {
+  currentPX += (targetPX - currentPX) * 0.05;
+  currentPY += (targetPY - currentPY) * 0.05;
+
+  drawStars(t);
+  drawGrid(t, currentPX, currentPY);
+  drawParticles();
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>

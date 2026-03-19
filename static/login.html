@@ -902,7 +902,7 @@ document.querySelectorAll('.f-card').forEach(card=>{
 });
 
 /* GUEST LOGIN */
-function guestLogin(){fetch('/guest').then(()=>{window.location.href='/'}).catch(()=>{window.location.href='/'})}
+function guestLogin(){fetch('/guest',{method:'POST'}).then(()=>{window.location.href='/app'}).catch(()=>{window.location.href='/app'})}
 
 /* RIPPLE */
 document.querySelectorAll('.l-btn').forEach(btn=>{

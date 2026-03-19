@@ -3764,11 +3764,36 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
 
 @app.route("/")
 def index():
-    """Serve the main index.html from static directory."""
+    """Serve the animated login page."""
+    login_path = os.path.join(STATIC_DIR, "login.html")
+    if os.path.exists(login_path):
+        return send_file(login_path)
+    # Fallback to index.html if login.html doesn't exist
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
         return send_file(index_path)
     return "Server running on port 5000", 200
+
+
+@app.route("/app")
+def app_main():
+    """Serve the main app after login."""
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return send_file(index_path)
+    return "App not found", 404
+
+
+@app.route("/guest", methods=["POST"])
+def guest_login():
+    """Guest login endpoint - just returns success for now."""
+    return jsonify({"success": True, "user": {"id": "guest", "name": "Guest"}})
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Health check for login page."""
+    return jsonify({"status": "ok", "server": "running"})
 
 
 @app.route("/ping", methods=["GET"])

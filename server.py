@@ -1,3 +1,23 @@
+def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    import requests as _req, os as _os
+    keys = [_os.environ.get("OPENROUTER_KEY_1",""), _os.environ.get("OPENROUTER_KEY_2",""), _os.environ.get("OPENROUTER_KEY_3","")]
+    for key in keys:
+        if not key: continue
+        try:
+            r = _req.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, json={"model": "google/gemini-2.0-flash-exp:free", "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}], "max_tokens": max_tokens, "temperature": temperature}, timeout=90)
+            return r.json()["choices"][0]["message"]["content"]
+        except: continue
+    return None
+def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
+    import requests as _req, os as _os
+    keys = [_os.environ.get("OPENROUTER_KEY_1",""), _os.environ.get("OPENROUTER_KEY_2",""), _os.environ.get("OPENROUTER_KEY_3","")]
+    for key in keys:
+        if not key: continue
+        try:
+            r = _req.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, json={"model": "google/gemini-2.0-flash-exp:free", "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}], "max_tokens": max_tokens, "temperature": temperature}, timeout=90)
+            return r.json()["choices"][0]["message"]["content"]
+        except: continue
+    return None
 
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
@@ -5862,6 +5882,8 @@ def build_preset_for_keyword(keyword, r, g, b):
 
 if __name__ == "__main__":
     _run_server()
+
+
 
 
 

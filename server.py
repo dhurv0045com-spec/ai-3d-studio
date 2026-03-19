@@ -5047,7 +5047,7 @@ def last_script():
     return jsonify({"lines": len(content.splitlines()), "script": content})
 
 
-@app.route("/api/last_log", methods=["GET"])
+@app.route("/debug/log", methods=["GET"]), methods=["GET"])
 def last_log():
     """Return last 100 lines of generation log for debugging."""
     try:
@@ -5401,6 +5401,8 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+
+
 
 
 

@@ -3791,12 +3791,6 @@ def guest_login():
     return jsonify({"success": True, "user": {"id": "guest", "name": "Guest"}})
 
 
-@app.route("/health", methods=["GET"])
-def health_check():
-    """Health check for login page."""
-    return jsonify({"status": "ok", "server": "running"})
-
-
 @app.route("/ping", methods=["GET"])
 def ping():
     """Health check and key status."""

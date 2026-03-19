@@ -1,24 +1,3 @@
-def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
-    import requests as _req, os as _os
-    keys = [_os.environ.get("OPENROUTER_KEY_1",""), _os.environ.get("OPENROUTER_KEY_2",""), _os.environ.get("OPENROUTER_KEY_3","")]
-    for key in keys:
-        if not key: continue
-        try:
-            r = _req.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, json={"model": "google/gemini-2.0-flash-exp:free", "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}], "max_tokens": max_tokens, "temperature": temperature}, timeout=90)
-            return r.json()["choices"][0]["message"]["content"]
-        except: continue
-    return None
-def call_llm(system_prompt, user_prompt, max_tokens=1000, temperature=0.2):
-    import requests as _req, os as _os
-    keys = [_os.environ.get("OPENROUTER_KEY_1",""), _os.environ.get("OPENROUTER_KEY_2",""), _os.environ.get("OPENROUTER_KEY_3","")]
-    for key in keys:
-        if not key: continue
-        try:
-            r = _req.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, json={"model": "google/gemini-2.0-flash-exp:free", "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}], "max_tokens": max_tokens, "temperature": temperature}, timeout=90)
-            return r.json()["choices"][0]["message"]["content"]
-        except: continue
-    return None
-
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
@@ -70,7 +49,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # GEMINI_KEY_5          = your fifth Gemini API key
 # GEMINI_KEY_6          = your sixth Gemini API key
 # GEMINI_KEY_7          = your seventh Gemini API key
-# ANTHROPIC_API_KEY     = your anthropic key
 #
 # CLOUDINARY_CLOUD_NAME = your cloud name (e.g. root)
 # CLOUDINARY_API_KEY    = your cloudinary api key
@@ -83,7 +61,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ============================================================
 
 
-from flask import Flask, request, jsonify, send_file, abort, send_from_directory, redirect, url_for, session
+from flask import Flask, request, jsonify, send_file, abort, send_from_directory
 from flask_cors import CORS
 
 # ---------------------------------------------------------------------------
@@ -103,7 +81,6 @@ LOGS_DIR        = os.path.join(BASE_DIR, "logs")
 STORAGE_DIR     = os.path.join(BASE_DIR, "storage", "users", "user")
 ROCKET_GLB      = os.path.join(BASE_DIR, "rocket.glb")
 HISTORY_FILE    = os.path.join(BASE_DIR, "history.json")
-DELETED_IDS_FILE = os.path.join(BASE_DIR, "deleted_ids.json")
 FOLDERS_FILE    = os.path.join(BASE_DIR, "folders.json")
 INDEX_FILE      = os.path.join(STORAGE_DIR, "index.json")
 STATE_FILE      = os.path.join(BASE_DIR, "state.json")
@@ -114,17 +91,13 @@ SHAPEE_FLAG     = os.path.join(BASE_DIR, "shapee_installed.flag")
 def _find_blender_exe():
     """Auto-detect Blender. Works on Windows local AND Railway Linux cloud."""
     import glob
-    import shutil as _shutil
-    env_path = os.environ.get("BLENDER_PATH", "/app/blender/blender")
+    env_path = os.environ.get("BLENDER_PATH", "")
     if env_path and os.path.isfile(env_path):
         return env_path
     if _platform.system() == "Linux":
         for p in ["/app/blender/blender", "/usr/bin/blender", "/usr/local/bin/blender"]:
             if os.path.isfile(p):
                 return p
-        found = _shutil.which("blender")
-        if found:
-            return found
         return "/app/blender/blender"
     else:
         import glob as _glob
@@ -134,67 +107,21 @@ def _find_blender_exe():
             return sorted(win)[-1]
         return r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"
 
-BLENDER_EXE = os.environ.get("BLENDER_PATH", "/app/blender/blender")
-if not os.path.isfile(BLENDER_EXE):
-    BLENDER_EXE = _find_blender_exe()
+BLENDER_EXE = _find_blender_exe()
 BLENDER_PATH = BLENDER_EXE  # alias for Railway compatibility
 VERSION         = "7.0"
 MAX_HISTORY     = 200
 MAX_LOG_LINES   = 80
 
 # ---------------------------------------------------------------------------
-#  FLASK APP & GOOGLE OAUTH
+#  FLASK APP
 # ---------------------------------------------------------------------------
 app = Flask(__name__, static_folder=STATIC_DIR)
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = True
-app.secret_key = os.environ.get("SECRET_KEY", "aurex3d_super_secret_key_2026")
 CORS(app)
 
-from authlib.integrations.flask_client import OAuth
-oauth = OAuth(app)
-
-google = oauth.register(
-    name='google',
-    client_id=os.environ.get("GOOGLE_CLIENT_ID", ""),
-    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET", ""),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'},
-)
-
 # ---------------------------------------------------------------------------
-#  ENVIRONMENT VALIDATION
+#  CORS HEADERS - Allow all origins (Railway + any browser)
 # ---------------------------------------------------------------------------
-def validate_env():
-    """Ensure all required secrets are present before starting."""
-    required = [
-        
-        "GOOGLE_CLIENT_ID",
-        "GOOGLE_CLIENT_SECRET",
-        "SECRET_KEY"
-    ]
-    missing = [v for v in required if not os.environ.get(v)]
-    
-    # Check for at least one Gemini key
-    gemini_found = any(os.environ.get(f"GEMINI_KEY_{i}") for i in range(1, 8))
-    if not gemini_found:
-        missing.append("GEMINI_KEY_1-7 (at least one)")
-
-    # At least one AI provider must be available
-    has_gemini = any(os.environ.get(f"GEMINI_KEY_{i}") for i in range(1,8))
-    has_openai = any(os.environ.get(f"OPENAI_KEY_{i}") for i in range(1,4)) or os.environ.get("OPENAI_API_KEY")
-    has_openrouter = any(os.environ.get(f"OPENROUTER_KEY_{i}") for i in range(1,4))
-    if not has_gemini and not has_openai and not has_openrouter:
-        missing.append("No AI provider keys found (need GEMINI_KEY_x or OPENAI_KEY_x or OPENROUTER_KEY_x)")
-    if missing:
-        print(f"CRITICAL: Missing environment variables: {', '.join(missing)}")
-        if os.environ.get("RAILWAY_ENVIRONMENT") and len(missing) > 1:
-            # Only exit if multiple critical vars missing
-            sys.exit(1)
-        else:
-            print("WARNING: Missing secrets. Running in degraded mode (local only).")
-
-validate_env()
 from collections import defaultdict as _defaultdict
 
 @app.after_request
@@ -231,45 +158,6 @@ def check_rate_limit(ip):
 
 
 # ---------------------------------------------------------------------------
-#  GOOGLE OAUTH ROUTES
-# ---------------------------------------------------------------------------
-@app.route('/login')
-def login_page():
-    return send_from_directory(STATIC_DIR, 'login.html')
-
-@app.route('/auth/google')
-def auth_google():
-    redirect_uri = url_for('auth_callback', _external=True)
-    if "up.railway.app" in request.host:
-        redirect_uri = "https://" + request.host + "/auth/callback"
-    import secrets; nonce = secrets.token_urlsafe(16); session["nonce"] = nonce; return google.authorize_redirect(redirect_uri, nonce=nonce)
-
-@app.route('/auth/callback')
-def auth_callback():
-    token = google.authorize_access_token()
-    nonce = session.pop("nonce", None); user = google.parse_id_token(token, nonce=nonce)
-    session['user'] = user
-    return redirect('/')
-
-@app.route('/auth/logout')
-def auth_logout():
-    session.pop('user', None)
-    return redirect('/')
-@app.route('/guest')
-def guest_login():
-    session['user'] = {'sub': 'anonymous', 'name': 'Guest', 'email': '', 'picture': ''}
-    return redirect('/')
-
-
-@app.route('/auth/me')
-def auth_me():
-    user = session.get('user')
-    if user:
-        return jsonify({"logged_in": True, "user": user})
-    return jsonify({"logged_in": False})
-
-
-# ---------------------------------------------------------------------------
 #  REQUEST LOGGING - Logs every request with timing
 # ---------------------------------------------------------------------------
 @app.before_request
@@ -282,14 +170,12 @@ def before_request_timer():
 def after_request_logger(response):
     try:
         from flask import g
-        if request.path in ("/ping", "/favicon.ico"):
-            return response
         elapsed = time.time() - g.req_start
         ms      = round(elapsed * 1000)
         log_srv("[HTTP] " + request.method + " " + request.path +
                 " " + str(response.status_code) + " " + str(ms) + "ms")
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
+    except Exception:
+        pass
     return response
 
 
@@ -299,14 +185,14 @@ def after_request_logger(response):
 import base64
 import hashlib as _hashlib_cloud
 
-CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
-CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
-CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER", "ai3d_studio").strip() or "ai3d_studio"
+CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME",  "root")
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY",    "847967395866559")
+CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "h9OL5-hsJdbxpMV3RpVxdLF7G-Q")
+CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER",     "ai3d_studio")
 CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY_SECRET)
 
 
-def upload_to_cloudinary(local_path, public_id=None, metadata=None):
+def upload_to_cloudinary(local_path, public_id=None):
     """
     Upload a GLB file to Cloudinary cloud storage.
     Returns the secure_url string on success, None on failure.
@@ -325,17 +211,7 @@ def upload_to_cloudinary(local_path, public_id=None, metadata=None):
             date_path = _dt.datetime.now().strftime("%Y/%m/%d")
             public_id = CLOUDINARY_FOLDER + "/" + date_path + "/" + fname + "_" + ts
 
-        params_str = ""
-        context_str = ""
-        if metadata:
-            context_parts = []
-            for k, v in sorted(metadata.items()):
-                safe_v = str(v).replace("|", "\\|").replace("=", "\\=")
-                context_parts.append(f"{k}={safe_v}")
-            context_str = "|".join(context_parts)
-            params_str += "context=" + context_str + "&"
-
-        params_str += (
+        params_str = (
             "folder=" + CLOUDINARY_FOLDER +
             "&public_id=" + public_id +
             "&resource_type=raw" +
@@ -366,8 +242,6 @@ def upload_to_cloudinary(local_path, public_id=None, metadata=None):
             "signature":     signature,
             "secure":        "true",
         }
-        if context_str:
-            payload["context"] = context_str
 
         resp = requests.post(
             upload_url,
@@ -390,101 +264,6 @@ def upload_to_cloudinary(local_path, public_id=None, metadata=None):
         log_error("[CLOUD] Exception: " + str(e))
         return None
 
-def delete_from_cloudinary(public_id):
-    """
-    Delete a resource from Cloudinary cloud storage.
-    Returns True on success, False on failure.
-    """
-    if not CLOUDINARY_ENABLED or not public_id:
-        return False
-    try:
-        ts = str(int(time.time()))
-        params_str = "public_id=" + public_id + "&timestamp=" + ts
-        sign_input = params_str + CLOUDINARY_SECRET
-        signature  = _hashlib_cloud.sha256(sign_input.encode("utf-8")).hexdigest()
-        
-        destroy_url = "https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD + "/image/destroy"
-        
-        payload = {
-            "public_id": public_id,
-            "timestamp": ts,
-            "api_key":   CLOUDINARY_API_KEY,
-            "signature": signature,
-        }
-        resp = requests.post(destroy_url, data=payload, timeout=30, verify=False)
-        if resp.status_code == 200:
-            result = resp.json()
-            if result.get("result") in ("ok", "not found"):
-                log_srv(f"[CLOUD] Destroy OK for: {public_id}")
-                return True
-        log_error("[CLOUD] Destroy failed: " + str(resp.status_code) + " " + resp.text[:200])
-        return False
-    except Exception as e:
-        log_error("[CLOUD] Destroy Exception: " + str(e))
-        return False
-
-def sync_cloudinary_history():
-    """Fetch all GLB files from Cloudinary folder and rebuild local index.json / history.json"""
-    if not CLOUDINARY_ENABLED:
-        return False
-    try:
-        url = f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD}/resources/search"
-        payload = {
-            "expression": f"folder:{CLOUDINARY_FOLDER}*",
-            "with_field": ["context"],
-            "max_results": 500
-        }
-        resp = requests.post(url, json=payload, auth=(CLOUDINARY_API_KEY, CLOUDINARY_SECRET), timeout=30)
-        if resp.status_code == 200:
-            data = resp.json()
-            resources = data.get("resources", [])
-            new_history = []
-            for r in resources:
-                ctx = r.get("context", {})
-                if not ctx: continue
-                
-                # Some APIs nest within 'custom'
-                if "custom" in ctx and isinstance(ctx["custom"], dict):
-                    ctx = ctx["custom"]
-
-                ts_str = ctx.get("id", "0")
-                try: ts_int = int(ts_str)
-                except Exception:
-                    ts_int = int(time.time())
-                
-                # Skip permanently deleted models
-                deleted_ids = load_deleted_ids()
-                if str(ts_int) in deleted_ids:
-                    continue
-                entry = {
-                    "id": ts_int,
-                    "prompt": ctx.get("prompt", "imported from cloud"),
-                    "color": ctx.get("color", "#aaaaaa"),
-                    "folder": ctx.get("folder", "default"),
-                    "service": "Cloudinary Sync",
-                    "file": "",
-                    "cloud_url": r.get("secure_url", ""),
-                    "created": r.get("created_at", str(ts_int)),
-                    "size": r.get("bytes", 0),
-                    "quality_score": 0,
-                    "user_id": ctx.get("user_id", "anonymous")
-                }
-                new_history.append(entry)
-            
-            # Sort by ID descending
-            new_history.sort(key=lambda x: x["id"], reverse=True)
-            if new_history:
-                save_history(new_history)
-                save_index(new_history[:MAX_HISTORY])
-                log_srv(f"[SYNC] Recovered {len(new_history)} models from Cloudinary.")
-            return True
-        else:
-            log_error(f"[SYNC] Cloudinary search failed: {resp.status_code} {resp.text[:200]}")
-            return False
-    except Exception as e:
-        log_error(f"[SYNC] Cloudinary exception: {e}")
-        return False
-
 
 
 # ---------------------------------------------------------------------------
@@ -494,153 +273,34 @@ def sync_cloudinary_history():
 #  GEMINI KEY SYSTEM V6 - 7 KEYS, ENV VARS FOR RAILWAY, HARDCODED FOR LOCAL
 # ---------------------------------------------------------------------------
 def _build_gemini_keys():
-    """Build Gemini key list from env vars only (Railway-safe, no hardcoded secrets)."""
-    raw_values = []
-
-    # Common single-key env names
-    for env_name in ["GEMINI_API_KEY", "GEMINI_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_API_KEY"]:
-        val = (os.environ.get(env_name) or "").strip()
-        if val:
-            raw_values.append((env_name.lower(), val))
-
-    # Numbered key slots: GEMINI_KEY_1..GEMINI_KEY_20
-    for i in range(1, 21):
-        val = (os.environ.get(f"GEMINI_KEY_{i}") or "").strip()
-        if val:
-            raw_values.append((f"key{i}", val))
-
-    # Optional comma-separated list support
-    csv = (os.environ.get("GEMINI_KEYS") or "").strip()
-    if csv:
-        for idx, item in enumerate(csv.split(","), 1):
-            v = item.strip()
-            if v:
-                raw_values.append((f"csv{idx}", v))
-
-    # Deduplicate while preserving order
-    seen = set()
+    """Build key list from env vars (Railway) with hardcoded fallbacks (local)."""
+    pairs = [
+        ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
+        ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
+        ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
+        ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
+        ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
+        ("key6", "AIzaSyDXsfLELFLRgoNfUXZGUtsK6X2-c--rqAM"),
+        ("key7", "AIzaSyBXLDQzk9_5naaxS4V5wG-RujQewfJKdw4"),
+    ]
     result = []
-    for name, key_val in raw_values:
-        if not key_val.startswith("AIza"):
-            continue
-        if key_val in seen:
-            continue
-        seen.add(key_val)
-        result.append({"name": name, "key": key_val,
-                       "fails": 0, "dead": False, "last_used": 0.0,
-                       "day": time.strftime("%Y-%m-%d"), "daily_used": 0,
-                       "rate_limited_until": 0.0, "death_reason": ""})
-
-    return result
+    for i, (name, fallback) in enumerate(pairs, 1):
+        key_val = os.environ.get("GEMINI_KEY_" + str(i), fallback)
+        if key_val and key_val.startswith("AIza"):
+            result.append({"name": name, "key": key_val,
+                           "fails": 0, "dead": False, "last_used": 0.0})
+    return result if result else [
+        {"name": "fallback", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}
+    ]
 
 GEMINI_KEYS = _build_gemini_keys()
 _gemini_index = 0
 _gemini_lock  = threading.Lock()
-_GEMINI_DAILY_LIMIT = int((os.environ.get("GEMINI_DAILY_LIMIT") or "200").strip() or "200")
-
-# ---------------------------------------------------------------------------
-#  OPENAI KEY SYSTEM
-# ---------------------------------------------------------------------------
-def _build_openai_keys():
-    keys = []
-    for i in range(1, 11):
-        val = (os.environ.get(f"OPENAI_KEY_{i}") or "").strip()
-        if val and val.startswith("sk-"):
-            keys.append({"name": f"openai{i}", "key": val,
-                        "fails": 0, "dead": False, "last_used": 0.0,
-                        "rate_limited_until": 0.0, "death_reason": ""})
-    single = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if single and single.startswith("sk-") and not any(k["key"]==single for k in keys):
-        keys.append({"name": "openai_env", "key": single,
-                    "fails": 0, "dead": False, "last_used": 0.0,
-                    "rate_limited_until": 0.0, "death_reason": ""})
-    return keys
-
-OPENAI_KEYS = _build_openai_keys()
-_openai_lock = threading.Lock()
-_openai_index = 0
-
-def get_openai_key():
-    with _openai_lock:
-        alive = [k for k in OPENAI_KEYS if not k["dead"]]
-        if not alive:
-            return None
-        alive.sort(key=lambda k: k["last_used"])
-        k = alive[0]
-        k["last_used"] = time.time()
-        return k["key"]
-
-def mark_openai_dead(key_val, reason="auth"):
-    with _openai_lock:
-        for k in OPENAI_KEYS:
-            if k["key"] == key_val:
-                if reason == "429":
-                    k["rate_limited_until"] = time.time() + 60
-                k["dead"] = True
-                k["death_reason"] = reason
-
-# ---------------------------------------------------------------------------
-#  OPENROUTER KEY SYSTEM
-# ---------------------------------------------------------------------------
-OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free").strip()
-
-def _build_openrouter_keys():
-    keys = []
-    for i in range(1, 11):
-        val = (os.environ.get(f"OPENROUTER_KEY_{i}") or "").strip()
-        if val and len(val) > 10:
-            keys.append({"name": f"openrouter{i}", "key": val,
-                        "fails": 0, "dead": False, "last_used": 0.0,
-                        "rate_limited_until": 0.0, "death_reason": ""})
-    return keys
-
-OPENROUTER_KEYS = _build_openrouter_keys()
-_openrouter_lock = threading.Lock()
-
-def get_openrouter_key():
-    with _openrouter_lock:
-        alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
-        if not alive:
-            return None
-        alive.sort(key=lambda k: k["last_used"])
-        k = alive[0]
-        k["last_used"] = time.time()
-        return k["key"]
-
-def mark_openrouter_dead(key_val, reason="auth"):
-    with _openrouter_lock:
-        for k in OPENROUTER_KEYS:
-            if k["key"] == key_val:
-                if reason == "429":
-                    k["rate_limited_until"] = time.time() + 60
-                k["dead"] = True
-                k["death_reason"] = reason
-
-
-
-def _gemini_today_key():
-    return time.strftime("%Y-%m-%d")
-
-
-def _gemini_daily_used(key_info):
-    day = _gemini_today_key()
-    if key_info.get("day") != day:
-        key_info["day"] = day
-        key_info["daily_used"] = 0
-    return int(key_info.get("daily_used", 0))
-
-
-def _gemini_inc_daily_used(key_info):
-    used = _gemini_daily_used(key_info) + 1
-    key_info["daily_used"] = used
-    return used
 
 
 def get_gemini_key():
     """Return the least-recently-used alive key string."""
     with _gemini_lock:
-        if not GEMINI_KEYS:
-            return ""
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             for k in GEMINI_KEYS:
@@ -648,35 +308,23 @@ def get_gemini_key():
                 k["fails"] = 0
             alive = list(GEMINI_KEYS)
             log_srv("[GEMINI] All keys reset - fresh rotation started")
-
-        quota_alive = [k for k in alive if _gemini_daily_used(k) < _GEMINI_DAILY_LIMIT]
-        if not quota_alive:
-            return ""
-
-        quota_alive.sort(key=lambda x: x["last_used"])
-        return quota_alive[0]["key"]
+        alive.sort(key=lambda x: x["last_used"])
+        return alive[0]["key"]
 
 
 def get_gemini_key_info():
     """Return the full key info dict for the next key to use."""
     with _gemini_lock:
-        if not GEMINI_KEYS:
-            return None
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             return GEMINI_KEYS[0]
-        quota_alive = [k for k in alive if _gemini_daily_used(k) < _GEMINI_DAILY_LIMIT]
-        if not quota_alive:
-            return None
-        quota_alive.sort(key=lambda x: x["last_used"])
-        return quota_alive[0]
+        alive.sort(key=lambda x: x["last_used"])
+        return alive[0]
 
 
 def rotate_gemini_key():
     """Advance to next key, incrementing fail count on current."""
     info = get_gemini_key_info()
-    if not info:
-        return
     with _gemini_lock:
         for k in GEMINI_KEYS:
             if k["key"] == info["key"]:
@@ -684,23 +332,19 @@ def rotate_gemini_key():
                 k["last_used"] = time.time()
                 if k["fails"] >= 3:
                     k["dead"] = True
-                    k["death_reason"] = "error"
                     log_srv("[GEMINI] Key " + k["name"] + " dead after 3 fails")
                 break
     log_srv("[GEMINI] Rotated - next key queued")
 
 
-def mark_key_dead(key_val, reason="auth"):
-    """Kill a key immediately. reason='auth' for 401/403, '429' for rate limit."""
+def mark_key_dead(key_val):
+    """Kill a key immediately on 401/403."""
     with _gemini_lock:
         for k in GEMINI_KEYS:
             if k["key"] == key_val:
                 k["dead"] = True
-                k["fails"] = 99 if reason == "auth" else k["fails"]
-                k["death_reason"] = reason
-                if reason == "429":
-                    k["rate_limited_until"] = time.time() + 60
-                log_srv("[GEMINI] Key " + k["name"] + " killed: " + reason)
+                k["fails"] = 99
+                log_srv("[GEMINI] Key " + k["name"] + " killed on auth error")
                 break
 
 
@@ -722,32 +366,152 @@ def get_gemini_key_status():
 
 
 # ---------------------------------------------------------------------------
-#  KEY RESURRECTION THREAD - Auto-revive 429-dead keys after 60s
+#  OPENROUTER KEY SYSTEM
 # ---------------------------------------------------------------------------
-_resurrection_running = False
+def _build_openrouter_keys():
+    keys = []
+    for i in range(1, 8):
+        val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
+        if val and val.startswith("sk-or"):
+            keys.append({
+                "name":      "openrouter" + str(i),
+                "key":       val,
+                "fails":     0,
+                "dead":      False,
+                "last_used": 0.0
+            })
+    return keys
 
-def _key_resurrection_loop():
-    """Background thread: every 30s, check for keys killed by 429 and revive them."""
-    global _resurrection_running
-    _resurrection_running = True
-    while True:
-        time.sleep(30)
-        now = time.time()
-        with _gemini_lock:
-            for k in GEMINI_KEYS:
-                if k["dead"] and k.get("death_reason") == "429":
-                    if now >= k.get("rate_limited_until", 0):
-                        k["dead"] = False
-                        k["fails"] = 0
-                        k["death_reason"] = ""
-                        k["rate_limited_until"] = 0.0
-                        log_srv("[GEMINI] Key " + k["name"] + " resurrected (429 cooldown expired)")
+OPENROUTER_KEYS  = _build_openrouter_keys()
+OPENROUTER_MODEL = os.environ.get(
+    "OPENROUTER_MODEL",
+    "meta-llama/llama-3.1-8b-instruct:free"
+).strip()
 
-def start_key_resurrection():
-    if not _resurrection_running:
-        t = threading.Thread(target=_key_resurrection_loop, daemon=True)
-        t.start()
-        log_srv("[GEMINI] Key resurrection thread started")
+
+# ---------------------------------------------------------------------------
+#  OPENROUTER LLM CALL
+# ---------------------------------------------------------------------------
+def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
+    """Call OpenRouter API. Returns text or None."""
+    alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
+    if not alive:
+        return None
+    for k in alive:
+        try:
+            r = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization":  "Bearer " + k["key"],
+                    "Content-Type":   "application/json",
+                    "HTTP-Referer":   "https://aurex-3d.up.railway.app",
+                    "X-Title":        "Aurex 3D"
+                },
+                json={
+                    "model":      OPENROUTER_MODEL,
+                    "messages":   [
+                        {"role": "system", "content": system_msg},
+                        {"role": "user",   "content": user_msg}
+                    ],
+                    "max_tokens": max_tokens,
+                    "temperature": temperature
+                },
+                timeout=90,
+                verify=False
+            )
+            if r.status_code == 200:
+                choices = r.json().get("choices", [])
+                if choices:
+                    text = choices[0].get("message", {}).get("content", "").strip()
+                    if text:
+                        k["fails"]     = 0
+                        k["last_used"] = time.time()
+                        log_srv("[OPENROUTER] Success model=" + OPENROUTER_MODEL)
+                        return text
+            elif r.status_code in (401, 403):
+                k["dead"]  = True
+                k["fails"] = 99
+                log_srv("[OPENROUTER] Key " + k["name"] + " auth error - dead")
+            elif r.status_code == 429:
+                k["fails"] += 1
+                log_srv("[OPENROUTER] Key " + k["name"] + " rate limited")
+                time.sleep(3)
+            else:
+                log_srv("[OPENROUTER] status " + str(r.status_code) + ": " + r.text[:200])
+                k["fails"] += 1
+        except Exception as e:
+            log_srv("[OPENROUTER] Exception: " + str(e))
+            k["fails"] += 1
+    return None
+
+
+# ---------------------------------------------------------------------------
+#  GEMINI LLM CALL  (call_llm)
+#  Tries all alive Gemini keys, then falls back to OpenRouter
+# ---------------------------------------------------------------------------
+def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
+    """Call Gemini API with key rotation. Falls back to OpenRouter if all fail."""
+    _base = (
+        "https://generativelanguage.googleapis.com"
+        "/v1beta/models/gemini-2.0-flash:generateContent"
+    )
+    total_attempts = len(GEMINI_KEYS) + 2
+    for attempt in range(total_attempts):
+        key_str = get_gemini_key()
+        if not key_str:
+            break
+        url     = _base + "?key=" + key_str
+        payload = {
+            "system_instruction": {
+                "parts": [{"text": system_msg}]
+            },
+            "contents": [{
+                "parts": [{"text": user_msg}]
+            }],
+            "generationConfig": {
+                "maxOutputTokens": max_tokens,
+                "temperature":     temperature
+            }
+        }
+        try:
+            r = requests.post(url, json=payload, timeout=90, verify=False)
+            if r.status_code == 200:
+                data  = r.json()
+                parts = (data.get("candidates", [{}])[0]
+                         .get("content", {})
+                         .get("parts", []))
+                text  = "".join(p.get("text", "") for p in parts).strip()
+                if text:
+                    mark_key_success(key_str)
+                    log_srv("[GEMINI] Success attempt=" + str(attempt + 1))
+                    return text
+                log_srv("[GEMINI] Empty response attempt=" + str(attempt + 1))
+                rotate_gemini_key()
+            elif r.status_code in (401, 403):
+                log_srv("[GEMINI] Auth error " + str(r.status_code) + " - killing key")
+                mark_key_dead(key_str)
+            elif r.status_code == 429:
+                log_srv("[GEMINI] 429 rate limit - rotating key")
+                rotate_gemini_key()
+                time.sleep(2)
+            else:
+                log_srv("[GEMINI] HTTP " + str(r.status_code) + " - rotating key")
+                rotate_gemini_key()
+        except requests.exceptions.Timeout:
+            log_srv("[GEMINI] Timeout attempt=" + str(attempt + 1) + " - rotating")
+            rotate_gemini_key()
+        except Exception as e:
+            log_srv("[GEMINI] Exception: " + str(e))
+            rotate_gemini_key()
+
+    # All Gemini keys failed - try OpenRouter
+    log_srv("[LLM] All Gemini keys failed - falling back to OpenRouter")
+    result = call_openrouter(system_msg, user_msg, max_tokens, temperature)
+    if result:
+        return result
+
+    log_srv("[LLM] All providers failed - returning None")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -765,8 +529,8 @@ def _write_log(filepath, message):
         with _log_lock:
             with open(filepath, "a", encoding="ascii", errors="replace") as f:
                 f.write(message + "\n")
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
+    except Exception:
+        pass
 
 
 def log_srv(msg):
@@ -927,388 +691,6 @@ REQUIRED_DIRS = [
 DEFAULT_FOLDERS = ["default", "vehicles", "creatures", "buildings", "misc"]
 
 
-# ---------------------------------------------------------------------------
-#  COLOR MAP
-# ---------------------------------------------------------------------------
-COLOR_MAP = {
-    "red": (1.0, 0.0, 0.0), "green": (0.0, 0.8, 0.0), "blue": (0.0, 0.3, 1.0),
-    "yellow": (1.0, 0.9, 0.0), "orange": (1.0, 0.5, 0.0), "purple": (0.5, 0.0, 0.8),
-    "pink": (1.0, 0.4, 0.7), "cyan": (0.0, 0.9, 1.0), "white": (1.0, 1.0, 1.0),
-    "black": (0.05, 0.05, 0.05), "gray": (0.5, 0.5, 0.5), "grey": (0.5, 0.5, 0.5),
-    "brown": (0.4, 0.2, 0.1), "gold": (1.0, 0.8, 0.0), "silver": (0.75, 0.75, 0.75),
-}
-
-
-# ---------------------------------------------------------------------------
-#  HISTORY / FOLDERS / INDEX - JSON persistence
-# ---------------------------------------------------------------------------
-_hist_lock = threading.Lock()
-
-
-def load_history():
-    try:
-        if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                d = json.load(f)
-            return d if isinstance(d, list) else []
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
-    return []
-
-
-def save_history(hist):
-    try:
-        with _hist_lock:
-            hist = sorted(hist, key=lambda x: x.get("id", 0), reverse=True)
-            if len(hist) > MAX_HISTORY:
-                hist = hist[:MAX_HISTORY]
-            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-                json.dump(hist, f, indent=2)
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
-
-
-def load_deleted_ids():
-    try:
-        if os.path.exists(DELETED_IDS_FILE):
-            with open(DELETED_IDS_FILE, 'r', encoding='utf-8') as f:
-                return set(json.load(f))
-    except Exception:
-        pass
-    return set()
-
-def save_deleted_id(model_id):
-    try:
-        ids = load_deleted_ids()
-        ids.add(str(model_id))
-        with open(DELETED_IDS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(list(ids), f)
-    except Exception as e:
-        log_srv('[DELETED_IDS] save failed: ' + str(e))
-
-def add_history_entry(entry):
-    try:
-        h = load_history()
-        h.insert(0, entry)
-        save_history(h)
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
-
-
-def load_folders(user_id=None):
-    folders = set(DEFAULT_FOLDERS)
-    try:
-        # 1. Add any folders currently in history matching user
-        for e in load_index():
-            e_user = e.get("user_id", "anonymous")
-            if user_id and user_id != "anonymous":
-                if e_user != "anonymous" and e_user != user_id: continue
-            else:
-                if e_user != "anonymous": continue
-                
-            if e.get("folder"):
-                folders.add(e["folder"])
-        
-        # 2. Add any empty folders saved locally
-        if os.path.exists(FOLDERS_FILE):
-            with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
-                d = json.load(f)
-            if isinstance(d, list):
-                folders.update(d)
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
-    return sorted(list(folders))
-
-
-def save_folders(folders):
-    try:
-        with open(FOLDERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(folders, f, indent=2)
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
-
-
-def load_index():
-    try:
-        if os.path.exists(INDEX_FILE):
-            with open(INDEX_FILE, "r", encoding="utf-8") as f:
-                d = json.load(f)
-            return d if isinstance(d, list) else []
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
-    return []
-
-
-def save_index(idx):
-    try:
-        with open(INDEX_FILE, "w", encoding="utf-8") as f:
-            json.dump(idx[:MAX_HISTORY], f, indent=2)
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
-
-
-# ---------------------------------------------------------------------------
-#  GEMINI LLM CALL
-# ---------------------------------------------------------------------------
-def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2): # patched
-    """Call Gemini API with system_instruction field and proper retry/rotation.
-    On 429: retries same key up to 3 times with escalating sleep (3s, 8s, 15s).
-    On 401/403: marks key permanently dead.
-    On other errors: rotates to next key.
-    """
-    _base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
-    _429_counts = {}  # key_val -> retry count for 429s
-    for _i in range(max(len(GEMINI_KEYS), 1) + 3):  # extra 3 for 429 retries
-        _k = get_gemini_key()
-        if not _k:
-            return None
-        payload = {
-            "system_instruction": {"parts": [{"text": system_msg}]},
-            "contents": [{"parts": [{"text": user_msg}]}],
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_tokens,
-                "candidateCount": 1,
-            },
-        }
-        try:
-            r = requests.post(
-                _base + _k,
-                headers={"Content-Type": "application/json"},
-                json=payload,
-                timeout=90,
-                verify=False,
-            )
-            if r.status_code == 200:
-                c = r.json().get("candidates", [])
-                if c:
-                    p = c[0].get("content", {}).get("parts", [])
-                    if p:
-                        mark_key_success(_k)
-                        _gemini_inc_daily_used_by_key(_k)
-                        return p[0].get("text", "")
-            elif r.status_code == 429:
-                key_429_count = _429_counts.get(_k, 0)
-                sleep_times = [3, 8, 15]
-                if key_429_count < len(sleep_times):
-                    sleep_s = sleep_times[key_429_count]
-                    log_srv(f"[GEMINI] 429 on key - retry {key_429_count+1}/3 after {sleep_s}s sleep")
-                    _429_counts[_k] = key_429_count + 1
-                    time.sleep(sleep_s)
-                    continue  # retry same key
-                else:
-                    log_srv("[GEMINI] 429 persistent - marking key rate-limited")
-                    mark_key_dead(_k, reason="429")
-            elif r.status_code in (401, 403):
-                mark_key_dead(_k, reason="auth")
-            else:
-                log_srv("[GEMINI] status " + str(r.status_code) + ": " + r.text[:200])
-                rotate_gemini_key()
-        except Exception as e:
-            log_srv("[GEMINI] exception: " + str(e))
-            rotate_gemini_key()
-    return None
-
-
-
-# ---------------------------------------------------------------------------
-#  OPENAI LLM CALL
-# ---------------------------------------------------------------------------
-def call_openai(system_msg, user_msg, max_tokens=4000, temperature=0.2):
-    """Call OpenAI API. Returns text or None."""
-    _base = "https://api.openai.com/v1/chat/completions"
-    for _i in range(max(len(OPENAI_KEYS), 1) + 2):
-        _k = get_openai_key()
-        if not _k:
-            return None
-        payload = {
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": user_msg}
-            ],
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
-        try:
-            r = requests.post(
-                _base,
-                headers={"Content-Type": "application/json",
-                         "Authorization": "Bearer " + _k},
-                json=payload,
-                timeout=90,
-                verify=False,
-            )
-            if r.status_code == 200:
-                data = r.json()
-                choices = data.get("choices", [])
-                if choices:
-                    text = choices[0].get("message", {}).get("content", "")
-                    if text:
-                        log_srv("[OPENAI] Success")
-                        return text
-            elif r.status_code == 429:
-                log_srv("[OPENAI] 429 rate limit - sleeping 5s")
-                time.sleep(5)
-                continue
-            elif r.status_code in (401, 403):
-                log_srv("[OPENAI] Auth error - marking key dead")
-                mark_openai_dead(_k, reason="auth")
-            else:
-                log_srv("[OPENAI] status " + str(r.status_code) + ": " + r.text[:200])
-        except Exception as e:
-            log_srv("[OPENAI] exception: " + str(e))
-    return None
-
-
-# ---------------------------------------------------------------------------
-#  OPENROUTER LLM CALL
-# ---------------------------------------------------------------------------
-def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
-    """Call OpenRouter API. Returns text or None."""
-    _base = "https://openrouter.ai/api/v1/chat/completions"
-    for _i in range(max(len(OPENROUTER_KEYS), 1) + 2):
-        _k = get_openrouter_key()
-        if not _k:
-            return None
-        payload = {
-            "model": OPENROUTER_MODEL,
-            "messages": [
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": user_msg}
-            ],
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
-        try:
-            r = requests.post(
-                _base,
-                headers={"Content-Type": "application/json",
-                         "Authorization": "Bearer " + _k,
-                         "HTTP-Referer": "https://aurex-3d.up.railway.app",
-                         "X-Title": "Aurex 3D"},
-                json=payload,
-                timeout=90,
-                verify=False,
-            )
-            if r.status_code == 200:
-                data = r.json()
-                choices = data.get("choices", [])
-                if choices:
-                    text = choices[0].get("message", {}).get("content", "")
-                    if text:
-                        log_srv("[OPENROUTER] Success with model: " + OPENROUTER_MODEL)
-                        return text
-            elif r.status_code == 429:
-                log_srv("[OPENROUTER] 429 rate limit - sleeping 5s")
-                time.sleep(5)
-                continue
-            elif r.status_code in (401, 403):
-                log_srv("[OPENROUTER] Auth error - marking key dead")
-                mark_openrouter_dead(_k, reason="auth")
-            else:
-                log_srv("[OPENROUTER] status " + str(r.status_code) + ": " + r.text[:200])
-        except Exception as e:
-            log_srv("[OPENROUTER] exception: " + str(e))
-    return None
-
-
-# ---------------------------------------------------------------------------
-#  UNIFIED LLM CALL - Tries Gemini -> OpenRouter -> OpenAI
-# ---------------------------------------------------------------------------
-def call_llm_unified(system_msg, user_msg, max_tokens=4000, temperature=0.2):
-    """Try all available AI providers in order. Returns (text, provider_name) or (None, None)."""
-    # Try Gemini first (cheapest, 7 keys)
-    alive_gemini = [k for k in GEMINI_KEYS if not k["dead"]]
-    if alive_gemini:
-        result = call_llm(system_msg, user_msg, max_tokens, temperature)
-        if result:
-            return result, "Gemini"
-
-    # Try OpenRouter second (free models available)
-    alive_or = [k for k in OPENROUTER_KEYS if not k["dead"]]
-    if alive_or:
-        log_srv("[LLM] Gemini failed/unavailable - trying OpenRouter")
-        result = call_openrouter(system_msg, user_msg, max_tokens, temperature)
-        if result:
-            return result, "OpenRouter"
-
-    # Try OpenAI last (paid)
-    alive_oai = [k for k in OPENAI_KEYS if not k["dead"]]
-    if alive_oai:
-        log_srv("[LLM] OpenRouter failed/unavailable - trying OpenAI")
-        result = call_openai(system_msg, user_msg, max_tokens, temperature)
-        if result:
-            return result, "OpenAI"
-
-    log_srv("[LLM] All providers failed")
-    return None, None
-
-def _gemini_inc_daily_used_by_key(key_val):
-    """Increment daily usage for a key by its value string."""
-    with _gemini_lock:
-        for k in GEMINI_KEYS:
-            if k["key"] == key_val:
-                _gemini_inc_daily_used(k)
-                break
-
-
-# ---------------------------------------------------------------------------
-#  BLENDER SCRIPT RUNNER
-# ---------------------------------------------------------------------------
-def run_blender_script(script_text, output_path):
-    """Run a Blender Python script and validate the output GLB."""
-    import tempfile
-    import subprocess as _sp
-
-    if not os.path.isfile(BLENDER_EXE):
-        log_error("[BLENDER] Blender executable not found at " + BLENDER_EXE)
-        return False
-    try:
-        full = (
-            "import bpy,math,os\nOUTPUT_PATH=r'"
-            + output_path.replace("\\", "/")
-            + "'\n"
-            + script_text
-        )
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False, encoding="utf-8"
-        ) as tf:
-            tf.write(full)
-            tmp = tf.name
-        cf = 0x08000000 if os.name == "nt" else 0
-        r = _sp.run(
-            [BLENDER_EXE, "--background", "--python", tmp],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            creationflags=cf,
-        )
-        if r.stdout:
-            for line in r.stdout.splitlines():
-                if line.strip():
-                    log_gen("[BLENDER OUT] " + line.strip())
-        if r.stderr:
-            for line in r.stderr.splitlines():
-                if line.strip():
-                    log_gen("[BLENDER ERR] " + line.strip())
-
-        try:
-            os.unlink(tmp)
-        except Exception as _e:
-                log_srv(f"[EXCEPTION] {_e}")
-        if r.returncode == 0 and os.path.exists(output_path):
-            ok, msg = validate_glb(output_path)
-            if not ok:
-                log_error("[BLENDER] Validated GLB failed: " + msg)
-            return ok
-        else:
-            log_error("[BLENDER] exited with " + str(r.returncode))
-        return False
-    except Exception as e:
-        log_error("[BLENDER] Error running script: " + str(e))
-        return False
-
 
 def startup_health_check():
     """Run full diagnostics on startup - comprehensive system check."""
@@ -1323,28 +705,6 @@ def startup_health_check():
     # Blender
     if os.path.exists(BLENDER_EXE):
         log_srv("[STARTUP] Blender: FOUND - " + BLENDER_EXE)
-        try:
-            bv = subprocess.run([BLENDER_EXE, "--version"], capture_output=True, text=True, timeout=10)
-            if bv.returncode == 0 and bv.stdout:
-                v_line = bv.stdout.splitlines()[0]
-                log_srv("[STARTUP] Blender Version: " + v_line)
-            else:
-                log_srv("[STARTUP] WARNING: Blender --version failed")
-        except Exception as e:
-            log_srv("[STARTUP] WARNING: Blender error: " + str(e))
-        
-        # Check Linux libraries
-        import platform as _p
-        if _p.system() == "Linux":
-            try:
-                libs = subprocess.run(["ldd", BLENDER_EXE], capture_output=True, text=True, timeout=5)
-                missing = [l for l in libs.stdout.splitlines() if "not found" in l]
-                if missing:
-                    log_srv("[STARTUP] BLENDER CRITICAL WARNING: Missing Linux libraries:")
-                    for m in missing[:5]:
-                        log_srv("[STARTUP]   " + m.strip())
-            except Exception as _e:
-                    log_srv(f"[EXCEPTION] {_e}")
     else:
         log_srv("[STARTUP] WARNING: Blender NOT FOUND - AI Blender stage disabled")
         log_srv("[STARTUP]   Expected at: " + BLENDER_EXE)
@@ -1370,8 +730,8 @@ def startup_health_check():
             log_srv("[STARTUP] WARNING: Low disk space: " + str(free_gb) + "GB free")
         else:
             log_srv("[STARTUP] Disk free: " + str(free_gb) + "GB")
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
+    except Exception:
+        pass
 
     check_shap_e()
     load_settings()
@@ -1413,12 +773,12 @@ _last_quality_score = 0
 
 
 def validate_glb(path):
-    """Basic GLB validation: exists, >1024 bytes, magic == glTF."""
+    """Basic GLB validation: exists, >4096 bytes, magic == glTF."""
     try:
         if not os.path.exists(path):
             return False, "file not found"
         size = os.path.getsize(path)
-        if size < 1024:
+        if size < 4096:
             return False, "too small: " + str(size) + " bytes"
         with open(path, "rb") as f:
             magic = f.read(4)
@@ -1488,7 +848,7 @@ def validate_glb_quality(path):
     if not valid:
         return False, msg
     score, detail = score_glb_quality(path)
-    min_size = 1024
+    min_size = int(get_setting("quality.min_glb_size_bytes", 8192))
     if os.path.getsize(path) < min_size:
         return False, "Quality too low: score=" + str(score) + " " + detail
     return True, "OK score=" + str(score) + " " + detail
@@ -1502,8 +862,8 @@ def hex_to_rgb_float(hexstr):
             g = int(h[2:4], 16) / 255.0
             b = int(h[4:6], 16) / 255.0
             return (r, g, b)
-        except Exception as _e:
-                log_srv(f"[EXCEPTION] {_e}")
+        except Exception:
+            pass
     return (0.5, 0.5, 0.5)
 
 
@@ -1550,9 +910,7 @@ INTERPRETER_SYSTEM = (
 def interpret_prompt(prompt_text, color_hex="#aaaaaa"):
     """Call Groq interpreter. Returns dict with parsed fields."""
     log_gen("[INTERPRETER] Calling Gemini interpreter...")
-    raw = call_llm_unified(INTERPRETER_SYSTEM, prompt_text, max_tokens=500, temperature=0.1)
-    raw_provider = raw[1] if isinstance(raw, tuple) else "Gemini"
-    raw = raw[0] if isinstance(raw, tuple) else raw
+    raw = call_llm(INTERPRETER_SYSTEM, prompt_text, max_tokens=500, temperature=0.1)
     if raw:
         # Strip any accidental markdown fences
         clean = raw.strip()
@@ -1668,8 +1026,8 @@ def cleanup_cache_if_needed():
         try:
             os.remove(fp)
             deleted += 1
-        except Exception as _e:
-                log_srv(f"[EXCEPTION] {_e}")
+        except Exception:
+            pass
     log_srv("[CACHE] Deleted " + str(deleted) + " old cache files")
 
 
@@ -1680,11 +1038,12 @@ def check_cache(prompt):
         if ok:
             log_gen(f"[CACHE] hit hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
             return path
-        log_gen(f"[CACHE] stale entry, removing: {msg}")
-        try:
-            os.remove(path)
-        except Exception as e:
-            log_error(f"[CACHE] remove stale failed: {e}")
+        else:
+            log_gen(f"[CACHE] stale entry, removing: {msg}")
+            try:
+                os.remove(path)
+            except Exception:
+                pass
     log_gen(f"[CACHE] miss hash={h}"); global _cache_misses; _cache_misses += 1
     return None
 
@@ -1955,12 +1314,12 @@ def extract_key_error(stderr):
     return "Script execution failed"
 
 
-def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=1):
+def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2):
     """Run a Blender script with up to max_retries Gemini-powered auto-fix attempts."""
     current_script  = script
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
     debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
-    blender_timeout = int(get_setting("generation.blender_timeout", 240))
+    blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
     # Inject OUTPUT_PATH into script before first run
     if "OUTPUT_PATH" not in current_script or "OUTPUT_PATH =" not in current_script:
@@ -1979,8 +1338,8 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=1
         try:
             with open(debug_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(fixed_script)
-        except Exception as e:
-            log_error("[BLENDER] Failed to write debug script: " + str(e))
+        except Exception:
+            pass
 
         try:
             safe = fixed_script.encode("ascii", errors="replace").decode("ascii")
@@ -2047,9 +1406,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=1
                 "\nBroken script (first 2000 chars):\n"
                 + current_script[:2000]
             )
-            fixed = call_llm_unified(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
-            fixed_provider = fixed[1] if isinstance(fixed, tuple) else "Gemini"
-            fixed = fixed[0] if isinstance(fixed, tuple) else fixed
+            fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
             if fixed and len(fixed.strip()) > 100:
                 current_script = fixed
                 log_gen("[BLENDER] Got Gemini fix ("
@@ -2114,11 +1471,6 @@ BLENDER_SYSTEM = (
     "QUALITY: Minimum 20 separate mesh objects. Aim for 30-40 on complex models. "
     "Every major part its own object. Realistic proportions. "
     "Objects must NOT all stack at origin. Place each part at its correct 3D position. "
-    "ORGANIC/COMPLEX SHAPES (Animals, Humans, Plants, Food): You CANNOT use complex modifiers. "
-    "You MUST build complex/organic shapes by aggressively OVERLAPPING dozens of basic primitives. "
-    "Example: A dog's curved leg is 3-4 overlapping stretched spheres (thigh, calf, paw). "
-    "Example: A face is a large sphere with smaller spheres embedded for snout/eyes/ears. "
-    "Do NOT try to reshape a single mesh! Sculpt by assembling overlapping primitives! "
     "MENTAL CHECK BEFORE WRITING: "
     "1. What are all the main parts? "
     "2. What size is each part? "
@@ -2254,64 +1606,15 @@ def get_parts_hint(obj_name, parts_override=None):
             "mid section slightly narrower, upper section with arrow slits, "
             "stepped battlements crown, arched entrance, windows, flag pole, flag plane"
         ),
-        "dog": (
-            "large oval torso sphere (stretched), rounded neck, spherical head, "
-            "elongated cylindrical snout, 2 folded triangular ears, "
-            "4 thick angled legs (overlapping spheres/cylinders), 4 paws, tail"
-        ),
-        "cat": (
-            "slender oval torso, arched back sphere, small round head, "
-            "2 sharp triangular ears, short snout, "
-            "4 thin legs with knee joints, small round paws, long sweeping tail"
-        ),
-        "elephant": (
-            "massive rounded torso, large thick head, long drooping trunk (multiple spheres), "
-            "2 giant flat ears (scaled planes/flattened spheres), 2 curved tusks (cones), "
-            "4 thick pillar legs, small tail"
-        ),
-        "bird": (
-            "egg-shaped body, small round head, sharp pointed beak (cone), "
-            "2 large swept wings (flattened stretched spheres), tail feather fan (planes), "
-            "2 thin legs, 2 clawed feet"
-        ),
-        "human": (
-            "oval head, cylindrical neck, wide upper torso, narrower lower torso, "
-            "2 shoulder joints (spheres), 2 upper arms (cylinders), 2 forearms, 2 hands, "
-            "2 hips (spheres), 2 thighs, 2 calves, 2 feet"
-        ),
-        "person": (
-            "oval head, cylindrical neck, wide upper torso, narrower lower torso, "
-            "2 shoulder joints (spheres), 2 upper arms (cylinders), 2 forearms, 2 hands, "
-            "2 hips (spheres), 2 thighs, 2 calves, 2 feet"
-        ),
-        "pizza": (
-            "wide flat cylinder (crust), raised outer torus (edge), "
-            "large flat red cylinder (sauce), white flattened blobs (cheese), "
-            "many small red cylinders (pepperoni scattered randomly)"
-        ),
-        "hamburger": (
-            "curved top bun (half-sphere), flat bottom bun (cylinder), "
-            "thick brown patty cylinder, crinkled green planes (lettuce), "
-            "red flat cylinders (tomato), yellow square plane (cheese)"
-        ),
-        "mountain": (
-            "massive wide cone base, several overlapping jagged cones for peaks, "
-            "smaller cones scattered at base for foothills, textured rocky outcroppings"
-        ),
-        "plant": (
-            "Central stalk (cylinder), multiple branching stems, "
-            "many leaf planes angled outwards, central flower bulb if applicable, "
-            "pot or soil base at bottom"
-        ),
     }
     name_lower = obj_name.lower()
     for key, parts in parts_map.items():
         if key in name_lower:
             return parts
     return (
-        "Deconstruct " + obj_name + " into its fundamental geometric parts! "
-        "List 15-20 distinct sub-components. If organic, assemble it using overlapping spheres and curved cylinders. "
-        "Model each part as a separate mesh correctly positioned in 3D space."
+        "all major visible structural parts of a "
+        + obj_name
+        + " - model each part as a separate mesh with correct proportions and 3D positions"
     )
 
 
@@ -2376,10 +1679,9 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     """Stage B: Gemini writes a Blender script, validator cleans it, retry on failure."""
     log_gen("[MODEL_B] Starting Gemini+Blender (style=" + style
             + " complexity=" + str(complexity) + ")")
+
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
-    script_raw = call_llm_unified(BLENDER_SYSTEM, user_msg, max_tokens=4000, temperature=0.2)
-    script_raw_provider = script_raw[1] if isinstance(script_raw, tuple) else "Gemini"
-    script_raw = script_raw[0] if isinstance(script_raw, tuple) else script_raw
+    script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=4000, temperature=0.2)
     if not script_raw:
         log_gen("[MODEL_B] Gemini returned no script")
         return False
@@ -2393,6 +1695,7 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
         log_gen("[MODEL_B] REJECT: missing import bpy. Raw: " + script_raw[:200])
         return False
     if "export_scene.gltf" not in script:
+        log_gen("[MODEL_B] REJECT: missing gltf export")
         return False
     if len(script) < 200:
         log_gen("[MODEL_B] REJECT: script too short (" + str(len(script)) + " chars)")
@@ -2401,27 +1704,9 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     ok, final_script = run_blender_with_retry(script, prompt, color_hex, output_path)
     if ok:
         log_gen("[MODEL_B] Success")
-        return True
-        
-    log_gen("[MODEL_B] Initial generation failed. Attempting extremely simplified fallback...")
-    simp_complexity = max(1, complexity - 2)
-    user_msg_simp = build_blender_user_prompt(interp, color_hex, style, simp_complexity)
-    user_msg_simp += " PREVIOUS ATTEMPT CRASHED. THIS MUST BE EXTREMELY SIMPLE AND RELIABLE. USE ONLY A FEW OBJECTS."
-    
-    script_raw_simp = call_llm_unified(BLENDER_SYSTEM, user_msg_simp, max_tokens=2500, temperature=0.1)
-    script_raw_simp_provider = script_raw_simp[1] if isinstance(script_raw_simp, tuple) else "Gemini"
-    script_raw_simp = script_raw_simp[0] if isinstance(script_raw_simp, tuple) else script_raw_simp
-    if script_raw_simp:
-        script_simp = strip_md_fences(script_raw_simp)
-        if "import bpy" in script_simp and "export_scene.gltf" in script_simp:
-            # Try once with no internal Gemini retries (fast fail)
-            ok_simp, _ = run_blender_with_retry(script_simp, prompt, color_hex, output_path, max_retries=0)
-            if ok_simp:
-                log_gen("[MODEL_B] Simplified fallback succeeded")
-                return True
-
-    log_gen("[MODEL_B] All retries and fallbacks failed")
-    return False
+    else:
+        log_gen("[MODEL_B] All retries failed")
+    return ok
 
 # ---------------------------------------------------------------------------
 #  PRESET BLENDER SCRIPTS  (40 shapes, 20+ primitives each)
@@ -3977,8 +3262,8 @@ def load_saved_script(prompt):
                 script = f.read()
             log_gen("[SCRIPT_LIB] Found saved script: " + key)
             return script
-    except Exception as _e:
-            log_srv(f"[EXCEPTION] {_e}")
+    except Exception:
+        pass
     return None
 
 
@@ -4044,8 +3329,8 @@ def stage_c_preset(prompt, interp, color_hex, output_path):
         # Cache the result
         try:
             shutil.copy2(output_path, cached_preset)
-        except Exception as e:
-            log_error(f"[PRESET] Failed to cache preset '{keyword}': {e}")
+        except Exception:
+            pass
         return True, keyword
     log_gen(f"[PRESET] [MODEL_C] Blender preset failed for {keyword}")
     return False, keyword
@@ -4096,11 +3381,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
-                          model_used="Cache", cloud_url=_cloud or "",
+                          cloud_url=_cloud or "",
                           quality_score=score_glb_quality(ROCKET_GLB)[0])
                 return
         set_state(progress=15, step="cache_miss")
-        log_gen("[CACHE] miss - proceeding to generation (Gemini may be used)")
+        log_gen("[CACHE] miss - proceeding to generation")
 
         # ------------------------------------------------------------------
         # STEP 1: Prompt interpreter
@@ -4113,7 +3398,6 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         if library_mode:
             interp = interpret_prompt(prompt, color_hex)
         else:
-            log_gen("[INTERPRETER] skipped Gemini interpreter (library_mode=False)")
             color_word = color_name_from_hex(color_hex)
             words = prompt.lower().split()
             for w in words:
@@ -4183,9 +3467,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 4: Stage B - Gemini + Blender (AI reads full prompt)
         # ------------------------------------------------------------------
         set_state(progress=40, step="stage_b_gemini_blender")
-        blender_ready = os.path.isfile(BLENDER_EXE)
-        gemini_ready = bool(GEMINI_KEYS)
-        if blender_ready and gemini_ready:
+        if os.path.exists(BLENDER_EXE):
             log_gen("[MODEL_B] attempting Gemini+Blender with full prompt...")
             set_state(progress=60, step="blender_running")
             ok = stage_b_gemini_blender(prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
@@ -4194,37 +3476,28 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[MODEL_B] Gemini+Blender success")
                 store_cache(ROCKET_GLB, prompt)
-                _cloud = upload_to_cloudinary(ROCKET_GLB)
                 set_state(status="done", progress=100, step="done",
-                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
-                          model_used="Gemini+Blender", cloud_url=_cloud or "",
-                          quality_score=score_glb_quality(ROCKET_GLB)[0])
+                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB)
                 return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through to preset")
         else:
-            if not gemini_ready:
-                log_gen("[MODEL_B] skipped: no Gemini keys configured")
-            if not blender_ready:
-                log_gen(f"[MODEL_B] skipped: Blender not found at {BLENDER_EXE}")
+            log_gen(f"[MODEL_B] Blender not found at {BLENDER_EXE}, skipping Stage B")
 
         # ------------------------------------------------------------------
         # STEP 5: Stage C - Preset shapes
         # ------------------------------------------------------------------
         set_state(progress=75, step="stage_c_preset")
-        if os.path.isfile(BLENDER_EXE):
-            ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
-            if ok:
-                shutil.copy2(temp_path, ROCKET_GLB)
-                sz = os.path.getsize(ROCKET_GLB)
-                log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
-                store_cache(ROCKET_GLB, prompt)
-                set_state(status="done", progress=100, step="done",
-                          service="Preset", glb_size=sz, last_model=ROCKET_GLB,
-                          model_used="Preset", cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
-                          quality_score=score_glb_quality(ROCKET_GLB)[0])
-                return
-        else:
-            log_gen(f"[PRESET] skipped: Blender not found at {BLENDER_EXE}")
+        ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
+        if ok:
+            shutil.copy2(temp_path, ROCKET_GLB)
+            sz = os.path.getsize(ROCKET_GLB)
+            log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
+            store_cache(ROCKET_GLB, prompt)
+            set_state(status="done", progress=100, step="done",
+                      service="Preset", glb_size=sz, last_model=ROCKET_GLB,
+                      cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
+                      quality_score=score_glb_quality(ROCKET_GLB)[0])
+            return
 
         # ------------------------------------------------------------------
         # STEP 6: Fallback - Pure Python GLB
@@ -4234,10 +3507,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
         log_gen(f"[PYGLB] fallback written: {sz} bytes")
+        store_cache(ROCKET_GLB, prompt)
         _cloud = upload_to_cloudinary(ROCKET_GLB)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
-                  model_used="Fallback", cloud_url=_cloud or "",
+                  cloud_url=_cloud or "",
                   quality_score=score_glb_quality(ROCKET_GLB)[0])
 
     except Exception as e:
@@ -4262,17 +3536,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
 #  FLASK ROUTES
 # ---------------------------------------------------------------------------
 
-@app.route("/favicon.ico")
-def favicon():
-    return ("", 204)
-
-
 @app.route("/")
 def index():
-    user = session.get('user')
-    if not user:
-        return redirect('/login')
-
     """Serve the main index.html from static directory."""
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
@@ -4282,55 +3547,23 @@ def index():
 
 @app.route("/ping", methods=["GET"])
 def ping():
-    """Health check and comprehensive system status."""
+    """Health check and key status."""
     alive_keys, dead_keys = get_gemini_key_status()
-    
-    # Blender info
-    blender_version = "unknown"
-    try:
-        if os.path.exists(BLENDER_EXE):
-            bv = subprocess.check_output([BLENDER_EXE, "--version"], stderr=subprocess.STDOUT, timeout=5).decode()
-            blender_version = bv.split("\n")[0].strip()
-    except Exception as _e:
-        blender_version = f"error: {_e}"
-
-    # Disk info
-    try:
-        import shutil as _shutil
-        usage = _shutil.disk_usage(BASE_DIR)
-        disk_free_gb = usage.free // (1024**3)
-    except Exception as _e:
-        disk_free_gb = -1
-
     return jsonify({
-        "status":               "ok",
+        "ok":                   True,
         "version":              VERSION,
-        "timestamp":            datetime.datetime.now().isoformat(),
-        "blender": {
-            "found":            os.path.exists(BLENDER_EXE),
-            "version":          blender_version,
-            "path":             BLENDER_EXE
-        },
-        "gemini": {
-            "total_keys":       len(GEMINI_KEYS),
-            "alive":            alive_keys,
-            "dead":             dead_keys
-        },
-        "cloudinary": {
-            "enabled":          CLOUDINARY_ENABLED,
-            "cloud":            CLOUDINARY_CLOUD
-        },
-        "system": {
-            "disk_free_gb":     disk_free_gb,
-            "platform":         sys.platform,
-            "python":           sys.version.split(" ")[0]
-        },
-        "usage": {
-            "cache_hits":       _cache_hits,
-            "cache_misses":     _cache_misses,
-            "cache_size_mb":    get_cache_size_mb(),
-            "last_quality":     _last_quality_score
-        }
+        "gemini_keys_total":    len(GEMINI_KEYS),
+        "gemini_keys_alive":    alive_keys,
+        "gemini_keys_dead":     dead_keys,
+        "last_quality_score":   _last_quality_score,
+        "cache_hits":           _cache_hits,
+        "cache_misses":         _cache_misses,
+        "cache_size_mb":        get_cache_size_mb(),
+        "shap_e_available":     shap_e_available,
+        "blender_found":        os.path.exists(BLENDER_EXE),
+        "cloudinary_enabled":   CLOUDINARY_ENABLED,
+        "cloudinary_cloud":     CLOUDINARY_CLOUD,
+        "model_count":          len(load_history()),
     })
 
 
@@ -4368,31 +3601,9 @@ def serve_manifest():
     return resp
 
 
-
-@app.route("/api/keys/status", methods=["GET"])
-def api_keys_status():
-    """Return health of all AI provider keys."""
-    def key_summary(keys, provider):
-        alive = [k for k in keys if not k["dead"]]
-        dead  = [k for k in keys if k["dead"]]
-        return {
-            "provider": provider,
-            "total": len(keys),
-            "alive": len(alive),
-            "dead": len(dead),
-            "keys": [{"name": k["name"], "dead": k["dead"],
-                     "reason": k.get("death_reason","")} for k in keys]
-        }
-    return jsonify({
-        "gemini":      key_summary(GEMINI_KEYS, "Gemini"),
-        "openai":      key_summary(OPENAI_KEYS, "OpenAI"),
-        "openrouter":  key_summary(OPENROUTER_KEYS, "OpenRouter"),
-        "openrouter_model": OPENROUTER_MODEL,
-    })
-
 @app.route("/health")
 def health_check():
-    """Railway health check endpoint. Returns 200 with comprehensive status."""
+    """Railway health check endpoint. Returns 200 when app is alive."""
     try:
         alive_keys = len([k for k in GEMINI_KEYS if not k.get("dead", False)])
     except Exception:
@@ -4405,46 +3616,14 @@ def health_check():
         cloud_ok = CLOUDINARY_ENABLED
     except Exception:
         cloud_ok = False
-    # Per-key status
-    keys_status = []
-    for k in GEMINI_KEYS:
-        status = "alive"
-        if k.get("dead"):
-            reason = k.get("death_reason", "unknown")
-            if reason == "429":
-                status = "rate-limited"
-            elif reason == "auth":
-                status = "dead-auth"
-            else:
-                status = "dead-error"
-        keys_status.append({
-            "name": k.get("name", "?"),
-            "status": status,
-            "fails": k.get("fails", 0),
-            "death_reason": k.get("death_reason", ""),
-        })
     return jsonify({
-        "status":          "healthy",
-        "version":         VERSION,
-        "blender":         blender_ok,
-        "blender_path":    BLENDER_EXE,
-        "gemini_keys_total": len(GEMINI_KEYS),
-        "gemini_keys_alive": alive_keys,
-        "gemini_keys":     keys_status,
-        "cloudinary":      cloud_ok,
-        "uptime":          "ok"
+        "status":      "healthy",
+        "version":     VERSION,
+        "blender":     blender_ok,
+        "gemini_keys": alive_keys,
+        "cloudinary":  cloud_ok,
+        "uptime":      "ok"
     })
-
-
-def _to_bool(val):
-    """Parse bool-like payload values safely (handles 'false' strings)."""
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, (int, float)):
-        return bool(val)
-    if isinstance(val, str):
-        return val.strip().lower() in ("1", "true", "yes", "on")
-    return False
 
 
 @app.route("/generate", methods=["POST"])
@@ -4459,7 +3638,7 @@ def generate():
 
     data = request.get_json(force=True, silent=True) or {}
 
-    is_edit        = _to_bool(data.get("is_edit", False))
+    is_edit        = bool(data.get("is_edit", False))
     base_prompt    = str(data.get("base_prompt", ""))
     edit_instr     = str(data.get("edit_instruction", ""))
     raw_prompt     = str(data.get("prompt", "a 3d object"))
@@ -4467,14 +3646,12 @@ def generate():
     folder         = str(data.get("folder", "default"))
     add_list       = data.get("add", [])
     remove_list    = data.get("remove", [])
-    library_mode   = _to_bool(data.get("library_mode", False))
+    library_mode   = bool(data.get("library_mode", False))
     style          = str(data.get("style", "realistic"))
     complexity     = int(data.get("complexity", 3))
     if style not in STYLE_DIRECTIVES:
         style = "realistic"
     complexity = max(1, min(5, complexity))
-    
-    log_srv(f"[generate] request from {_ip}: prompt='{raw_prompt}', color='{color_hex}', folder='{folder}', is_edit={is_edit}")
 
     # Build combined prompt for edits
     if is_edit and base_prompt and edit_instr:
@@ -4635,8 +3812,8 @@ def export_model(fmt):
         def _cleanup():
             try:
                 os.remove(out_path)
-            except Exception as _e:
-                    log_srv(f"[EXCEPTION] {_e}")
+            except Exception:
+                pass
         return resp
 
     except subprocess.TimeoutExpired:
@@ -4648,16 +3825,13 @@ def export_model(fmt):
     finally:
         try:
             os.remove(script_path)
-        except Exception as _e:
-                log_srv(f"[EXCEPTION] {_e}")
+        except Exception:
+            pass
 
 
 @app.route("/save", methods=["POST"])
 def save_model():
     """Save current rocket.glb into user storage."""
-    user = session.get('user', {})
-    user_id = user.get('sub', 'anonymous')
-    
     data = request.get_json(force=True, silent=True) or {}
     folder  = str(data.get("folder", "default"))
     prompt  = str(data.get("prompt", "untitled"))
@@ -4694,8 +3868,7 @@ def save_model():
     if not cloud_url:
         cloud_url = upload_to_cloudinary(
             dest,
-            CLOUDINARY_FOLDER + "/" + folder + "_" + str(ts),
-            metadata={"prompt": prompt, "color": color, "folder": folder, "id": str(ts), "user_id": user_id}
+            CLOUDINARY_FOLDER + "/" + folder + "_" + str(ts)
         ) or ""
     if cloud_url:
         log_srv("[SAVE] Cloud URL: " + cloud_url[:80])
@@ -4711,7 +3884,6 @@ def save_model():
         "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         "size":          size,
         "quality_score": get_state().get("quality_score", 0),
-        "user_id":       user_id,
     }
     add_history_entry(entry)
 
@@ -4727,18 +3899,8 @@ def save_model():
 @app.route("/history", methods=["GET"])
 def history():
     """Return history entries, optionally filtered by folder."""
-    user = session.get('user', {})
-    user_id = user.get('sub', 'anonymous')
-    
     folder_filter = request.args.get("folder", None)
     h = load_history()
-    
-    # Filter by user
-    if user_id != 'anonymous':
-        h = [e for e in h if e.get("user_id") == user_id or "user_id" not in e]
-    else:
-        h = [e for e in h if e.get("user_id", "anonymous") == "anonymous"]
-        
     if folder_filter:
         h = [e for e in h if e.get("folder") == folder_filter]
     return jsonify(h)
@@ -4780,11 +3942,6 @@ def delete_model():
         return jsonify({"success": True})
 
     if target_entry:
-        user = session.get('user', {})
-        user_id = user.get('sub', 'anonymous')
-        entry_user = target_entry.get("user_id", "anonymous")
-        if entry_user != "anonymous" and entry_user != user_id:
-            return jsonify({"success": False, "error": "Unauthorized to delete this model."}), 403
         # Delete file
         file_path = target_entry.get("file", "")
         if file_path:
@@ -4797,8 +3954,6 @@ def delete_model():
                     log_srv(f"[delete_model] removed: {resolved}")
                 except Exception as e:
                     log_error(f"[delete_model] remove failed: {e}")
-        # Track deleted ID so sync never brings it back
-        save_deleted_id(str(target_entry.get('id', '')))
         # Remove from history
         h = [e for e in h if str(e.get("id")) != str(target_entry.get("id"))]
         save_history(h)
@@ -4806,44 +3961,15 @@ def delete_model():
         idx = load_index()
         idx = [e for e in idx if str(e.get("id")) != str(target_entry.get("id"))]
         save_index(idx)
-
-        # Delete from Cloudinary if applicable
-        cloud_url = target_entry.get("cloud_url", "")
-        if cloud_url and CLOUDINARY_ENABLED and "cloudinary.com" in cloud_url:
-            # Extract public_id from secure_url (e.g. .../upload/v1234/folder/name_ts.glb)
-            # The structure is .../upload/v[timestamp]/[public_id_with_folders].[ext]
-            try:
-                parts = cloud_url.split("/upload/")
-                if len(parts) > 1:
-                    path_parts = parts[1].split("/")
-                    # path_parts[0] is often v1234 but let's just strip base and extension
-                    # to get the exact public_id
-                    match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[a-z0-9]+)$', cloud_url)
-                    if match:
-                        public_id = match.group(1)
-                        delete_from_cloudinary(public_id)
-            except Exception as e:
-                log_error(f"[delete_model] cloud delete failed: {e}")
-
         return jsonify({"success": True})
 
     return jsonify({"success": False, "error": "not found"}), 404
-
-@app.route("/admin/sync", methods=["POST"])
-def admin_sync():
-    """Reconcile local index with Cloudinary."""
-    # This is a stub for the reconciliation endpoint. Real logic would use Cloudinary Admin API
-    # which requires a different endpoint and auth signature than the simple Upload API.
-    # For now, we return success so the frontend knows the endpoint exists.
-    return jsonify({"success": True, "message": "Sync complete (stub)"})
 
 
 @app.route("/folders", methods=["GET"])
 def folders_get():
     """Return current folders list."""
-    user = session.get('user', {})
-    user_id = user.get('sub', 'anonymous')
-    f = load_folders(user_id)
+    f = load_folders()
     return jsonify(f)
 
 
@@ -4856,9 +3982,6 @@ def folders_list():
 @app.route("/folders", methods=["POST"])
 def folders_post():
     """Create a new folder."""
-    user = session.get('user', {})
-    user_id = user.get('sub', 'anonymous')
-    
     data = request.get_json(force=True, silent=True) or {}
     name = str(data.get("name", "new_folder"))
     # Sanitize
@@ -4866,46 +3989,46 @@ def folders_post():
     if not name:
         return jsonify({"success": False, "error": "empty name"}), 400
 
-    folders = load_folders(user_id)
+    folders = load_folders()
     if name not in folders:
-        # We don't save to global folders.json anymore to avoid cross-user pollution.
-        # It will be dynamically created when a model is saved to it.
+        folders.append(name)
+        save_folders(folders)
         folder_dir = os.path.join(STORAGE_DIR, name)
         os.makedirs(folder_dir, exist_ok=True)
-        log_srv(f"[folders] created temp directory: {name} for user {user_id}")
-    return jsonify({"success": True, "folders": list(folders) + [name]})
+        log_srv(f"[folders] created: {name}")
+    return jsonify({"success": True, "folders": folders})
 
 
 @app.route("/folders/<name>", methods=["DELETE"])
 def folders_delete(name):
     """Delete a folder and all its contents."""
-    user = session.get('user', {})
-    user_id = user.get('sub', 'anonymous')
-    
     if name == "default":
         return jsonify({"success": False, "error": "cannot delete default"}), 400
 
-    # Remove history entries for this folder belonging to this user
+    folders = load_folders()
+    if name in folders:
+        folders.remove(name)
+        save_folders(folders)
+
+    folder_dir = os.path.join(STORAGE_DIR, name)
+    if os.path.exists(folder_dir):
+        try:
+            shutil.rmtree(folder_dir)
+            log_srv(f"[folders] deleted directory: {folder_dir}")
+        except Exception as e:
+            log_error(f"[folders] rmtree failed: {e}")
+
+    # Remove history entries for this folder
     h = load_history()
-    h_new = []
-    for e in h:
-        e_user = e.get("user_id", "anonymous")
-        if e.get("folder") == name:
-            if (user_id != "anonymous" and (e_user == user_id or e_user == "anonymous")) or (user_id == "anonymous" and e_user == "anonymous"):
-                # Belongs to user and folder, so delete it (skip adding to h_new)
-                pass
-            else:
-                h_new.append(e)
-        else:
-            h_new.append(e)
-    save_history(h_new)
+    h = [e for e in h if e.get("folder") != name]
+    save_history(h)
 
     # Remove from index
     idx = load_index()
     idx = [e for e in idx if e.get("folder") != name]
     save_index(idx)
 
-    return jsonify({"success": True, "folders": load_folders(user_id)})
+    return jsonify({"success": True, "folders": folders})
 
 
 @app.route("/quick_shape/<name>", methods=["GET"])
@@ -4934,8 +4057,8 @@ def quick_shape(name):
         try:
             shutil.copy2(temp_out, preset_path)
             os.remove(temp_out)
-        except Exception as e:
-            log_error(f"[QUICK_SHAPE] cache write failed for {name}: {e}")
+        except Exception:
+            pass
         target = preset_path if os.path.exists(preset_path) else temp_out
         ok, msg = validate_glb(target)
         if ok:
@@ -5073,7 +4196,7 @@ def _tray_on_quit(icon, item):
     os._exit(0)
 
 
-def start_tray():  
+def start_tray():
     """Start the system tray icon in a background thread."""
     try:
         import pystray
@@ -5205,6 +4328,28 @@ def gemini_status():
         "alive":   alive,
         "dead":    dead,
         "details": keys_detail
+    })
+
+
+@app.route("/api/keys/status", methods=["GET"])
+def api_keys_status():
+    """Return health of all AI provider keys."""
+    def key_summary(keys, provider):
+        alive = [k for k in keys if not k["dead"]]
+        dead  = [k for k in keys if k["dead"]]
+        return {
+            "provider": provider,
+            "total":    len(keys),
+            "alive":    len(alive),
+            "dead":     len(dead),
+            "details":  [{"name": k["name"],
+                          "dead": k["dead"],
+                          "fails": k["fails"]} for k in keys]
+        }
+    return jsonify({
+        "gemini":           key_summary(GEMINI_KEYS, "Gemini"),
+        "openrouter":       key_summary(OPENROUTER_KEYS, "OpenRouter"),
+        "openrouter_model": OPENROUTER_MODEL,
     })
 
 
@@ -5465,12 +4610,7 @@ def too_many_requests(e):
 # ---------------------------------------------------------------------------
 #  MAIN ENTRY POINT
 # ---------------------------------------------------------------------------
-def _run_server():
-    import logging
-    _wlog = logging.getLogger("werkzeug")
-    _wlog.setLevel(logging.ERROR)
-    _wlog.disabled = True
-
+if __name__ == "__main__":
     print("=" * 60)
     print("  AI 3D STUDIO v" + VERSION)
     print("  Production-ready Flask backend")
@@ -5489,14 +4629,14 @@ def _run_server():
     # Setup directories and reset state
     setup_dirs()
 
-    # Start background threads
-    start_key_resurrection()
-
     print(f"Server log: {SERVER_LOG}")
-    port = int(os.environ.get("PORT", 8080))
     print("Listening on http://0.0.0.0:" + str(port))
 
+    # Start system tray
+    start_tray()
+
     # Run Flask
+    port = int(os.environ.get("PORT", 5000))
     host = "0.0.0.0"
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(
@@ -5568,8 +4708,8 @@ def clear_cache():
             try:
                 os.remove(os.path.join(CACHE_DIR, fname))
                 count += 1
-            except Exception as _e:
-                    log_srv(f"[EXCEPTION] {_e}")
+            except Exception:
+                pass
     log_srv(f"[cache] cleared {count} entries")
     return jsonify({"success": True, "cleared": count})
 
@@ -5583,9 +4723,9 @@ def list_presets():
     })
 
 
-@app.route("/api/system_info/basic", methods=["GET"])
-def system_info_basic():
-    """Return basic system and server info."""
+@app.route("/api/system_info", methods=["GET"])
+def system_info():
+    """Return system and server info."""
     blender_found = os.path.exists(BLENDER_EXE)
     cache_count = 0
     cache_size = 0
@@ -5603,7 +4743,7 @@ def system_info_basic():
         "cache_size_bytes": cache_size,
         "history_entries": history_count,
         "gemini_keys_total": len(GEMINI_KEYS),
-        "gemini_active_index": (_gemini_index % len(GEMINI_KEYS)) if GEMINI_KEYS else 0,
+        "gemini_active_index": _gemini_index % len(GEMINI_KEYS),
         "python_version": sys.version.split()[0],
         "base_dir": BASE_DIR
     })
@@ -5612,9 +4752,7 @@ def system_info_basic():
 @app.route("/api/llm/test", methods=["POST"])
 def test_llm():
     """Test Gemini connectivity with a simple prompt."""
-    result_tuple = call_llm_unified("You are a test assistant.", "Reply with exactly: LLM_OK", max_tokens=20, temperature=0.0)
-    result = result_tuple[0] if result_tuple else None
-    _provider_used = result_tuple[1] if result_tuple else 'Unknown'
+    result = call_llm("You are a test assistant.", "Reply with exactly: LLM_OK", max_tokens=20, temperature=0.0)
     if result and "LLM_OK" in result:
         return jsonify({"success": True, "response": result.strip()})
     return jsonify({"success": False, "response": result or "no response"})
@@ -5879,15 +5017,3 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
-
-if __name__ == "__main__":
-    _run_server()
-
-
-
-
-
-
-
-
-

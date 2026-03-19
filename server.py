@@ -328,7 +328,7 @@ def upload_to_cloudinary(local_path, public_id=None):
 #  GEMINI KEY ROTATION
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-#  GEMINI KEY SYSTEM V6 - 7 KEYS, ENV VARS FOR RAILWAY, HARDCODED FOR LOCAL
+#  GEMINI KEY SYSTEM - 5 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_gemini_keys():
     """Build key list from env vars (Railway) with hardcoded fallbacks (local)."""
@@ -338,8 +338,6 @@ def _build_gemini_keys():
         ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
         ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
         ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
-        ("key6", "AIzaSyDXsfLELFLRgoNfUXZGUtsK6X2-c--rqAM"),
-        ("key7", "AIzaSyBXLDQzk9_5naaxS4V5wG-RujQewfJKdw4"),
     ]
     result = []
     for i, (name, fallback) in enumerate(pairs, 1):
@@ -424,12 +422,12 @@ def get_gemini_key_status():
 
 
 # ---------------------------------------------------------------------------
-#  OPENROUTER KEY SYSTEM
+#  OPENROUTER KEY SYSTEM - 3 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_openrouter_keys():
     keys = []
-    # PRIORITY: Try environment variables first (Railway)
-    for i in range(1, 8):
+    # PRIORITY: Try environment variables first (Railway) - max 3 keys
+    for i in range(1, 4):
         val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
         if val and val.startswith("sk-or"):
             keys.append({
@@ -446,7 +444,7 @@ def _build_openrouter_keys():
             with open("settings.json", "r", encoding="utf-8") as f:
                 settings = json.load(f)
                 openrouter_keys = settings.get("ai", {}).get("openrouter_keys", [])
-                for i, key in enumerate(openrouter_keys, 1):
+                for i, key in enumerate(openrouter_keys[:3], 1):  # Max 3 keys
                     if key and key.startswith("sk-or"):
                         keys.append({
                             "name":      "openrouter" + str(i),
@@ -467,12 +465,12 @@ OPENROUTER_MODEL = os.environ.get(
 
 
 # ---------------------------------------------------------------------------
-#  GROQ KEY SYSTEM
+#  GROQ KEY SYSTEM - 2 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_groq_keys():
     keys = []
-    # PRIORITY: Try environment variables first (Railway)
-    for i in range(1, 8):
+    # PRIORITY: Try environment variables first (Railway) - max 2 keys
+    for i in range(1, 3):
         val = (os.environ.get("GROQ_KEY_" + str(i)) or "").strip()
         if val and val.startswith("gsk_"):
             keys.append({
@@ -489,7 +487,7 @@ def _build_groq_keys():
             with open("settings.json", "r", encoding="utf-8") as f:
                 settings = json.load(f)
                 groq_keys = settings.get("ai", {}).get("groq_keys", [])
-                for i, key in enumerate(groq_keys, 1):
+                for i, key in enumerate(groq_keys[:2], 1):  # Max 2 keys
                     if key and key.startswith("gsk_"):
                         keys.append({
                             "name":      "groq" + str(i),
@@ -615,11 +613,22 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
 
 
 # ---------------------------------------------------------------------------
-#  GEMINI LLM CALL  (call_llm)
-#  Tries all alive Gemini keys, then falls back to OpenRouter
+#  UNIFIED LLM CALL  
+#  Priority: OpenRouter FIRST (most reliable), then Gemini, then Groq
 # ---------------------------------------------------------------------------
 def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
-    """Call Gemini API with key rotation. Falls back to OpenRouter if all fail."""
+    """Call LLM API with priority: OpenRouter > Gemini > Groq."""
+    
+    # PRIORITY 1: OpenRouter (most reliable, fast)
+    if OPENROUTER_KEYS:
+        log_srv("[LLM] Trying OpenRouter first...")
+        result = call_openrouter(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            log_srv("[LLM] OpenRouter success")
+            return result
+    
+    # PRIORITY 2: Gemini (with key rotation)
+    log_srv("[LLM] OpenRouter failed or no keys - trying Gemini...")
     _base = (
         "https://generativelanguage.googleapis.com"
         "/v1beta/models/gemini-2.0-flash:generateContent"
@@ -673,19 +682,14 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
             log_srv("[GEMINI] Exception: " + str(e))
             rotate_gemini_key()
 
-    # All Gemini keys failed - try Groq
-    log_srv("[LLM] All Gemini keys failed - falling back to Groq")
+    # PRIORITY 3: Groq (final fallback)
+    log_srv("[LLM] Gemini failed - falling back to Groq")
     result = call_groq(system_msg, user_msg, max_tokens, temperature)
     if result:
+        log_srv("[LLM] Groq success")
         return result
 
-    # Groq also failed - try OpenRouter
-    log_srv("[LLM] Groq also failed - falling back to OpenRouter")
-    result = call_openrouter(system_msg, user_msg, max_tokens, temperature)
-    if result:
-        return result
-
-    log_srv("[LLM] All providers failed - returning None")
+    log_srv("[LLM] ALL providers failed (OpenRouter, Gemini, Groq)")
     return None
 
 

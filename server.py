@@ -174,6 +174,7 @@ MAX_LOG_LINES   = 80
 #  FLASK APP
 # ---------------------------------------------------------------------------
 app = Flask(__name__, static_folder=STATIC_DIR)
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 CORS(app)
 
 # ---------------------------------------------------------------------------
@@ -4496,16 +4497,120 @@ def settings_get():
 
 @app.route("/auth/me", methods=["GET"])
 def auth_me():
-    """Simple auth endpoint - returns user info for frontend."""
+    """Return current user info from session."""
+    user = session.get('user')
+    if user:
+        return jsonify({
+            "logged_in": True,
+            "user": user
+        })
     return jsonify({
-        "logged_in": True,
-        "user": {
-            "sub": "user",
-            "name": "User",
-            "email": "user@aurex3d.com",
-            "picture": ""
-        }
+        "logged_in": False,
+        "user": None
     })
+
+
+@app.route("/auth/google")
+def auth_google():
+    """Redirect to Google OAuth."""
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+    if not client_id:
+        return jsonify({"error": "Google OAuth not configured"}), 500
+    
+    redirect_uri = request.url_root.rstrip('/') + '/auth/callback'
+    scope = 'openid email profile'
+    
+    auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={client_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&response_type=code"
+        f"&scope={scope}"
+        f"&access_type=offline"
+    )
+    return redirect(auth_url)
+
+
+@app.route("/auth/callback")
+def auth_callback():
+    """Handle Google OAuth callback."""
+    code = request.args.get('code')
+    if not code:
+        return jsonify({"error": "No code received"}), 400
+    
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+    redirect_uri = request.url_root.rstrip('/') + '/auth/callback'
+    
+    # Exchange code for tokens
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        'code': code,
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'redirect_uri': redirect_uri,
+        'grant_type': 'authorization_code'
+    }
+    
+    try:
+        import urllib.request
+        import urllib.parse
+        req = urllib.request.Request(
+            token_url,
+            data=urllib.parse.urlencode(data).encode(),
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            tokens = json.loads(resp.read().decode())
+        
+        # Get user info from ID token
+        id_token = tokens.get('id_token', '')
+        if id_token:
+            # Decode JWT payload
+            import base64
+            payload = id_token.split('.')[1]
+            # Add padding if needed
+            padding = 4 - len(payload) % 4
+            if padding != 4:
+                payload += '=' * padding
+            user_info = json.loads(base64.b64decode(payload).decode())
+            
+            user = {
+                'sub': user_info.get('sub', ''),
+                'email': user_info.get('email', ''),
+                'name': user_info.get('name', user_info.get('email', 'User')),
+                'picture': user_info.get('picture', '')
+            }
+            
+            # Create user folder
+            user_folder = os.path.join(BASE_DIR, 'storage', 'users', user['sub'])
+            os.makedirs(user_folder, exist_ok=True)
+            for sub in ['default', 'vehicles', 'creatures', 'buildings']:
+                os.makedirs(os.path.join(user_folder, sub), exist_ok=True)
+            
+            session['user'] = user
+            session.permanent = True
+            
+        return redirect('/app')
+    except Exception as e:
+        log_error(f"[AUTH] OAuth callback failed: {e}")
+        return redirect('/?error=auth_failed')
+
+
+@app.route("/auth/logout")
+def auth_logout():
+    """Logout and clear session."""
+    session.clear()
+    return redirect('/')
+
+
+@app.route("/api/user", methods=["GET"])
+def get_user():
+    """Get current user info."""
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not logged in"}), 401
+    return jsonify(user)
 
 
 @app.route("/api/settings", methods=["POST"])

@@ -427,16 +427,35 @@ def get_gemini_key_status():
 # ---------------------------------------------------------------------------
 def _build_openrouter_keys():
     keys = []
-    for i in range(1, 8):
-        val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
-        if val and val.startswith("sk-or"):
-            keys.append({
-                "name":      "openrouter" + str(i),
-                "key":       val,
-                "fails":     0,
-                "dead":      False,
-                "last_used": 0.0
-            })
+    # Try to get keys from settings.json first
+    try:
+        with open("settings.json", "r", encoding="utf-8") as f:
+            settings = json.load(f)
+            openrouter_keys = settings.get("ai", {}).get("openrouter_keys", [])
+            for i, key in enumerate(openrouter_keys, 1):
+                if key and key.startswith("sk-or"):
+                    keys.append({
+                        "name":      "openrouter" + str(i),
+                        "key":       key,
+                        "fails":     0,
+                        "dead":      False,
+                        "last_used": 0.0
+                    })
+    except Exception:
+        pass
+    
+    # Fallback to environment variables if no keys in settings
+    if not keys:
+        for i in range(1, 8):
+            val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
+            if val and val.startswith("sk-or"):
+                keys.append({
+                    "name":      "openrouter" + str(i),
+                    "key":       val,
+                    "fails":     0,
+                    "dead":      False,
+                    "last_used": 0.0
+                })
     return keys
 
 OPENROUTER_KEYS  = _build_openrouter_keys()
@@ -444,6 +463,98 @@ OPENROUTER_MODEL = os.environ.get(
     "OPENROUTER_MODEL",
     "meta-llama/llama-3.1-8b-instruct:free"
 ).strip()
+
+
+# ---------------------------------------------------------------------------
+#  GROQ KEY SYSTEM
+# ---------------------------------------------------------------------------
+def _build_groq_keys():
+    keys = []
+    # Try to get keys from settings.json first
+    try:
+        with open("settings.json", "r", encoding="utf-8") as f:
+            settings = json.load(f)
+            groq_keys = settings.get("ai", {}).get("groq_keys", [])
+            for i, key in enumerate(groq_keys, 1):
+                if key and key.startswith("gsk_"):
+                    keys.append({
+                        "name":      "groq" + str(i),
+                        "key":       key,
+                        "fails":     0,
+                        "dead":      False,
+                        "last_used": 0.0
+                    })
+    except Exception:
+        pass
+    
+    # Fallback to environment variables if no keys in settings
+    if not keys:
+        for i in range(1, 8):
+            val = (os.environ.get("GROQ_KEY_" + str(i)) or "").strip()
+            if val and val.startswith("gsk_"):
+                keys.append({
+                    "name":      "groq" + str(i),
+                    "key":       val,
+                    "fails":     0,
+                    "dead":      False,
+                    "last_used": 0.0
+                })
+    return keys
+
+GROQ_KEYS  = _build_groq_keys()
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+
+
+# ---------------------------------------------------------------------------
+#  GROQ LLM CALL
+# ---------------------------------------------------------------------------
+def call_groq(system_msg, user_msg, max_tokens=4000, temperature=0.2):
+    """Call Groq API. Returns text or None."""
+    alive = [k for k in GROQ_KEYS if not k["dead"]]
+    if not alive:
+        return None
+    for k in alive:
+        try:
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization":  "Bearer " + k["key"],
+                    "Content-Type":   "application/json"
+                },
+                json={
+                    "model":      GROQ_MODEL,
+                    "messages":   [
+                        {"role": "system", "content": system_msg},
+                        {"role": "user",   "content": user_msg}
+                    ],
+                    "max_tokens": max_tokens,
+                    "temperature": temperature
+                },
+                timeout=90, verify=False
+            )
+            if r.status_code == 200:
+                data = r.json()
+                text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                if text:
+                    k["fails"] = 0
+                    k["last_used"] = time.time()
+                    log_srv("[GROQ] Success model=" + GROQ_MODEL)
+                    return text
+            elif r.status_code in (401, 403):
+                k["dead"] = True
+                k["fails"] = 99
+                log_srv("[GROQ] Key " + k["name"] + " auth error - dead")
+            elif r.status_code == 429:
+                k["fails"] += 1
+                log_srv("[GROQ] Key " + k["name"] + " rate limited")
+                time.sleep(3)
+            else:
+                log_srv("[GROQ] status " + str(r.status_code) + ": " + r.text[:200])
+                k["fails"] += 1
+        except Exception as e:
+            log_srv("[GROQ] Exception: " + str(e))
+            k["fails"] += 1
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -561,14 +672,56 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
             log_srv("[GEMINI] Exception: " + str(e))
             rotate_gemini_key()
 
-    # All Gemini keys failed - try OpenRouter
-    log_srv("[LLM] All Gemini keys failed - falling back to OpenRouter")
+    # All Gemini keys failed - try Groq
+    log_srv("[LLM] All Gemini keys failed - falling back to Groq")
+    result = call_groq(system_msg, user_msg, max_tokens, temperature)
+    if result:
+        return result
+
+    # Groq also failed - try OpenRouter
+    log_srv("[LLM] Groq also failed - falling back to OpenRouter")
     result = call_openrouter(system_msg, user_msg, max_tokens, temperature)
     if result:
         return result
 
     log_srv("[LLM] All providers failed - returning None")
     return None
+
+
+# ---------------------------------------------------------------------------
+#  HISTORY AND INDEX FUNCTIONS
+# ---------------------------------------------------------------------------
+def load_history():
+    """Load history from HISTORY_FILE."""
+    try:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_history(history):
+    """Save history to HISTORY_FILE."""
+    try:
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2)
+    except Exception as e:
+        log_error(f"[save_history] failed: {e}")
+
+def load_index():
+    """Load index from INDEX_FILE."""
+    try:
+        with open(INDEX_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_index(index):
+    """Save index to INDEX_FILE."""
+    try:
+        with open(INDEX_FILE, "w", encoding="utf-8") as f:
+            json.dump(index, f, indent=2)
+    except Exception as e:
+        log_error(f"[save_index] failed: {e}")
 
 
 # ---------------------------------------------------------------------------

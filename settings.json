@@ -20,6 +20,15 @@
       "AIzaSyB5dli5AOpsnpMwamY78iAOUPahxdm1pO0",
       "AIzaSyCAupuJnceO7f5v7BtZ4HWeEyTKp7MWrWA",
       "AIzaSyBjCVzVcKWZZLFHGizeSnYSM98fHgLy1ug"
+    ],
+    "openrouter_keys": [
+      "sk-or-v1-9e8b2c7d5f4a6e3b1a2d9c8f7e6a5b4c",
+      "sk-or-v1-8d7c6b5e4f3a2b1c9d8e7f6a5b4c3d2e",
+      "sk-or-v1-7c6b5a4f3e2d1c9b8a7f6e5d4c3b2a1f"
+    ],
+    "groq_keys": [
+      "gsk_2pVlGz8pLkQjXmNnRrTtYyUuIiOoPpQq",
+      "gsk_4sWmHx9rMnKjYlOoPpQqRrSsTtUuVvWw"
     ]
   },
 

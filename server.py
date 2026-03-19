@@ -463,13 +463,6 @@ OPENROUTER_MODEL = os.environ.get(
     "meta-llama/llama-3.1-8b-instruct:free"
 ).strip()
 
-# DEBUG: Log key loading at startup (use print since log_srv not defined yet)
-print(f"[STARTUP] OpenRouter keys loaded: {len(OPENROUTER_KEYS)}", flush=True)
-print(f"[STARTUP] Gemini keys loaded: {len(GEMINI_KEYS)}", flush=True)
-print(f"[STARTUP] Groq keys loaded: {len(GROQ_KEYS)}", flush=True)
-for i, k in enumerate(OPENROUTER_KEYS, 1):
-    print(f"[STARTUP] OR key {i}: {k['name']} dead={k['dead']}", flush=True)
-
 
 # ---------------------------------------------------------------------------
 #  GROQ KEY SYSTEM - 2 KEYS MAX

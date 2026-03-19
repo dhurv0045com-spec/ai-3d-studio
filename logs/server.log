@@ -2689,3 +2689,59 @@ RuntimeError: Error: File format is not supported in file "C:\Users\user\Desktop
 [16:53:55] INFO  SERVER: [HTTP] GET /status 200 0ms
 [16:53:55] INFO  SERVER: [HTTP] GET /folders 200 2ms
 [16:53:55] INFO  SERVER: [HTTP] GET /history 200 1ms
+[20:24:37] INFO  SERVER: [START] Server startup - state reset to idle
+[20:24:37] INFO  SERVER: [TRAY] system tray icon started
+[20:27:04] INFO  SERVER: [START] Server startup - state reset to idle
+[20:27:04] INFO  SERVER: [TRAY] system tray icon started
+[20:28:01] INFO  SERVER: [HTTP] POST /api/llm/test 405 2ms
+[20:28:16] INFO  SERVER: [HTTP] GET /ping 500 24ms
+[20:39:28] INFO  SERVER: [START] Server startup - state reset to idle
+[20:39:28] INFO  SERVER: [TRAY] system tray icon started
+[20:48:37] INFO  SERVER: [HTTP] GET /ping 500 47ms
+[20:49:26] INFO  SERVER: [START] Server startup - state reset to idle
+[20:49:27] INFO  SERVER: [TRAY] system tray icon started
+[20:49:41] INFO  SERVER: [HTTP] GET /ping 200 3ms
+[20:49:53] INFO  SERVER: [HTTP] GET /api/keys 405 1ms
+[20:50:10] INFO  SERVER: [HTTP] GET /api/keys 405 0ms
+[20:50:20] INFO  SERVER: [HTTP] GET /api/status 405 0ms
+[20:50:34] INFO  SERVER: [HTTP] GET / 200 242ms
+[20:50:35] INFO  SERVER: [HTTP] GET /manifest.json 200 1ms
+[20:50:36] INFO  SERVER: [HTTP] GET /history 200 1ms
+[20:50:36] INFO  SERVER: [HTTP] GET /folders 500 15ms
+[20:50:36] INFO  SERVER: [HTTP] GET /status 200 0ms
+[20:50:36] INFO  SERVER: [HTTP] GET /ping 200 3ms
+[20:50:36] INFO  SERVER: [HTTP] GET /history 200 2ms
+[20:50:37] INFO  SERVER: [HTTP] GET /auth/me 405 31ms
+[20:50:37] INFO  SERVER: [HTTP] GET /ping 200 3ms
+[20:50:37] INFO  SERVER: [HTTP] GET /static/icon-192.png 404 3ms
+[20:51:05] INFO  SERVER: [HTTP] GET /ping 200 3ms
+[20:51:36] INFO  SERVER: [HTTP] GET /ping 200 2ms
+[20:52:06] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:52:36] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:53:06] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:53:36] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:54:06] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:54:43] INFO  SERVER: [HTTP] GET /ping 200 2ms
+[20:55:43] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:56:43] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:57:43] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[20:58:43] INFO  SERVER: [HTTP] GET /ping 200 2ms
+[20:59:43] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[21:00:43] INFO  SERVER: [HTTP] GET /ping 200 2ms
+[21:01:43] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[21:02:43] INFO  SERVER: [HTTP] GET /ping 200 2ms
+[21:09:09] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[21:11:13] INFO  SERVER: [HTTP] GET /folders 500 39ms
+[21:12:17] INFO  SERVER: [START] Server startup - state reset to idle
+[21:12:17] INFO  SERVER: [TRAY] system tray icon started
+[21:12:36] INFO  SERVER: [HTTP] GET /folders 500 9ms
+[21:14:25] INFO  SERVER: [START] Server startup - state reset to idle
+[21:14:25] INFO  SERVER: [TRAY] system tray icon started
+[21:14:42] INFO  SERVER: [HTTP] GET /folders 200 1ms
+[21:14:51] INFO  SERVER: [HTTP] GET /history 200 1ms
+[21:14:59] INFO  SERVER: [HTTP] GET /status 200 0ms
+[21:25:57] INFO  SERVER: [START] Server startup - state reset to idle
+[21:25:57] INFO  SERVER: [TRAY] system tray icon started
+[21:26:18] INFO  SERVER: [HTTP] GET /auth/me 200 0ms
+[21:26:35] INFO  SERVER: [HTTP] GET /manifest.json 200 0ms
+[22:55:42] INFO  SERVER: [HTTP] GET / 200 145ms

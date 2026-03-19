@@ -568,7 +568,7 @@ def _build_openrouter_keys():
     keys = []
     for i in range(1, 11):
         val = (os.environ.get(f"OPENROUTER_KEY_{i}") or "").strip()
-        if val and val.startswith("sk-or"):
+        if val and len(val) > 10:
             keys.append({"name": f"openrouter{i}", "key": val,
                         "fails": 0, "dead": False, "last_used": 0.0,
                         "rate_limited_until": 0.0, "death_reason": ""})
@@ -5864,6 +5864,7 @@ def build_preset_for_keyword(keyword, r, g, b):
 
 if __name__ == "__main__":
     _run_server()
+
 
 
 

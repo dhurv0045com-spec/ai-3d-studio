@@ -1,4 +1,4 @@
-# server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
+﻿# server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
 # Target: 3400+ lines. Zero placeholders. Zero emoji. ASCII only.
@@ -4630,7 +4630,7 @@ if __name__ == "__main__":
     setup_dirs()
 
     print(f"Server log: {SERVER_LOG}")
-    print("Listening on http://0.0.0.0:" + str(port))
+    print("Listening on http://0.0.0.0:8080")
 
     # Start system tray
     start_tray()
@@ -5017,3 +5017,5 @@ def build_preset_for_keyword(keyword, r, g, b):
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+
+

@@ -427,35 +427,35 @@ def get_gemini_key_status():
 # ---------------------------------------------------------------------------
 def _build_openrouter_keys():
     keys = []
-    # Try to get keys from settings.json first
-    try:
-        with open("settings.json", "r", encoding="utf-8") as f:
-            settings = json.load(f)
-            openrouter_keys = settings.get("ai", {}).get("openrouter_keys", [])
-            for i, key in enumerate(openrouter_keys, 1):
-                if key and key.startswith("sk-or"):
-                    keys.append({
-                        "name":      "openrouter" + str(i),
-                        "key":       key,
-                        "fails":     0,
-                        "dead":      False,
-                        "last_used": 0.0
-                    })
-    except Exception:
-        pass
+    # PRIORITY: Try environment variables first (Railway)
+    for i in range(1, 8):
+        val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
+        if val and val.startswith("sk-or"):
+            keys.append({
+                "name":      "openrouter" + str(i),
+                "key":       val,
+                "fails":     0,
+                "dead":      False,
+                "last_used": 0.0
+            })
     
-    # Fallback to environment variables if no keys in settings
+    # Fallback to settings.json only if no env vars found
     if not keys:
-        for i in range(1, 8):
-            val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
-            if val and val.startswith("sk-or"):
-                keys.append({
-                    "name":      "openrouter" + str(i),
-                    "key":       val,
-                    "fails":     0,
-                    "dead":      False,
-                    "last_used": 0.0
-                })
+        try:
+            with open("settings.json", "r", encoding="utf-8") as f:
+                settings = json.load(f)
+                openrouter_keys = settings.get("ai", {}).get("openrouter_keys", [])
+                for i, key in enumerate(openrouter_keys, 1):
+                    if key and key.startswith("sk-or"):
+                        keys.append({
+                            "name":      "openrouter" + str(i),
+                            "key":       key,
+                            "fails":     0,
+                            "dead":      False,
+                            "last_used": 0.0
+                        })
+        except Exception:
+            pass
     return keys
 
 OPENROUTER_KEYS  = _build_openrouter_keys()
@@ -470,35 +470,35 @@ OPENROUTER_MODEL = os.environ.get(
 # ---------------------------------------------------------------------------
 def _build_groq_keys():
     keys = []
-    # Try to get keys from settings.json first
-    try:
-        with open("settings.json", "r", encoding="utf-8") as f:
-            settings = json.load(f)
-            groq_keys = settings.get("ai", {}).get("groq_keys", [])
-            for i, key in enumerate(groq_keys, 1):
-                if key and key.startswith("gsk_"):
-                    keys.append({
-                        "name":      "groq" + str(i),
-                        "key":       key,
-                        "fails":     0,
-                        "dead":      False,
-                        "last_used": 0.0
-                    })
-    except Exception:
-        pass
+    # PRIORITY: Try environment variables first (Railway)
+    for i in range(1, 8):
+        val = (os.environ.get("GROQ_KEY_" + str(i)) or "").strip()
+        if val and val.startswith("gsk_"):
+            keys.append({
+                "name":      "groq" + str(i),
+                "key":       val,
+                "fails":     0,
+                "dead":      False,
+                "last_used": 0.0
+            })
     
-    # Fallback to environment variables if no keys in settings
+    # Fallback to settings.json only if no env vars found
     if not keys:
-        for i in range(1, 8):
-            val = (os.environ.get("GROQ_KEY_" + str(i)) or "").strip()
-            if val and val.startswith("gsk_"):
-                keys.append({
-                    "name":      "groq" + str(i),
-                    "key":       val,
-                    "fails":     0,
-                    "dead":      False,
-                    "last_used": 0.0
-                })
+        try:
+            with open("settings.json", "r", encoding="utf-8") as f:
+                settings = json.load(f)
+                groq_keys = settings.get("ai", {}).get("groq_keys", [])
+                for i, key in enumerate(groq_keys, 1):
+                    if key and key.startswith("gsk_"):
+                        keys.append({
+                            "name":      "groq" + str(i),
+                            "key":       key,
+                            "fails":     0,
+                            "dead":      False,
+                            "last_used": 0.0
+                        })
+        except Exception:
+            pass
     return keys
 
 GROQ_KEYS  = _build_groq_keys()

@@ -503,13 +503,6 @@ def _build_groq_keys():
 GROQ_KEYS  = _build_groq_keys()
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
 
-# Debug: Log key counts at startup
-log_srv(f"[STARTUP] OpenRouter keys loaded: {len(OPENROUTER_KEYS)}")
-log_srv(f"[STARTUP] Gemini keys loaded: {len(GEMINI_KEYS)}")
-log_srv(f"[STARTUP] Groq keys loaded: {len(GROQ_KEYS)}")
-for i, k in enumerate(OPENROUTER_KEYS, 1):
-    log_srv(f"[STARTUP] OpenRouter key {i}: {k['name']} (dead={k['dead']})")
-
 
 # ---------------------------------------------------------------------------
 #  GROQ LLM CALL

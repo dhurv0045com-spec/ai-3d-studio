@@ -1050,7 +1050,7 @@ def save_index(idx):
 # ---------------------------------------------------------------------------
 #  GEMINI LLM CALL
 # ---------------------------------------------------------------------------
-def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
+def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2): # patched
     """Call Gemini API with system_instruction field and proper retry/rotation.
     On 429: retries same key up to 3 times with escalating sleep (3s, 8s, 15s).
     On 401/403: marks key permanently dead.

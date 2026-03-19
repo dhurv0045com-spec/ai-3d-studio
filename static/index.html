@@ -4366,7 +4366,8 @@ function buildGalCard(item) {
 }
 
 var galSearch = document.getElementById('gal-search');
-if (galSearch) { galSearch.addEventListener('input', debounce(renderGallery, 280)); }
+// Moved to after debounce function definition
+// if (galSearch) { galSearch.addEventListener('input', debounce(renderGallery, 280)); }
 </script>
 <script>
 /* ============================================================
@@ -4560,15 +4561,8 @@ document.addEventListener('keydown', function(e) {
 var promptEl = document.getElementById('prompt');
 if (promptEl) { promptEl.addEventListener('input', updateCounter); }
 
-/* V7: Resize listener with debounce */
-window.addEventListener('resize', debounce(function() {
-  detectDevice();
-  resizeRenderer();
-}, 250));
-
-
 /* ============================================================
-   V7 DEBOUNCE UTILITY
+   V7 DEBOUNCE UTILITY - MUST BE FIRST
    ============================================================ */
 function debounce(fn, delay) {
   var t;
@@ -4579,6 +4573,16 @@ function debounce(fn, delay) {
     t = setTimeout(function() { fn.apply(ctx, args); }, delay);
   };
 }
+
+/* V7: Resize listener with debounce */
+window.addEventListener('resize', debounce(function() {
+  detectDevice();
+  resizeRenderer();
+}, 250));
+
+/* Gallery search with debounce */
+var galSearch = document.getElementById('gal-search');
+if (galSearch) { galSearch.addEventListener('input', debounce(renderGallery, 280)); }
 
 /* ============================================================
    V7 CLIPBOARD UTILITY

@@ -4524,7 +4524,8 @@ def auth_google():
         session.permanent = True
         return redirect('/app')
     
-    redirect_uri = request.url_root.rstrip('/') + '/auth/callback'
+    # Force https:// for Railway (proxy causes http://)
+    redirect_uri = request.url_root.rstrip('/').replace('http://', 'https://') + '/auth/callback'
     scope = 'openid email profile'
     
     auth_url = (
@@ -4547,7 +4548,8 @@ def auth_callback():
     
     client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '')
-    redirect_uri = request.url_root.rstrip('/') + '/auth/callback'
+    # Force https:// for Railway (proxy causes http://)
+    redirect_uri = request.url_root.rstrip('/').replace('http://', 'https://') + '/auth/callback'
     
     # Exchange code for tokens
     token_url = "https://oauth2.googleapis.com/token"

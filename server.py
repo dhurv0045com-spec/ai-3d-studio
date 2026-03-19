@@ -723,6 +723,22 @@ def save_index(index):
     except Exception as e:
         log_error(f"[save_index] failed: {e}")
 
+def load_folders():
+    """Load folders from FOLDERS_FILE."""
+    try:
+        with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return DEFAULT_FOLDERS
+
+def save_folders(folders):
+    """Save folders to FOLDERS_FILE."""
+    try:
+        with open(FOLDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(folders, f, indent=2)
+    except Exception as e:
+        log_error(f"[save_folders] failed: {e}")
+
 
 # ---------------------------------------------------------------------------
 #  LOGGING SYSTEM

@@ -515,7 +515,7 @@ function renderTags(type){
 
 // ── FOLDERS ─────────────────────────────────────────────────────────────────
 async function loadFolders(){
-  const r=await fetch('/api/folders');
+  const r=await fetch('/folders');
   S.folders=await r.json();
   renderFolders(); renderFolderSelect();
 }
@@ -533,13 +533,13 @@ function selectFolder(n){S.activeFolder=n;renderFolders();loadHistory()}
 
 async function createFolder(){
   const name=document.getElementById('new-folder-name').value.trim(); if(!name)return;
-  const r=await fetch('/api/folders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  const r=await fetch('/folders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
   const d=await r.json();
   if(d.success){S.folders=d.folders;renderFolders();renderFolderSelect();document.getElementById('new-folder-name').value='';toast('Folder created')}
 }
 async function deleteFolder(name){
   if(!confirm(`Delete "${name}" and all its models?`))return;
-  const r=await fetch(`/api/folders/${name}`,{method:'DELETE'});
+  const r=await fetch(`/folders/${name}`,{method:'DELETE'});
   const d=await r.json(); S.folders=d.folders;
   if(S.activeFolder===name)S.activeFolder='default';
   renderFolders();renderFolderSelect();loadHistory();toast('Deleted');
@@ -547,7 +547,7 @@ async function deleteFolder(name){
 
 // ── HISTORY ─────────────────────────────────────────────────────────────────
 async function loadHistory(){
-  const r=await fetch(`/api/history?folder=${S.activeFolder}`);
+  const r=await fetch(`/history?folder=${S.activeFolder}`);
   S.history=await r.json(); renderHistory();
   document.getElementById('model-count').textContent=`${S.history.length} MODELS`;
 }
@@ -583,7 +583,7 @@ function prepareEdit(id){
 }
 async function deleteModel(id){
   if(!confirm('Delete this model?'))return;
-  await fetch(`/api/history/${id}`,{method:'DELETE'}); loadHistory(); toast('Deleted');
+  await fetch(`/delete_model`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); loadHistory(); toast('Deleted');
 }
 function downloadModel(){
   if(!S.selectedModel)return;
@@ -605,7 +605,7 @@ async function generate(){
   let si=0;
   const stepTimer=setInterval(()=>{si=(si+1)%STEPS.length;showProgress('gen-progress',true,STEPS[si])},8000);
   try{
-    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,color,add:S.tags.add||[],remove:S.tags.remove||[],folder})});
+    const r=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,color,add:S.tags.add||[],remove:S.tags.remove||[],folder})});
     clearInterval(stepTimer);
     const d=await r.json();
     showProgress('gen-progress',false); setBusy('gen-btn',false,'⬡ GENERATE MODEL');
@@ -632,7 +632,7 @@ async function editModel(){
   showProgress('edit-progress',true,'AI IS EDITING YOUR MODEL...');
   hideErr('edit-err');
   try{
-    const r=await fetch('/api/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:S.selectedModel.id,edit_prompt:ep,color,add:S.tags['edit-add']||[],remove:S.tags['edit-rem']||[]})});
+    const r=await fetch('/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:S.selectedModel.id,edit_prompt:ep,color,add:S.tags['edit-add']||[],remove:S.tags['edit-rem']||[]})});
     const d=await r.json();
     showProgress('edit-progress',false); setBusy('edit-btn',false,'✦ APPLY EDITS');
     if(d.success){
@@ -662,7 +662,7 @@ function toast(msg,isErr=false){
 
 async function checkStatus(){
   try{
-    const r=await fetch('/api/status'); const d=await r.json();
+    const r=await fetch('/status'); const d=await r.json();
     const dot=document.getElementById('dot-tripo');
     if(d.tripo){dot.className='dot dot-on'}else{dot.className='dot dot-off'}
   }catch(e){}

@@ -1,4 +1,4 @@
-﻿
+
 # server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
@@ -1201,9 +1201,7 @@ def call_llm_unified(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     # Try Gemini first (cheapest, 7 keys)
     alive_gemini = [k for k in GEMINI_KEYS if not k["dead"]]
     if alive_gemini:
-        result_tuple = call_llm_unified(system_msg, user_msg, max_tokens, temperature)
-        result = result_tuple[0] if result_tuple else None
-        _provider_used = result_tuple[1] if result_tuple else 'Unknown'
+        result = call_llm(system_msg, user_msg, max_tokens, temperature)
         if result:
             return result, "Gemini"
 
@@ -5864,6 +5862,7 @@ def build_preset_for_keyword(keyword, r, g, b):
 
 if __name__ == "__main__":
     _run_server()
+
 
 
 

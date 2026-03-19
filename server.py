@@ -3751,9 +3751,12 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                   quality_score=score_glb_quality(ROCKET_GLB)[0])
 
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         log_error(f"[ERROR] Generation pipeline exception: {e}")
+        log_error(f"[ERROR] Full traceback: {tb}")
         set_state(status="error", step="error",
-                  error=str(e), progress=0)
+                  error=f"{e}", progress=0)
         # Emergency fallback
         try:
             write_fallback_glb(ROCKET_GLB, "#888888")

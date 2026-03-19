@@ -463,6 +463,13 @@ OPENROUTER_MODEL = os.environ.get(
     "meta-llama/llama-3.1-8b-instruct:free"
 ).strip()
 
+# DEBUG: Log key loading at startup
+log_srv(f"[STARTUP] OpenRouter keys loaded: {len(OPENROUTER_KEYS)}")
+log_srv(f"[STARTUP] Gemini keys loaded: {len(GEMINI_KEYS)}")  
+log_srv(f"[STARTUP] Groq keys loaded: {len(GROQ_KEYS)}")
+for i, k in enumerate(OPENROUTER_KEYS, 1):
+    log_srv(f"[STARTUP] OR key {i}: {k['name']} dead={k['dead']}")
+
 
 # ---------------------------------------------------------------------------
 #  GROQ KEY SYSTEM - 2 KEYS MAX
@@ -502,6 +509,13 @@ def _build_groq_keys():
 
 GROQ_KEYS  = _build_groq_keys()
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+
+# Debug: Log key counts at startup
+log_srv(f"[STARTUP] OpenRouter keys loaded: {len(OPENROUTER_KEYS)}")
+log_srv(f"[STARTUP] Gemini keys loaded: {len(GEMINI_KEYS)}")
+log_srv(f"[STARTUP] Groq keys loaded: {len(GROQ_KEYS)}")
+for i, k in enumerate(OPENROUTER_KEYS, 1):
+    log_srv(f"[STARTUP] OpenRouter key {i}: {k['name']} (dead={k['dead']})")
 
 
 # ---------------------------------------------------------------------------
@@ -562,10 +576,13 @@ def call_groq(system_msg, user_msg, max_tokens=4000, temperature=0.2):
 def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     """Call OpenRouter API. Returns text or None."""
     alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
+    log_srv(f"[OR-DEBUG] {len(alive)} alive of {len(OPENROUTER_KEYS)} total keys")
     if not alive:
+        log_srv("[OR-DEBUG] No alive keys - returning None")
         return None
     for k in alive:
         try:
+            log_srv(f"[OR-DEBUG] Trying key {k['name']}...")
             r = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
@@ -586,6 +603,7 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
                 timeout=90,
                 verify=False
             )
+            log_srv(f"[OR-DEBUG] Key {k['name']} status: {r.status_code}")
             if r.status_code == 200:
                 choices = r.json().get("choices", [])
                 if choices:
@@ -604,11 +622,12 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
                 log_srv("[OPENROUTER] Key " + k["name"] + " rate limited")
                 time.sleep(3)
             else:
-                log_srv("[OPENROUTER] status " + str(r.status_code) + ": " + r.text[:200])
+                log_srv("[OR-DEBUG] status " + str(r.status_code) + ": " + r.text[:200])
                 k["fails"] += 1
         except Exception as e:
-            log_srv("[OPENROUTER] Exception: " + str(e))
+            log_srv("[OR-DEBUG] Exception: " + str(e))
             k["fails"] += 1
+    log_srv("[OR-DEBUG] All OpenRouter keys failed")
     return None
 
 

@@ -3389,6 +3389,7 @@ function doPoll() {
         if (sSvc) { sSvc.textContent = APP.lastService || 'preset'; }
 
         loadGLB('/rocket.glb?t=' + Date.now(), function() {
+          var _es = document.getElementById('empty-state'); if(_es) _es.style.display='none';
           showModelBar(APP.lastPrompt, APP.lastService);
           refreshHistory();
           updateModelCounter();
@@ -5385,21 +5386,21 @@ function initOverlayCanvas() {
 function filterEmptyDefaultFolders() {
   var defaults = ['vehicles','creatures','buildings','misc','bingoo','unchained'];
   function doFilter() {
-    var items = document.querySelectorAll('.folder-row');
-    items.forEach(function(item) {
+    document.querySelectorAll('.folder-row').forEach(function(item) {
       var nameEl = item.querySelector('.folder-name-txt');
       if (!nameEl) return;
       var name = nameEl.textContent.trim().toLowerCase();
-      var countEl = item.querySelector('.folder-count');
-      var count = countEl ? parseInt(countEl.textContent) : 0;
+      // Check both possible badge class names
+      var countEl = item.querySelector('.folder-count, .folder-cnt-badge');
+      var count = countEl ? (parseInt(countEl.textContent) || 0) : 0;
       if (defaults.indexOf(name) !== -1 && count === 0) {
         item.style.display = 'none';
+      } else {
+        item.style.display = '';
       }
     });
   }
-  setTimeout(doFilter, 800);
-  setTimeout(doFilter, 2000);
-  setTimeout(doFilter, 4000);
+  [500, 1500, 3000, 6000].forEach(function(t){ setTimeout(doFilter, t); });
 }
 document.addEventListener('DOMContentLoaded', filterEmptyDefaultFolders);
 
@@ -5424,10 +5425,17 @@ function loadUserInfo() {
     var nm   = document.getElementById('user-name');
     var em   = document.getElementById('user-email');
     if (d.logged_in && d.user) {
-      if (wrap) wrap.style.display = 'flex';
-      if (img && d.user.picture) img.src = d.user.picture;
-      if (nm)  nm.textContent  = d.user.name  || 'User';
-      if (em)  em.textContent  = d.user.email || '';
+      if (wrap) { wrap.style.display = 'flex'; }
+      if (img) {
+        if (d.user.picture) {
+          img.src = d.user.picture;
+          img.style.display = 'block';
+        } else {
+          img.style.display = 'none';
+        }
+      }
+      if (nm) nm.textContent = d.user.name || (d.user.email ? d.user.email.split('@')[0] : 'User');
+      if (em) em.textContent = d.user.email || '';
     }
   }).catch(function() {});
 }
@@ -5436,30 +5444,6 @@ document.addEventListener('DOMContentLoaded', function() {
   initLoginOverlay();
   loadUserInfo();
   filterEmptyDefaultFolders();
-});
-
-
-/* Run on load to set correct initial arrow states */
-document.addEventListener('DOMContentLoaded', function() {
-  ['shapes-body','color-body','style-body'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) {
-      el.setAttribute('data-ts-open', '0');
-      el.style.maxHeight = '0px';
-      el.style.overflow = 'hidden';
-    }
-  });
-  ['shapes-arrow','color-arrow','style-arrow'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.style.transform = 'rotate(-90deg)';
-  });
-  var fp = document.getElementById('folder-panel-body');
-  if (fp) {
-    fp.setAttribute('data-ts-open', '1');
-    fp.style.overflow = 'hidden';
-  }
-  var fa = document.getElementById('folder-panel-arrow');
-  if (fa) fa.style.transform = 'rotate(0deg)';
 });
 
 

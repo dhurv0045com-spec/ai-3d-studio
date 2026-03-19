@@ -1532,7 +1532,9 @@ INTERPRETER_SYSTEM = (
 def interpret_prompt(prompt_text, color_hex="#aaaaaa"):
     """Call Groq interpreter. Returns dict with parsed fields."""
     log_gen("[INTERPRETER] Calling Gemini interpreter...")
-    raw = call_llm(INTERPRETER_SYSTEM, prompt_text, max_tokens=500, temperature=0.1)
+    raw = call_llm_unified(INTERPRETER_SYSTEM, prompt_text, max_tokens=500, temperature=0.1)
+    raw_provider = raw[1] if isinstance(raw, tuple) else "Gemini"
+    raw = raw[0] if isinstance(raw, tuple) else raw
     if raw:
         # Strip any accidental markdown fences
         clean = raw.strip()
@@ -2027,7 +2029,9 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=1
                 "\nBroken script (first 2000 chars):\n"
                 + current_script[:2000]
             )
-            fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
+            fixed = call_llm_unified(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
+            fixed_provider = fixed[1] if isinstance(fixed, tuple) else "Gemini"
+            fixed = fixed[0] if isinstance(fixed, tuple) else fixed
             if fixed and len(fixed.strip()) > 100:
                 current_script = fixed
                 log_gen("[BLENDER] Got Gemini fix ("
@@ -2355,7 +2359,9 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     log_gen("[MODEL_B] Starting Gemini+Blender (style=" + style
             + " complexity=" + str(complexity) + ")")
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
-    script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=4000, temperature=0.2)
+    script_raw = call_llm_unified(BLENDER_SYSTEM, user_msg, max_tokens=4000, temperature=0.2)
+    script_raw_provider = script_raw[1] if isinstance(script_raw, tuple) else "Gemini"
+    script_raw = script_raw[0] if isinstance(script_raw, tuple) else script_raw
     if not script_raw:
         log_gen("[MODEL_B] Gemini returned no script")
         return False
@@ -2384,7 +2390,9 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     user_msg_simp = build_blender_user_prompt(interp, color_hex, style, simp_complexity)
     user_msg_simp += " PREVIOUS ATTEMPT CRASHED. THIS MUST BE EXTREMELY SIMPLE AND RELIABLE. USE ONLY A FEW OBJECTS."
     
-    script_raw_simp = call_llm(BLENDER_SYSTEM, user_msg_simp, max_tokens=2500, temperature=0.1)
+    script_raw_simp = call_llm_unified(BLENDER_SYSTEM, user_msg_simp, max_tokens=2500, temperature=0.1)
+    script_raw_simp_provider = script_raw_simp[1] if isinstance(script_raw_simp, tuple) else "Gemini"
+    script_raw_simp = script_raw_simp[0] if isinstance(script_raw_simp, tuple) else script_raw_simp
     if script_raw_simp:
         script_simp = strip_md_fences(script_raw_simp)
         if "import bpy" in script_simp and "export_scene.gltf" in script_simp:

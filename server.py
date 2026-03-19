@@ -4469,6 +4469,20 @@ def settings_get():
     return jsonify(_settings)
 
 
+@app.route("/auth/me", methods=["GET"])
+def auth_me():
+    """Simple auth endpoint - returns user info for frontend."""
+    return jsonify({
+        "logged_in": True,
+        "user": {
+            "sub": "user",
+            "name": "User",
+            "email": "user@aurex3d.com",
+            "picture": ""
+        }
+    })
+
+
 @app.route("/api/settings", methods=["POST"])
 def settings_post():
     """Update a single setting by dot-notation path."""

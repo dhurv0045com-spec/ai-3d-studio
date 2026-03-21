@@ -39,6 +39,21 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ============================================================
+# SUPABASE INITIALIZATION
+# ============================================================
+from supabase import create_client, Client
+
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
+
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print(f"[SUPABASE] Initialized with URL: {SUPABASE_URL[:30]}...")
+else:
+    supabase = None
+    print("[SUPABASE] WARNING: SUPABASE_URL or SUPABASE_KEY not set")
+
+# ============================================================
 # RAILWAY ENVIRONMENT VARIABLES
 # Set these in Railway dashboard > Variables tab
 # ============================================================
@@ -782,6 +797,41 @@ def log_error(msg):
         _state["log"].append(line)
         if len(_state["log"]) > MAX_LOG_LINES:
             _state["log"] = _state["log"][-MAX_LOG_LINES:]
+
+
+# ---------------------------------------------------------------------------
+#  SUPABASE SAVE FUNCTION
+# ---------------------------------------------------------------------------
+def save_to_supabase(prompt, color, folder, service, file_path, size):
+    """Save model metadata to Supabase 'models' table."""
+    if not supabase:
+        print("[SUPABASE] ERROR: Supabase client not initialized")
+        return False
+    
+    try:
+        print(f"[SUPABASE] Attempting to save: prompt='{prompt}', service='{service}', size={size}")
+        
+        data = {
+            "user_id": "user",
+            "prompt": prompt,
+            "color": color,
+            "folder": folder,
+            "service": service,
+            "file": file_path,
+            "cloud_url": "",
+            "size": size,
+            "quality_score": 0
+        }
+        
+        result = supabase.table("models").insert(data).execute()
+        print(f"[SUPABASE] SUCCESS: {result}")
+        return True
+        
+    except Exception as e:
+        print(f"[SUPABASE] ERROR: {str(e)}")
+        import traceback
+        print(f"[SUPABASE] TRACEBACK: {traceback.format_exc()}")
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -3774,6 +3824,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen(f"[CACHE] served from cache: {msg}")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
+                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz)
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
@@ -3836,6 +3887,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                         sz = os.path.getsize(ROCKET_GLB)
                         log_gen(f"[LIBRARY] success: {msg}")
                         store_cache(ROCKET_GLB, prompt)
+                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz)
                         set_state(status="done", progress=100, step="done",
                                   service="Library", cached=False, glb_size=sz,
                                   last_model=ROCKET_GLB)
@@ -3854,6 +3906,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[SHAPEE] [MODEL_A] Shap-E success")
                 store_cache(ROCKET_GLB, prompt)
+                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz)
                 set_state(status="done", progress=100, step="done",
                           service="Shap-E", glb_size=sz, last_model=ROCKET_GLB)
                 return
@@ -3874,6 +3927,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[MODEL_B] Gemini+Blender success")
                 store_cache(ROCKET_GLB, prompt)
+                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz)
                 set_state(status="done", progress=100, step="done",
                           service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB)
                 return
@@ -3891,6 +3945,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             sz = os.path.getsize(ROCKET_GLB)
             log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
             store_cache(ROCKET_GLB, prompt)
+            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz)
             set_state(status="done", progress=100, step="done",
                       service="Preset", glb_size=sz, last_model=ROCKET_GLB,
                       cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
@@ -3919,6 +3974,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword} ({msg})")
                     store_cache(ROCKET_GLB, prompt)
                     _cloud = upload_to_cloudinary(ROCKET_GLB)
+                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz)
                     set_state(status="done", progress=100, step="done",
                               service="Fallback-Shaped", glb_size=sz,
                               last_model=ROCKET_GLB,
@@ -3940,6 +3996,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         log_gen(f"[PYGLB] generic fallback written: {sz} bytes")
         # Do NOT cache generic fallback - it doesn't match the prompt
         _cloud = upload_to_cloudinary(ROCKET_GLB)
+        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
                   cloud_url=_cloud or "",

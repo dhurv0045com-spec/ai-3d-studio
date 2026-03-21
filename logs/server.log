@@ -2745,3 +2745,10 @@ RuntimeError: Error: File format is not supported in file "C:\Users\user\Desktop
 [21:26:18] INFO  SERVER: [HTTP] GET /auth/me 200 0ms
 [21:26:35] INFO  SERVER: [HTTP] GET /manifest.json 200 0ms
 [22:55:42] INFO  SERVER: [HTTP] GET / 200 145ms
+[21:17:03] INFO  SERVER: [START] Server startup - state reset to idle
+[21:17:03] INFO  SERVER: [TRAY] system tray icon started
+[21:17:04] INFO  SERVER: [HTTP] GET /ping 200 1ms
+[21:17:04] INFO  SERVER: [HTTP] GET /ping 200 3ms
+[21:17:04] INFO  SERVER: [HTTP] GET /status 200 0ms
+[21:17:04] INFO  SERVER: [HTTP] GET /folders 200 1ms
+[21:17:04] INFO  SERVER: [HTTP] GET /history 200 0ms

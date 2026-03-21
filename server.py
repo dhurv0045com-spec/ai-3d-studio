@@ -274,23 +274,57 @@ def upload_to_cloudinary(local_path, public_id=None):
 #  GEMINI KEY SYSTEM - 5 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_gemini_keys():
-    """Build key list from env vars (Railway) with hardcoded fallbacks (local)."""
-    pairs = [
-        ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
-        ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
-        ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
-        ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
-        ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
-    ]
-    result = []
-    for i, (name, fallback) in enumerate(pairs, 1):
-        key_val = os.environ.get("GEMINI_KEY_" + str(i), fallback)
-        if key_val and key_val.startswith("AIza"):
-            result.append({"name": name, "key": key_val,
-                           "fails": 0, "dead": False, "last_used": 0.0})
-    return result if result else [
-        {"name": "fallback", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}
-    ]
+    """Build key list: Priority 1 (Env Vars) -> Priority 2 (settings.json) -> Priority 3 (Hardcoded)."""
+    keys = []
+    # PRIORITY 1: Environment Variables (GEMINI_KEY_1 to GEMINI_KEY_20)
+    for i in range(1, 21):
+        val = (os.environ.get("GEMINI_KEY_" + str(i)) or "").strip()
+        if val and val.startswith("AIza"):
+            keys.append({
+                "name":      "gemini" + str(i),
+                "key":       val,
+                "fails":     0,
+                "dead":      False,
+                "last_used": 0.0
+            })
+    
+    # PRIORITY 2: settings.json
+    if not keys:
+        try:
+            with open("settings.json", "r", encoding="utf-8") as f:
+                settings = json.load(f)
+                gemini_list = settings.get("ai", {}).get("gemini_keys", [])
+                for i, val in enumerate(gemini_list, 1):
+                    if val and val.startswith("AIza"):
+                        keys.append({
+                            "name":      "settings_gemini" + str(i),
+                            "key":       val,
+                            "fails":     0,
+                            "dead":      False,
+                            "last_used": 0.0
+                        })
+        except Exception:
+            pass
+            
+    # PRIORITY 3: Hardcoded fallbacks (Emergency only)
+    if not keys:
+        fallbacks = [
+            ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
+            ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
+            ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
+            ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
+            ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
+        ]
+        for name, val in fallbacks:
+            keys.append({
+                "name":      "fallback_" + name,
+                "key":       val,
+                "fails":     0,
+                "dead":      False,
+                "last_used": 0.0
+            })
+            
+    return keys if keys else [{"name": "none", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}]
 
 GEMINI_KEYS = _build_gemini_keys()
 _gemini_index = 0
@@ -368,9 +402,10 @@ def get_gemini_key_status():
 #  OPENROUTER KEY SYSTEM - 3 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_openrouter_keys():
+    """Build OpenRouter keys: Env Vars (Priority) -> settings.json."""
     keys = []
-    # PRIORITY: Try environment variables first (Railway) - max 3 keys
-    for i in range(1, 4):
+    # PRIORITY 1: Environment Variables (OPENROUTER_KEY_1 to OPENROUTER_KEY_10)
+    for i in range(1, 11):
         val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
         if val and val.startswith("sk-or"):
             keys.append({
@@ -381,16 +416,16 @@ def _build_openrouter_keys():
                 "last_used": 0.0
             })
     
-    # Fallback to settings.json only if no env vars found
+    # PRIORITY 2: settings.json
     if not keys:
         try:
             with open("settings.json", "r", encoding="utf-8") as f:
                 settings = json.load(f)
                 openrouter_keys = settings.get("ai", {}).get("openrouter_keys", [])
-                for i, key in enumerate(openrouter_keys[:3], 1):  # Max 3 keys
+                for i, key in enumerate(openrouter_keys, 1):
                     if key and key.startswith("sk-or"):
                         keys.append({
-                            "name":      "openrouter" + str(i),
+                            "name":      "settings_openrouter" + str(i),
                             "key":       key,
                             "fails":     0,
                             "dead":      False,
@@ -411,9 +446,10 @@ OPENROUTER_MODEL = os.environ.get(
 #  GROQ KEY SYSTEM - 2 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_groq_keys():
+    """Build Groq keys: Env Vars (Priority) -> settings.json."""
     keys = []
-    # PRIORITY: Try environment variables first (Railway) - max 2 keys
-    for i in range(1, 3):
+    # PRIORITY 1: Environment Variables (GROQ_KEY_1 to GROQ_KEY_10)
+    for i in range(1, 11):
         val = (os.environ.get("GROQ_KEY_" + str(i)) or "").strip()
         if val and val.startswith("gsk_"):
             keys.append({
@@ -424,16 +460,16 @@ def _build_groq_keys():
                 "last_used": 0.0
             })
     
-    # Fallback to settings.json only if no env vars found
+    # PRIORITY 2: settings.json
     if not keys:
         try:
             with open("settings.json", "r", encoding="utf-8") as f:
                 settings = json.load(f)
                 groq_keys = settings.get("ai", {}).get("groq_keys", [])
-                for i, key in enumerate(groq_keys[:2], 1):  # Max 2 keys
+                for i, key in enumerate(groq_keys, 1):
                     if key and key.startswith("gsk_"):
                         keys.append({
-                            "name":      "groq" + str(i),
+                            "name":      "settings_groq" + str(i),
                             "key":       key,
                             "fails":     0,
                             "dead":      False,
@@ -2977,7 +3013,7 @@ ir2.rotation_euler=(math.radians(90),0,0); apply_mat(ir2)
 
 
 def build_preset_for_keyword(keyword, r, g, b):
-    """Return Blender script for keyword. Falls back to generic sphere."""
+    """Return Blender script for keyword. Handles 40+ shapes including extended ones."""
     builders = {
         "rocket":    build_preset_rocket,
         "dragon":    build_preset_dragon,
@@ -2992,6 +3028,10 @@ def build_preset_for_keyword(keyword, r, g, b):
         "train":     build_preset_train,
         "snake":     build_preset_snake,
         "shield":    build_preset_shield,
+        # Extended shapes
+        "tower":     lambda r,g,b: build_quick_shape_script("tower", r,g,b),
+        "chair":     lambda r,g,b: build_quick_shape_script("chair", r,g,b),
+        "table":     lambda r,g,b: build_quick_shape_script("table", r,g,b),
     }
     builder = builders.get(keyword)
     if builder:
@@ -4911,7 +4951,7 @@ def cloud_history():
 
 @app.route("/api/system_info", methods=["GET"])
 def system_info():
-    """Return comprehensive system information."""
+    """Return comprehensive system and server info."""
     import platform
     alive, dead = get_gemini_key_status()
     try:
@@ -4919,21 +4959,36 @@ def system_info():
         free_gb = round(disk.free / (1024 ** 3), 1)
     except Exception:
         free_gb = -1
+    
+    cache_count = 0
+    cache_size = 0
+    try:
+        for fname in os.listdir(CACHE_DIR):
+            if fname.endswith(".glb"):
+                cache_count += 1
+                cache_size += os.path.getsize(os.path.join(CACHE_DIR, fname))
+    except Exception:
+        pass
+
     return jsonify({
-        "version":         VERSION,
-        "python":          sys.version[:20],
-        "platform":        platform.system() + " " + platform.release(),
-        "blender_found":   os.path.exists(BLENDER_EXE),
-        "blender_path":    BLENDER_EXE,
-        "shap_e":          shap_e_available,
-        "gemini_alive":    alive,
-        "gemini_dead":     dead,
-        "cloudinary":      CLOUDINARY_ENABLED,
-        "cloudinary_cloud":CLOUDINARY_CLOUD,
-        "disk_free_gb":    free_gb,
-        "cache_mb":        get_cache_size_mb(),
-        "history_count":   len(load_history()),
-        "preset_count":    len(PRESET_KEYWORDS),
+        "version":            VERSION,
+        "python":             sys.version[:20],
+        "platform":           platform.system() + " " + platform.release(),
+        "blender_found":      os.path.exists(BLENDER_EXE),
+        "blender_path":       BLENDER_EXE,
+        "shap_e":             shap_e_available,
+        "gemini_keys_total":  len(GEMINI_KEYS),
+        "gemini_alive":       alive,
+        "gemini_dead":        dead,
+        "cloudinary":         CLOUDINARY_ENABLED,
+        "cloudinary_cloud":   CLOUDINARY_CLOUD,
+        "disk_free_gb":       free_gb,
+        "cache_mb":           get_cache_size_mb(),
+        "cache_entries":      cache_count,
+        "cache_size_bytes":   cache_size,
+        "history_count":      len(load_history()),
+        "preset_count":       len(PRESET_KEYWORDS),
+        "base_dir":           BASE_DIR
     })
 
 
@@ -5268,30 +5323,7 @@ def list_presets():
     })
 
 
-@app.route("/api/system_info", methods=["GET"])
-def system_info():
-    """Return system and server info."""
-    blender_found = os.path.exists(BLENDER_EXE)
-    cache_count = 0
-    cache_size = 0
-    for fname in os.listdir(CACHE_DIR):
-        if fname.endswith(".glb"):
-            cache_count += 1
-            cache_size += os.path.getsize(os.path.join(CACHE_DIR, fname))
-    history_count = len(load_history())
-    return jsonify({
-        "version": VERSION,
-        "blender_found": blender_found,
-        "blender_path": BLENDER_EXE,
-        "shap_e_available": shap_e_available,
-        "cache_entries": cache_count,
-        "cache_size_bytes": cache_size,
-        "history_entries": history_count,
-        "gemini_keys_total": len(GEMINI_KEYS),
-        "gemini_active_index": _gemini_index % len(GEMINI_KEYS),
-        "python_version": sys.version.split()[0],
-        "base_dir": BASE_DIR
-    })
+
 
 
 @app.route("/api/llm/test", methods=["POST"])
@@ -5512,13 +5544,7 @@ for lx,ly in [(-1.0,-0.6),(1.0,-0.6),(-1.0,0.6),(1.0,0.6)]:
 _orig_build_preset_for_keyword = build_preset_for_keyword
 
 
-def build_preset_for_keyword(keyword, r, g, b):
-    """Extended version checking all 40 shapes."""
-    result = _orig_build_preset_for_keyword(keyword, r, g, b)
-    # If it returned generic sphere for a named shape, try extended
-    if result == build_preset_generic_sphere(r, g, b) and keyword in ("tower", "chair", "table"):
-        return build_quick_shape_script(keyword, r, g, b)
-    return result
+
 
 
 # ---------------------------------------------------------------------------

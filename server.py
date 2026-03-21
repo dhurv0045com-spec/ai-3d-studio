@@ -3660,14 +3660,7 @@ def save_successful_script(prompt, script):
 
 PRESET_KEYWORDS = [
     "dragon", "rocket", "car", "robot", "castle", "spaceship",
-    "sword", "house", "tree", "plane", "tower", "pyramid",
-    "diamond", "chair", "table", "boat", "cube", "sphere",
-    "cylinder", "cone", "train", "bus", "helicopter", "truck",
-    "ship", "submarine", "tank", "motorcycle", "bicycle",
-    "horse", "dog", "cat", "bird", "fish", "flower", "mountain",
-    "crystal", "crown", "hammer", "axe", "shield", "bow",
-    "arrow", "wand", "staff", "lantern", "chest", "barrel",
-    "mushroom", "cactus", "star", "capsule", "torus", "ring"
+    "sword", "house", "tree", "plane", "train"
 ]
 
 

@@ -1,145 +1,109 @@
-# AI 3D Studio — Setup & Usage Guide
+<div align="center">
+  <img src="https://via.placeholder.com/150/09090b/ffd700?text=AI+3D+STUDIO" alt="AI 3D Studio Logo" width="150"/>
+  <h1>🌌 Aurex AI 3D Studio (V7.0)</h1>
+  <p><strong>Next-Generation Text-to-3D Generation Pipeline</strong></p>
+  
+  [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+  [![Flask](https://img.shields.io/badge/Flask-3.0.0-000000.svg?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+  [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.0_Flash-4285F4.svg?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+  [![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E.svg?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
-## Project Structure
+  *Turn your imagination into high-quality 3D models using AI.*
+</div>
 
-```
-ai-3d-project/
-├── index.html          ← Three.js viewer (open in browser)
-├── generate_model.py   ← AI backend (reads prompts, runs Blender, exports .glb)
-├── server.py           ← Simple HTTP server (bridges browser ↔ backend)
-├── state.json          ← Shared state file (prompt + status)
-└── rocket.glb          ← Generated 3D model (created automatically)
+---
+
+## ✨ Features
+
+- 🧠 **Multi-API Intelligence**: Powered primarily by OpenRouter, with robust failovers to **Google Gemini (20 Keys Auto-Rotation)** and Groq.
+- 🎨 **Hybrid Pipeline**: LLM generates optimized Python scripts which are seamlessly executed by a headless Blender instance.
+- ☁️ **Cloud Native**: Integrated automatically with **Cloudinary** for global GLB delivery and **Supabase** for scalable, user-specific model history storage.
+- 🔐 **Google Authentication**: Built-in Google OAuth2 for secure user sessions and personalized model libraries.
+- ⚡ **Production Ready**: Configured for Railway deployment via Gunicorn.
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    A[Client UI] -->|Prompt + Styles| B[Flask Server]
+    B -->|Check Rate Limits| C{Auth & Session}
+    C -->|Try 1| D[OpenRouter LLM]
+    C -->|Try 2| E[Gemini 2.0 Flash]
+    C -->|Try 3| F[Groq Fallback]
+    
+    D & E & F -->|Generate Python| G[Blender Headless]
+    G -->|Render Engine| H[Generate GLB]
+    
+    H -->|Upload| I[Cloudinary CDN]
+    H -->|Save Metadata| J[(Supabase DB)]
+    
+    I & J -->|Return URLs| A
 ```
 
 ---
 
-## Quick Start
+## 🚀 Quick Start (Local Setup)
 
-### Step 1 — Install Requirements
+### 1. Prerequisites
+- **Python 3.10+** installed.
+- **Blender 4.0+** installed in its default `C:\Program Files` directory (Windows).
 
-- **Blender 3.x or 4.x**: https://www.blender.org/download/
-- **Python 3.8+**: https://www.python.org/
-
-Make sure `blender` is on your PATH, or set the environment variable:
+### 2. Installation
 ```bash
-# Windows
-set BLENDER_PATH=C:\Program Files\Blender Foundation\Blender 4.0\blender.exe
-
-# macOS / Linux
-export BLENDER_PATH=/Applications/Blender.app/Contents/MacOS/Blender
-```
-
----
-
-### Step 2 — Start the HTTP Server
-
-Open **Terminal 1**:
-```bash
+git clone https://github.com/your-repo/ai-3d-project.git
 cd ai-3d-project
+pip install -r requirements.txt
+```
+
+### 3. Environment Variables
+You need to set up your API keys. Locally, you can export them or add them to your `settings.json`. In production (like Railway), add them to the Environment Variables tab. 
+
+*Note: Variable names are **case-insensitive***.
+- `OPENROUTER_KEY_1` to `OPENROUTER_KEY_10`
+- `GEMINI_KEY_1` to `GEMINI_KEY_20`
+- `GROQ_KEY_1` to `GROQ_KEY_10`
+
+### 4. Database Setup (Supabase)
+To enable scalable storage:
+1. Create a project on [Supabase.com](https://supabase.com/).
+2. Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to your environment variables.
+3. Run the following SQL in your Supabase SQL Editor:
+```sql
+create table models (
+    id bigint primary key,
+    user_id text not null,
+    prompt text,
+    color text,
+    folder text,
+    service text,
+    file text,
+    cloud_url text,
+    created text,
+    size bigint,
+    quality_score numeric
+);
+create index idx_models_user on models(user_id);
+```
+
+### 5. Run the Studio!
+```bash
 python server.py
 ```
-You should see:
-```
-  URL : http://localhost:8000
-```
+Visit `http://127.0.0.1:5000` in your browser.
 
 ---
 
-### Step 3 — Start the Generation Backend
+## ☁️ Deployment (Railway)
 
-Open **Terminal 2**:
-```bash
-cd ai-3d-project
-python generate_model.py
-```
-It will poll state.json every second for new prompts.
-
----
-
-### Step 4 — Open the Browser
-
-Visit: **http://localhost:8000**
-
-Type a prompt like:
-- `create a red rocket with big wings`
-- `make a blue spaceship`
-- `build a golden tower`
-- `generate a green robot`
-
-Click **GENERATE** and watch the model appear!
+This project is configured out-of-the-box for Railway.
+1. Connect your GitHub repository to Railway.
+2. Railway will automatically detect the `Dockerfile`.
+3. Go to the **Variables** tab in Railway and add your API keys (e.g., `gemini_key_1`, `supabase_url`, `google_client_id`).
+4. The server will start automatically via `gunicorn`.
 
 ---
-
-## How It Works
-
-```
-Browser (index.html)
-   │
-   │  POST /save-state  { "prompt": "...", "status": "pending" }
-   ▼
-server.py  ──writes──▶  state.json
-                              │
-                         generate_model.py (polling)
-                              │  reads prompt
-                              │  detects shape + color
-                              │  writes blender_script.py
-                              │  runs: blender --background --python script.py
-                              │  Blender exports rocket.glb
-                              │  writes state.json { "status": "done" }
-                              ▼
-Browser polls state.json every 1s
-   │  sees "done"
-   │  loads rocket.glb via Three.js GLTFLoader
-   ▼
-3D model appears in the viewer ✓
-```
-
----
-
-## Supported Shapes
-
-| Keyword in prompt         | Shape generated        |
-|--------------------------|------------------------|
-| rocket, missile          | Rocket with 4 fins     |
-| car, vehicle, truck      | Low-poly car           |
-| tower, castle, building  | Stacked tower          |
-| spaceship, ufo, saucer   | Flying saucer          |
-| robot, android, mech     | Humanoid robot         |
-| house, home, cottage     | House with roof        |
-| plane, aircraft, jet     | Airplane               |
-| pyramid, temple          | Egyptian pyramid       |
-| diamond, gem, crystal    | Gem shape              |
-| tree, pine               | Layered pine tree      |
-
-## Supported Colors
-
-`red`, `green`, `blue`, `yellow`, `gold`, `white`, `black`, `orange`,
-`purple`, `pink`, `cyan`, `silver`
-
-## Size Modifiers
-
-- `big`, `large`, `huge`, `giant` → larger fins/wings
-- `small`, `tiny`, `mini` → smaller fins/wings
-
----
-
-## Demo Mode (No Server)
-
-If you just open `index.html` directly (without running server.py),
-the viewer works in **Demo Mode**: it generates a preview shape
-using Three.js geometry instead of Blender. No GLB file is needed.
-Great for testing the UI!
-
----
-
-## Troubleshooting
-
-**"blender not found"**
-→ Set BLENDER_PATH to the full path of your Blender executable.
-
-**Model doesn't update**
-→ Make sure server.py is running and generate_model.py is running.
-→ Check Terminal 2 for Blender errors.
-
-**Port 8000 in use**
-→ Edit `server.py` and change `PORT = 8000` to another port (e.g. 8080).
+<div align="center">
+  <i>Developed with ❤️ for 3D enthusiasts.</i>
+</div>

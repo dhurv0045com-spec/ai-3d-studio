@@ -37,7 +37,12 @@ import datetime
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from supabase import create_client
 
+SUPABASE_URL = "https://kinqcwteqgwvinfhqxgw.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpbnFjd3RlcWd3dmluZmhxeGd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Mzc1MDgsImV4cCI6MjA4OTQxMzUwOH0.RTO5fWEC3gJONLBbpYiSCV2BBjct-f9gxGmkZQgyFBQ"
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ============================================================
 # RAILWAY ENVIRONMENT VARIABLES
 # Set these in Railway dashboard > Variables tab
@@ -192,6 +197,43 @@ CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "h9OL5-hsJdbxpMV3Rp
 CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER",     "ai3d_studio")
 CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY_SECRET)
 
+# ---------------------------------------------------------------------------
+#  SUPABASE - SCALABLE STORAGE
+# ---------------------------------------------------------------------------
+SUPABASE_URL     = os.environ.get("SUPABASE_URL", "").strip()
+SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "").strip()
+SUPABASE_ENABLED = bool(SUPABASE_URL and SUPABASE_KEY)
+
+def supabase_request(method, endpoint, params=None, json_data=None):
+    if not SUPABASE_ENABLED:
+        return None
+    url = f"{SUPABASE_URL}/rest/v1/{endpoint}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    try:
+        if method == "GET":
+            r = requests.get(url, headers=headers, params=params, timeout=10)
+        elif method == "POST":
+            r = requests.post(url, headers=headers, json=json_data, timeout=10)
+        elif method == "DELETE":
+            r = requests.delete(url, headers=headers, params=params, timeout=10)
+        else:
+            return None
+        
+        if r.status_code in [200, 201, 204]:
+            if r.status_code == 204:
+                return True
+            return r.json()
+        else:
+            log_error(f"[SUPABASE] {method} Error: {r.status_code} - {r.text}")
+            return None
+    except Exception as e:
+        log_error(f"[SUPABASE] Request failed: {e}")
+        return None
 
 def upload_to_cloudinary(local_path, public_id=None):
     """
@@ -276,9 +318,11 @@ def upload_to_cloudinary(local_path, public_id=None):
 def _build_gemini_keys():
     """Build key list: Priority 1 (Env Vars) -> Priority 2 (settings.json) -> Priority 3 (Hardcoded)."""
     keys = []
-    # PRIORITY 1: Environment Variables (GEMINI_KEY_1 to GEMINI_KEY_20)
+    # PRIORITY 1: Environment Variables (GEMINI_KEY_1 to GEMINI_KEY_20, case-insensitive)
+    env_keys_lower = {k.lower(): v for k, v in os.environ.items()}
     for i in range(1, 21):
-        val = (os.environ.get("GEMINI_KEY_" + str(i)) or "").strip()
+        target = f"gemini_key_{i}"
+        val = env_keys_lower.get(target, "").strip()
         if val and val.startswith("AIza"):
             keys.append({
                 "name":      "gemini" + str(i),
@@ -404,9 +448,11 @@ def get_gemini_key_status():
 def _build_openrouter_keys():
     """Build OpenRouter keys: Env Vars (Priority) -> settings.json."""
     keys = []
-    # PRIORITY 1: Environment Variables (OPENROUTER_KEY_1 to OPENROUTER_KEY_10)
+    # PRIORITY 1: Environment Variables (OPENROUTER_KEY_1 to OPENROUTER_KEY_10, case-insensitive)
+    env_keys_lower = {k.lower(): v for k, v in os.environ.items()}
     for i in range(1, 11):
-        val = (os.environ.get("OPENROUTER_KEY_" + str(i)) or "").strip()
+        target = f"openrouter_key_{i}"
+        val = env_keys_lower.get(target, "").strip()
         if val and val.startswith("sk-or"):
             keys.append({
                 "name":      "openrouter" + str(i),
@@ -448,9 +494,11 @@ OPENROUTER_MODEL = os.environ.get(
 def _build_groq_keys():
     """Build Groq keys: Env Vars (Priority) -> settings.json."""
     keys = []
-    # PRIORITY 1: Environment Variables (GROQ_KEY_1 to GROQ_KEY_10)
+    # PRIORITY 1: Environment Variables (GROQ_KEY_1 to GROQ_KEY_10, case-insensitive)
+    env_keys_lower = {k.lower(): v for k, v in os.environ.items()}
     for i in range(1, 11):
-        val = (os.environ.get("GROQ_KEY_" + str(i)) or "").strip()
+        target = f"groq_key_{i}"
+        val = env_keys_lower.get(target, "").strip()
         if val and val.startswith("gsk_"):
             keys.append({
                 "name":      "groq" + str(i),
@@ -605,14 +653,16 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     
     # PRIORITY 1: OpenRouter (most reliable, fast)
     if OPENROUTER_KEYS:
-        log_srv("[LLM] Trying OpenRouter first...")
+        log_srv("[LLM] Priority 1: Trying OpenRouter first...")
         result = call_openrouter(system_msg, user_msg, max_tokens, temperature)
         if result:
             log_srv("[LLM] OpenRouter success")
             return result
+        log_srv("[LLM] OpenRouter failed or ran out of keys -> Falling back to Gemini")
+    else:
+        log_srv("[LLM] No OpenRouter keys -> Falling back to Gemini")
     
     # PRIORITY 2: Gemini (with key rotation)
-    log_srv("[LLM] OpenRouter failed or no keys - trying Gemini...")
     _base = (
         "https://generativelanguage.googleapis.com"
         "/v1beta/models/gemini-2.0-flash:generateContent"
@@ -666,22 +716,36 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
             log_srv("[GEMINI] Exception: " + str(e))
             rotate_gemini_key()
 
-    # PRIORITY 3: Groq (final fallback)
-    log_srv("[LLM] Gemini failed - falling back to Groq")
-    result = call_groq(system_msg, user_msg, max_tokens, temperature)
-    if result:
-        log_srv("[LLM] Groq success")
-        return result
+    log_srv("[LLM] Gemini failed -> Falling back to Groq")
 
-    log_srv("[LLM] ALL providers failed (OpenRouter, Gemini, Groq)")
+    # PRIORITY 3: Groq (final fallback)
+    if GROQ_KEYS:
+        result = call_groq(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            log_srv("[LLM] Groq success")
+            return result
+        log_srv("[LLM] Groq failed or ran out of keys.")
+    else:
+        log_srv("[LLM] No Groq keys available.")
+
+    log_srv("[LLM] ERROR: ALL providers failed (OpenRouter, Gemini, Groq)")
     return None
 
 
 # ---------------------------------------------------------------------------
-#  HISTORY AND INDEX FUNCTIONS
+#  HISTORY AND INDEX FUNCTIONS (Local & Supabase)
 # ---------------------------------------------------------------------------
 def load_history():
-    """Load history from HISTORY_FILE."""
+    """Load history. Uses Supabase if enabled, else falls back to local HISTORY_FILE."""
+    if SUPABASE_ENABLED:
+        try:
+            res = supabase_request("GET", "models?order=id.desc")
+            if res is not None and isinstance(res, list):
+                return res
+        except Exception as e:
+            log_error(f"[load_history] Supabase err: {e}")
+            
+    # Fallback to local
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -689,12 +753,37 @@ def load_history():
         return []
 
 def save_history(history):
-    """Save history to HISTORY_FILE."""
+    """Save full history array to local HISTORY_FILE."""
     try:
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2)
     except Exception as e:
         log_error(f"[save_history] failed: {e}")
+
+def add_history_entry(entry):
+    """Add a single entry to history. Uses Supabase if enabled, and updates local fallback."""
+    if SUPABASE_ENABLED:
+        try:
+            # Map Python dict to Supabase schema columns
+            # assuming id, prompt, color, folder, service, file, cloud_url, created, size, quality_score
+            sub_id = session.get("user", {}).get("sub", "default_user") if flask.has_request_context() and session else "default_user"
+            
+            db_entry = dict(entry)
+            db_entry["user_id"] = sub_id
+            
+            res = supabase_request("POST", "models", json_data=db_entry)
+            if res is not None:
+                log_srv(f"[SUPABASE] Inserted model {entry.get('id')}")
+            else:
+                log_error("[SUPABASE] Failed to insert model")
+        except Exception as e:
+            log_error(f"[add_history_entry] Supabase err: {e}")
+
+    # Always maintain local fallback
+    h = load_history()
+    h.insert(0, entry)
+    save_history(h[:MAX_HISTORY])
+
 
 def load_index():
     """Load index from INDEX_FILE."""
@@ -4316,7 +4405,12 @@ def save_model():
         return jsonify({"success": False, "error": str(e)}), 500
 
     # Relative path for storage
-    rel_path = os.path.join("storage", "users", "user", folder, fname)
+    user_info = session.get("user")
+    if user_info and user_info.get("sub"):
+        sub_id = user_info.get("sub")
+        rel_path = os.path.join("storage", "users", sub_id, folder, fname)
+    else:
+        rel_path = os.path.join("storage", "default", folder, fname)
 
     # History entry
     # Upload to Cloudinary cloud storage
@@ -4397,29 +4491,49 @@ def delete_model():
             return jsonify({"success": False, "error": str(e)}), 500
         return jsonify({"success": True})
 
-    if target_entry:
-        # Delete file
-        file_path = target_entry.get("file", "")
-        if file_path:
-            full = os.path.join(BASE_DIR, file_path)
-            resolved = os.path.realpath(full)
-            base_real = os.path.realpath(BASE_DIR)
-            if resolved.startswith(base_real) and os.path.exists(resolved):
+        if target_entry:
+            # Delete file
+            file_path = target_entry.get("file", "")
+            if file_path:
+                full = os.path.join(BASE_DIR, file_path)
+                resolved = os.path.realpath(full)
+                base_real = os.path.realpath(BASE_DIR)
+                if resolved.startswith(base_real) and os.path.exists(resolved):
+                    try:
+                        os.remove(resolved)
+                        log_srv(f"[delete_model] removed: {resolved}")
+                    except Exception as e:
+                        log_error(f"[delete_model] remove failed: {e}")
+            
+            # Remove from Supabase if enabled
+            if SUPABASE_ENABLED:
                 try:
-                    os.remove(resolved)
-                    log_srv(f"[delete_model] removed: {resolved}")
+                    res = supabase_request("DELETE", f"models?id=eq.{target_entry.get('id')}")
+                    if res is not None:
+                        log_srv(f"[SUPABASE] Deleted model {target_entry.get('id')}")
+                    else:
+                        log_error("[SUPABASE] Failed to delete model")
                 except Exception as e:
-                    log_error(f"[delete_model] remove failed: {e}")
-        # Remove from history
-        h = [e for e in h if str(e.get("id")) != str(target_entry.get("id"))]
-        save_history(h)
-        # Remove from index
-        idx = load_index()
-        idx = [e for e in idx if str(e.get("id")) != str(target_entry.get("id"))]
-        save_index(idx)
-        return jsonify({"success": True})
+                    log_error(f"[delete_model] Supabase err: {e}")
 
-    return jsonify({"success": False, "error": "not found"}), 404
+            # Remove from local history
+            # Always reload from file for local fallback to be safe
+            try:
+                with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                    local_h = json.load(f)
+                local_h = [e for e in local_h if str(e.get("id")) != str(target_entry.get("id"))]
+                with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+                    json.dump(local_h, f, indent=2)
+            except Exception:
+                pass
+
+            # Remove from index
+            idx = load_index()
+            idx = [e for e in idx if str(e.get("id")) != str(target_entry.get("id"))]
+            save_index(idx)
+            return jsonify({"success": True})
+
+        return jsonify({"success": False, "error": "not found"}), 404
 
 
 @app.route("/folders", methods=["GET"])
@@ -4799,7 +4913,6 @@ def auth_callback():
             
             # Create user folder
             user_folder = os.path.join(BASE_DIR, 'storage', 'users', user['sub'])
-            os.makedirs(user_folder, exist_ok=True)
             for sub in ['default', 'vehicles', 'creatures', 'buildings']:
                 os.makedirs(os.path.join(user_folder, sub), exist_ok=True)
             

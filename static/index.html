@@ -848,17 +848,7 @@ body:has(a:hover) #cursor-ring{
   font-family:'JetBrains Mono',monospace;font-size:7px;
   color:var(--tx-4);letter-spacing:.5px;
 }
-.log-box{
-  max-height:180px;overflow-y:auto;
-  font-family:'JetBrains Mono',monospace;font-size:10px;
-  line-height:1.6;color:var(--tx-3);
-  background:var(--bg-0);border-radius:var(--r-sm);
-  padding:8px 10px;border:1px solid var(--bd-1);
-  margin-top:8px;
-  width:100%;box-sizing:border-box;
-  word-wrap:break-word;word-break:break-all;
-  white-space:pre-wrap;
-}
+.log-box{ height:120px; overflow-y:auto; font-family:'JetBrains Mono',monospace; font-size:10px; line-height:1.6; color:var(--tx-3); background:var(--bg-1); border-radius:var(--r-sm); padding:8px 10px; border:1px solid var(--bd-1); margin-top:10px; width:100%; box-sizing:border-box; word-wrap:break-word; word-break:break-all; white-space:pre-wrap; scrollbar-width: thin; }
 .log-line-info{color:var(--tx-3)}
 .log-line-gen{color:rgba(0,212,255,.7)}
 .log-line-err{color:var(--red)}
@@ -2264,27 +2254,6 @@ nav#nav { display: flex !important; }
               <select id="folder-select" class="folder-dropdown"></select>
             </div>
 
-            <!-- Progress section - Tarantino tension -->
-            <div id="progress-sec">
-              <div class="prog-header">
-                <span class="prog-step" id="prog-step">Initializing...</span>
-                <span class="prog-pct"  id="prog-pct">0%</span>
-                <span id="gen-timer">0:00</span>
-              </div>
-              <div class="prog-bar-bg">
-                <div class="prog-bar-fill" id="prog-fill"></div>
-              </div>
-              <div class="pdots">
-                <div class="pdot-wrap"><div class="pdot" id="pd0"></div><div class="pdot-lbl">CACHE</div></div>
-                <div class="pdot-wrap"><div class="pdot" id="pd1"></div><div class="pdot-lbl">PARSE</div></div>
-                <div class="pdot-wrap"><div class="pdot" id="pd2"></div><div class="pdot-lbl">AI</div></div>
-                <div class="pdot-wrap"><div class="pdot" id="pd3"></div><div class="pdot-lbl">BUILD</div></div>
-                <div class="pdot-wrap"><div class="pdot" id="pd4"></div><div class="pdot-lbl">DONE</div></div>
-              </div>
-              <div class="log-box" id="log-box"></div>
-              <div class="err-box" id="err-box"></div>
-            </div>
-
             <!-- THE TARANTINO BUTTON -->
             <button id="gen-btn" onclick="generate()">GENERATE MODEL</button>
 
@@ -2348,19 +2317,6 @@ nav#nav { display: flex !important; }
               <div class="tags-area mt6" id="edit-rem-tags"></div>
             </div>
 
-            <!-- Edit progress section -->
-            <div id="edit-progress-sec">
-              <div class="prog-header">
-                <span class="prog-step" id="eprog-step">Processing...</span>
-                <span class="prog-pct"  id="eprog-pct">0%</span>
-              </div>
-              <div class="prog-bar-bg">
-                <div class="prog-bar-fill" id="eprog-fill"></div>
-              </div>
-              <div class="log-box" id="edit-log-box"></div>
-              <div class="err-box" id="edit-err-box"></div>
-            </div>
-
             <!-- Scott orange transformation button -->
             <button id="apply-edit-btn" onclick="applyEdit()" disabled>APPLY EDITS</button>
 
@@ -2414,7 +2370,29 @@ nav#nav { display: flex !important; }
           </div>
         </div>
 
-      </div><!-- end studio-right -->
+        <!-- SHARED PROGRESS SECTION - Bottom Right -->
+        <div id="progress-sec">
+          <div class="prog-header">
+            <span class="prog-step" id="prog-step">Initializing...</span>
+            <span class="prog-pct"  id="prog-pct">0%</span>
+            <span id="gen-timer">0:00</span>
+          </div>
+          <div class="prog-bar-bg">
+            <div class="prog-bar-fill" id="prog-fill"></div>
+          </div>
+          <div class="pdots">
+            <div class="pdot-wrap"><div class="pdot" id="pd0"></div><div class="pdot-lbl">CACHE</div></div>
+            <div class="pdot-wrap"><div class="pdot" id="pd1"></div><div class="pdot-lbl">PARSE</div></div>
+            <div class="pdot-wrap"><div class="pdot" id="pd2"></div><div class="pdot-lbl">AI</div></div>
+            <div class="pdot-wrap"><div class="pdot" id="pd3"></div><div class="pdot-lbl">BUILD</div></div>
+            <div class="pdot-wrap"><div class="pdot" id="pd4"></div><div class="pdot-lbl">DONE</div></div>
+          </div>
+          <div class="log-box" id="log-box"></div>
+          <div class="err-box" id="err-box"></div>
+        </div>
+
+      </div>
+<!-- end studio-right -->
     </div><!-- end page-studio -->
 
     <!-- ======================== GALLERY ======================== -->
@@ -3425,13 +3403,8 @@ function doEditPoll() {
   fetch('/status')
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      var ef = document.getElementById('eprog-fill');
-      var ep = document.getElementById('eprog-pct');
-      var es = document.getElementById('eprog-step');
-      if (ef) { ef.style.width = (d.progress || 0) + '%'; }
-      if (ep) { ep.textContent = (d.progress || 0) + '%'; }
-      if (es && d.step) { es.textContent = friendlyStep(d.step); }
-      appendNewLogLines(d.log, 'edit-log-box', 'editLogLineCount');
+      updateProgressUI(d);
+      appendNewLogLines(d.log, 'log-box', 'logLineCount');
 
       if (d.status === 'done') {
         stopEditPoll();
@@ -3441,16 +3414,14 @@ function doEditPoll() {
           toast('Edit applied: ' + (d.service || 'done'), 'ok');
         });
         setGenerating(false);
-        var epSec = document.getElementById('edit-progress-sec');
-        if (epSec) { setTimeout(function() { epSec.style.display = 'none'; }, 2600); }
+        setTimeout(hideProgress, 3000);
 
       } else if (d.status === 'error') {
         stopEditPoll();
         setGenerating(false);
-        showError(d.error || 'Edit failed', 'edit-err-box');
+        showError(d.error || 'Edit failed', 'err-box');
         toast('Edit failed', 'err');
-        var epSec = document.getElementById('edit-progress-sec');
-        if (epSec) { setTimeout(function() { epSec.style.display = 'none'; }, 5000); }
+        setTimeout(hideProgress, 5000);
       }
     })
     .catch(function() {});
@@ -3559,14 +3530,13 @@ function generate() {
 function applyEdit() {
   if (!APP.selectedModel) { toast('No model selected', 'err'); return; }
   var instr = document.getElementById('edit-instr');
-  var ep    = document.getElementById('edit-progress-sec');
   var cpEl  = document.getElementById('edit-color-picker');
 
-  APP.editLogLineCount = 0;
-  clearLogBox('edit-log-box');
-  hideError('edit-err-box');
+  APP.logLineCount = 0;
+  clearLogBox('log-box');
+  hideError('err-box');
 
-  if (ep) { ep.style.display = 'flex'; }
+  showProgress();
   setGenerating(true);
 
   var body = {
@@ -3592,13 +3562,13 @@ function applyEdit() {
         toast('Edit started...', 'default');
       } else {
         setGenerating(false);
-        if (ep) { ep.style.display = 'none'; }
+        hideProgress();
         toast(d.status === 'busy' ? 'Server busy' : (d.error || 'Edit failed'), 'err');
       }
     })
     .catch(function() {
       setGenerating(false);
-      if (ep) { ep.style.display = 'none'; }
+      hideProgress();
       toast('Cannot connect to server', 'err');
     });
 }

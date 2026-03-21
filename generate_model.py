@@ -1143,6 +1143,26 @@ def _build_table(c):
         b.add_cylinder(0.07, 0.02, lx, ly, 0.01, _dark(c))
     return b
 
+def _build_snake(c):
+    b = GLBBuilder()
+    # Snake body - coiled path using spheres
+    for i in range(24):
+        ang = i * 0.4
+        rad = 0.5 + (i * 0.02)
+        z = i * 0.08
+        b.add_sphere(0.18 - (i*0.005), math.cos(ang)*rad, math.sin(ang)*rad, z, c)
+    # Head
+    # Last segment approximate position
+    ia = 23 * 0.4
+    ir = 0.5 + (23 * 0.02)
+    bx = math.cos(ia)*ir; by = math.sin(ia)*ir; bz = 23*0.08
+    b.add_sphere(0.24, bx, by, bz + 0.15, c)
+    # Eyes
+    b.add_sphere(0.04, bx+0.1, by+0.1, bz+0.25, (0.05, 0.05, 0.05))
+    b.add_sphere(0.04, bx-0.1, by+0.1, bz+0.25, (0.05, 0.05, 0.05))
+    return b
+
+
 def _build_boat(c):
     b = GLBBuilder()
     b.add_box(4.0, 1.5, 0.70, 0, 0, 0, c)
@@ -1229,6 +1249,7 @@ _SHAPE_MAP = {
     "chair":       _build_chair,
     "table":       _build_table,
     "boat":        _build_boat,
+    "snake":       _build_snake,
 }
 
 

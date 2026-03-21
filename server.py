@@ -2939,6 +2939,45 @@ wrearR.rotation_euler=(math.radians(90),0,0); apply_mat(wrearR)
 """ + _preset_footer()
 
 
+def build_preset_snake(r, g, b):
+    return _preset_header() + _mat_block(r, g, b, 0.1, 0.6) + f"""
+# Snake body - coiled path using spheres
+for i in range(32):
+    ang = math.radians(i * 15)
+    rad = 0.4 + (i * 0.015)
+    z = i * 0.06
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.18 - (i*0.003), 
+        location=(math.cos(ang)*rad, math.sin(ang)*rad, z))
+    seg = bpy.context.active_object; apply_mat(seg)
+# Head
+bpy.ops.mesh.primitive_uv_sphere_add(radius=0.22, 
+    location=(math.cos(math.radians(31*15))*0.88, math.sin(math.radians(31*15))*0.88, 32*0.06))
+head = bpy.context.active_object; head.scale=(1.4,1.1,0.8); apply_mat(head)
+# Eyes
+for side in [-1, 1]:
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.04, 
+        location=(math.cos(math.radians(31*15))*0.98, math.sin(math.radians(31*15+side*20))*0.88, 32*0.06+0.1))
+    eye = bpy.context.active_object; apply_mat(eye)
+""" + _preset_footer()
+
+
+def build_preset_shield(r, g, b):
+    return _preset_header() + _mat_block(r, g, b, 0.6, 0.3) + f"""
+# Shield plate - curved front
+bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0,0,0.5))
+plate = bpy.context.active_object; plate.scale=(0.75,0.08,1.0); apply_mat(plate)
+# Pointed bottom
+bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.75, radius2=0.0, depth=0.5, location=(0,0,-0.1))
+point = bpy.context.active_object; point.scale=(1,0.1,1); point.rotation_euler=(0,0,math.radians(45)); apply_mat(point)
+# Decorative rim
+bpy.ops.mesh.primitive_torus_add(major_radius=0.76, minor_radius=0.03, location=(0,0.06,0.5))
+rim = bpy.context.active_object; rim.scale=(1,1,2.0); rim.rotation_euler=(math.radians(90),0,0); apply_mat(rim)
+# Center boss
+bpy.ops.mesh.primitive_uv_sphere_add(radius=0.15, location=(0,-0.08,0.6))
+boss = bpy.context.active_object; boss.scale=(1,0.4,1); apply_mat(boss)
+""" + _preset_footer()
+
+
 def build_preset_generic_sphere(r, g, b):
     """Fallback preset: detailed sphere with rings."""
     return _preset_header() + _mat_block(r, g, b) + f"""
@@ -3008,6 +3047,8 @@ def build_preset_for_keyword(keyword, r, g, b):
         "tree":      build_preset_tree,
         "plane":     build_preset_plane,
         "train":     build_preset_train,
+        "snake":     build_preset_snake,
+        "shield":    build_preset_shield,
     }
     builder = builders.get(keyword)
     if builder:
@@ -3660,7 +3701,7 @@ def save_successful_script(prompt, script):
 
 PRESET_KEYWORDS = [
     "dragon", "rocket", "car", "robot", "castle", "spaceship",
-    "sword", "house", "tree", "plane", "train"
+    "sword", "house", "tree", "plane", "train", "snake", "shield"
 ]
 
 

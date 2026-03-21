@@ -812,10 +812,15 @@ body:has(a:hover) #cursor-ring{
 
 /* ---- PROGRESS ---- */
 #progress-sec{
-  display:none;padding:10px 0;border-top:1px solid var(--bd-1);
-  margin-top:8px;
+  display:none;
+  padding:12px 16px;
+  border-top:1px solid var(--bd-2);
+  background:var(--bg-0);
+  width:100%;
+  box-sizing:border-box;
+  flex-shrink:0;
 }
-#progress-sec.visible{display:block}
+#progress-sec.visible{display:flex;flex-direction:column}
 .prog-header{
   display:flex;align-items:center;gap:8px;margin-bottom:8px;
 }
@@ -848,7 +853,24 @@ body:has(a:hover) #cursor-ring{
   font-family:'JetBrains Mono',monospace;font-size:7px;
   color:var(--tx-4);letter-spacing:.5px;
 }
-.log-box{ height:120px; overflow-y:auto; font-family:'JetBrains Mono',monospace; font-size:10px; line-height:1.6; color:var(--tx-3); background:var(--bg-1); border-radius:var(--r-sm); padding:8px 10px; border:1px solid var(--bd-1); margin-top:10px; width:100%; box-sizing:border-box; word-wrap:break-word; word-break:break-all; white-space:pre-wrap; scrollbar-width: thin; }
+.log-box{
+  height:140px;
+  overflow-y:auto;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  line-height:1.5;
+  color:var(--tx-3);
+  background:var(--bg-1);
+  border-radius:var(--r-sm);
+  padding:10px;
+  border:1px solid var(--bd-1);
+  margin-top:12px;
+  width:100%;
+  box-sizing:border-box;
+  white-space:pre-wrap;
+  word-wrap:break-word;
+  scrollbar-width:thin;
+}
 .log-line-info{color:var(--tx-3)}
 .log-line-gen{color:rgba(0,212,255,.7)}
 .log-line-err{color:var(--red)}

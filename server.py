@@ -1766,15 +1766,29 @@ def extract_key_error(stderr):
 
 def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2):
     """Run a Blender script with up to max_retries Gemini-powered auto-fix attempts."""
-    # BUG 1 FIX - Force injection before loop
-    current_script  = inject_output_path(script, output_path)
+    
+    # Force inject OUTPUT_PATH - runs before every attempt
+    def _inject(s):
+        lines = s.split('\n')
+        lines = [l for l in lines if not (
+            'OUTPUT_PATH' in l and '=' in l
+            and 'filepath' not in l
+            and 'gltf' not in l
+        )]
+        for i, l in enumerate(lines):
+            if l.strip().startswith('import '):
+                lines.insert(i + 1, 
+                    'OUTPUT_PATH = r"' + output_path.replace("\\","/") + '"')
+                break
+        return '\n'.join(lines)
+    
+    current_script = _inject(script)
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
     debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
     for attempt in range(max_retries + 1):
-        # BUG 1 FIX - Force injection at start of each retry
-        current_script = inject_output_path(current_script, output_path)
+        current_script = _inject(current_script)
 
         # Prevent false positives reading from old generation attempts!
         if os.path.exists(output_path):
@@ -1960,6 +1974,7 @@ BLENDER_SYSTEM = (
     "obj = bpy.context.active_object "
     "obj.location = (x, y, z) "
     "obj.scale = (sx, sy, sz) "
+    "7. For materials, ALWAYS use: bsdf.inputs['Base Color'].default_value = (R,G,B,1.0) "
     "CORRECT examples: "
     "bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0)) "
     "bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0,0,0)) "

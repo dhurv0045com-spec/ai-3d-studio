@@ -265,13 +265,10 @@ def upload_to_cloudinary(local_path, public_id=None):
             date_path = _dt.datetime.now().strftime("%Y/%m/%d")
             public_id = CLOUDINARY_FOLDER + "/" + date_path + "/" + fname + "_" + ts
 
-        params_str = (
-            "folder=" + CLOUDINARY_FOLDER +
-            "&public_id=" + public_id +
-            "&resource_type=raw" +
-            "&timestamp=" + ts
-        )
-        sign_input = params_str + CLOUDINARY_SECRET
+        # Cloudinary requires parameters to be sorted alphabetically 
+        # for signing, omitting 'folder' and 'resource_type' in the signature.
+        params_to_sign = f"public_id={public_id}&timestamp={ts}"
+        sign_input = params_to_sign + CLOUDINARY_SECRET
         signature  = _hashlib_cloud.sha256(
             sign_input.encode("utf-8")
         ).hexdigest()
@@ -1644,11 +1641,11 @@ def strip_md_fences(text):
     """Extract code between first and last fence pair, ignoring preamble text."""
     text = text.strip()
     import re as _re
-    match = _re.search(r"```(?:python|py)?\n?(.*?)```", text, _re.DOTALL)
+    match = _re.search(r"```(?:python|py)?\s*\n(.*?)\n```", text, _re.DOTALL | _re.IGNORECASE)
     if match:
         return match.group(1).strip()
     for fence in ["```python", "```py", "```"]:
-        if text.startswith(fence):
+        if text.lower().startswith(fence):
             text = text[len(fence):]
     if text.endswith("```"):
         text = text[:-3]
@@ -1704,7 +1701,7 @@ def validate_and_fix_script(script_text):
     fixed_script = "\n".join(clean_lines)
 
     if "export_scene.gltf" not in fixed_script:
-        fixed_script += "\nbpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format=\'GLB\')\n"
+        fixed_script += "\nbpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB')\n"
         changes += 1
         log_gen("[VALIDATOR] Added missing export line")
 
@@ -1918,7 +1915,7 @@ BLENDER_SYSTEM = (
     "bpy.ops.object.select_all(action=SELECT) "
     "bpy.ops.object.delete(use_global=False) "
     "[build model here] "
-    "bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format=GLB) "
+    "bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB') "
     "OUTPUT_PATH IS ALREADY DEFINED AS A VARIABLE. DO NOT define it yourself. "
     "THE ONLY WAY TO SET TRANSFORMS - DO THIS AFTER EVERY SINGLE PRIMITIVE: "
     "obj = bpy.context.active_object "
@@ -2144,7 +2141,7 @@ def build_blender_user_prompt(interp, color_hex, style, complexity):
         "Call obj = bpy.context.active_object after EVERY primitive. "
         "Apply color material to EVERY object. "
         "Start with: import bpy "
-        "End with: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format=GLB)"
+        "End with: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB')"
     )
 
 
@@ -2168,22 +2165,31 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
         log_gen("[MODEL_B] Gemini returned no script")
         return False
 
-    script  = strip_md_fences(script_raw)
-    preview = script[:300].replace("\n", " | ")
-    log_gen("[MODEL_B] Script " + str(len(script)) + " chars: " + preview)
+    log_gen("[MODEL_B] Raw Gemini Response (First 500 chars): " + script_raw[:500].replace("\n", " | "))
+
+    script = strip_md_fences(script_raw)
+    
+    # Inject OUTPUT_PATH before validation so export line check matches
+    if "OUTPUT_PATH" not in script or "OUTPUT_PATH =" not in script:
+        script = 'OUTPUT_PATH = r"' + output_path + '"\n' + script
+
+    fixed_script, fixes = validate_and_fix_script(script)
+
+    preview = fixed_script[:300].replace("\n", " | ")
+    log_gen("[MODEL_B] Script " + str(len(fixed_script)) + " chars, fixes=" + str(fixes) + ": " + preview)
 
     # Pre-flight checks before spending a Blender subprocess
-    if "import bpy" not in script:
+    if "import bpy" not in fixed_script:
         log_gen("[MODEL_B] REJECT: missing import bpy. Raw: " + script_raw[:200])
         return False
-    if "export_scene.gltf" not in script:
-        log_gen("[MODEL_B] REJECT: missing gltf export")
+    if "export_scene.gltf" not in fixed_script:
+        log_gen("[MODEL_B] REJECT: missing gltf export. Fixed script preview: " + preview[:200])
         return False
-    if len(script) < 200:
-        log_gen("[MODEL_B] REJECT: script too short (" + str(len(script)) + " chars)")
+    if len(fixed_script) < 200:
+        log_gen("[MODEL_B] REJECT: script too short (" + str(len(fixed_script)) + " chars)")
         return False
 
-    ok, final_script = run_blender_with_retry(script, prompt, color_hex, output_path)
+    ok, final_script = run_blender_with_retry(fixed_script, prompt, color_hex, output_path)
     if ok:
         log_gen("[MODEL_B] Success")
     else:

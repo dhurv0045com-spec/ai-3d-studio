@@ -149,6 +149,26 @@ def add_cors_headers(response):
     return response
 
 
+def inject_output_path(script, output_path):
+    """Helper to ensure OUTPUT_PATH is correctly defined in the script."""
+    lines = script.split('\n')
+    # Remove any existing simple OUTPUT_PATH assignments
+    lines = [l for l in lines if not (
+        'OUTPUT_PATH' in l and '=' in l
+        and 'filepath' not in l
+        and 'export' not in l
+        and 'gltf' not in l
+    )]
+    insert_at = 1
+    # Find last import to insert after it
+    for i, l in enumerate(lines):
+        if l.strip().startswith('import ') or l.strip().startswith('from '):
+            insert_at = i + 1
+    # Inject absolute path with forward slashes for cross-platform safety
+    lines.insert(insert_at, 'OUTPUT_PATH = r"' + output_path.replace("\\", "/") + '"')
+    return '\n'.join(lines)
+
+
 @app.route("/", defaults={"_path": ""}, methods=["OPTIONS"])
 @app.route("/<path:_path>", methods=["OPTIONS"])
 def options_handler(_path):
@@ -871,7 +891,7 @@ def log_error(msg):
 # ---------------------------------------------------------------------------
 #  SUPABASE SAVE FUNCTION
 # ---------------------------------------------------------------------------
-def save_to_supabase(prompt, color, folder, service, file_path, size):
+def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=""):
     """Save model metadata to Supabase 'models' table."""
     if not supabase:
         print("[SUPABASE] ERROR: Supabase client not initialized")
@@ -893,9 +913,9 @@ def save_to_supabase(prompt, color, folder, service, file_path, size):
             "folder": folder,
             "service": service,
             "file": file_path,
-            "cloud_url": "",
+            "cloud_url": cloud_url or "",
             "size": size,
-            "quality_score": 0
+            "quality_score": get_state().get("quality_score", 0)
         }
         
         result = supabase.table("models").insert(data).execute()
@@ -1633,6 +1653,7 @@ FORBIDDEN_EXACT = [
     "orient_type=",
     "constraint_axis=",
     "proportional=",
+    "align=",
 ]
 
 FORBIDDEN_VALUE_PATTERNS = [
@@ -1645,9 +1666,11 @@ def strip_md_fences(text):
     """Extract code between first and last fence pair, ignoring preamble text."""
     text = text.strip()
     import re as _re
-    match = _re.search(r"```(?:python|py)?\s*\n(.*?)\n```", text, _re.DOTALL | _re.IGNORECASE)
+    # Robust regex allows for characters after the opening fence (e.g. ```python text)
+    match = _re.search(r"```(?:python|py)?.*?\n(.*?)\n```", text, _re.DOTALL | _re.IGNORECASE)
     if match:
         return match.group(1).strip()
+    # Fallback to simple starts-with/ends-with
     for fence in ["```python", "```py", "```"]:
         if text.lower().startswith(fence):
             text = text[len(fence):]
@@ -1743,23 +1766,15 @@ def extract_key_error(stderr):
 
 def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2):
     """Run a Blender script with up to max_retries Gemini-powered auto-fix attempts."""
-    current_script  = script
+    # BUG 1 FIX - Force injection before loop
+    current_script  = inject_output_path(script, output_path)
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
     debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
     for attempt in range(max_retries + 1):
-        # At start of each attempt, re-inject OUTPUT_PATH
-        output_line = 'OUTPUT_PATH = r"' + output_path + '"'
-        lines = current_script.split("\n")
-        lines = [l for l in lines if not ("OUTPUT_PATH" in l and "=" in l and "filepath" not in l and "export" not in l)]
-        # Find last import
-        last_imp = 0
-        for i, l in enumerate(lines):
-            if l.strip().startswith("import ") or l.strip().startswith("from "):
-                last_imp = i
-        lines.insert(last_imp + 1, output_line)
-        current_script = "\n".join(lines)
+        # BUG 1 FIX - Force injection at start of each retry
+        current_script = inject_output_path(current_script, output_path)
 
         # Prevent false positives reading from old generation attempts!
         if os.path.exists(output_path):
@@ -1834,34 +1849,21 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
             key_error = extract_key_error(stderr)
             log_gen("[BLENDER] Failed: " + key_error + " - requesting Gemini fix...")
             
-            if fixes == -1 or "SyntaxError" in key_error or "Indentation" in key_error:
-                fix_msg = (
-                    "Rewrite this Blender script from SCRATCH. "
-                    "The previous version had SyntaxError: " + str(key_error) + "\n"
-                    "STRICT RULES:\n"
-                    "- Every ( must close on the SAME line\n"
-                    "- No multiline expressions\n"
-                    "- No f-strings\n"
-                    "- OUTPUT_PATH is already defined, do not define it\n"
-                    "- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')\n"
-                    "- Raw Python only, no markdown\n"
-                    "Write a complete working script for: " + prompt
-                )
-            else:
-                fix_msg = (
-                    "This Blender 5.0 script crashed with this error:\n"
-                    + key_error
-                    + "\n\nFix ONLY the error. Rules:\n"
-                    "1. Output raw Python only, no markdown\n"
-                    "2. NEVER use bpy.ops.transform functions\n"
-                    "3. Use obj.location, obj.scale, obj.rotation_euler ONLY\n"
-                    "4. Get obj = bpy.context.active_object after every primitive\n"
-                    "5. OUTPUT_PATH is already defined - do not redefine it\n"
-                    "6. Last line: bpy.ops.export_scene.gltf("
-                    "filepath=OUTPUT_PATH, export_format='GLB')\n"
-                    "\nBroken script (first 2000 chars):\n"
-                    + current_script[:2000]
-                )
+            # BUG 2 FIX - New strict fix request
+            fix_msg = (
+                "Blender 4.2 script failed: " + key_error + "\n"
+                "REWRITE ENTIRE SCRIPT FROM SCRATCH.\n"
+                "RULES:\n"
+                "- Never use align= parameter\n"
+                "- Keyword arguments only for all primitives\n"  
+                "- Every ( closes on same line\n"
+                "- No f-strings\n"
+                "- OUTPUT_PATH already defined, never redefine\n"
+                "- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')\n"
+                "- Raw Python only\n"
+                "Correct sphere syntax: bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0))\n"
+                "Generate script for: " + prompt
+            )
             fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
             if fixed and len(fixed.strip()) > 100:
                 current_script = fixed
@@ -1881,23 +1883,8 @@ def run_blender_script(script_text, output_path):
     script_path = os.path.join(BASE_DIR, "_temp_preset_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
-    # ALWAYS inject OUTPUT_PATH as the very first line after imports
-    # Remove any existing OUTPUT_PATH definitions first to avoid duplicates
-    lines_tmp = script_text.split("\n")
-    # Remove any line that defines OUTPUT_PATH
-    lines_tmp = [l for l in lines_tmp if not (
-        'OUTPUT_PATH' in l and '=' in l and 
-        'export' not in l and 'filepath' not in l
-    )]
-    # Find last import line
-    last_import = 0
-    for idx, ln in enumerate(lines_tmp):
-        if ln.strip().startswith("import ") or ln.strip().startswith("from "):
-            last_import = idx
-    # Inject OUTPUT_PATH right after imports
-    injection = 'OUTPUT_PATH = r"' + output_path + '"'
-    lines_tmp.insert(last_import + 1, injection)
-    script_text = "\n".join(lines_tmp)
+    # BUG 1 FIX - Force injection via helper
+    script_text = inject_output_path(script_text, output_path)
 
     # Delete stale output to avoid falsely returning True on fail
     if os.path.exists(output_path):
@@ -1954,22 +1941,35 @@ def run_blender_script(script_text, output_path):
 #  BLENDER SYSTEM PROMPT V2 + PROMPT BUILDERS
 # ---------------------------------------------------------------------------
 BLENDER_SYSTEM = (
-    "You write Blender 5.0 Python scripts. "
-    "RULES - NEVER BREAK THESE: "
-    "1. Start with exactly: import bpy\nimport math\n "
-    "2. Line 3 must be exactly: bpy.ops.object.select_all(action='SELECT')\n "
-    "3. Line 4 must be exactly: bpy.ops.object.delete(use_global=False)\n "
-    "4. Every primitive call must be on ONE single line only. No line continuation. "
-    "5. After EVERY primitive add these THREE lines: "
-    "obj = bpy.context.active_object\n "
-    "obj.location = (x, y, z)\n "
-    "obj.scale = (sx, sy, sz)\n "
-    "6. OUTPUT_PATH is already defined - NEVER define it yourself. "
-    "7. Last line must be exactly: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')\n "
-    "8. NO f-strings. NO multiline strings. NO try/except. NO classes. NO functions. "
-    "9. NO line should exceed 120 characters. "
-    "10. Every opening ( must close on the SAME line. "
-    "OUTPUT ONLY RAW PYTHON. NO MARKDOWN. NO BACKTICKS. NO COMMENTS."
+    "You write Blender 4.2 Python scripts for Linux. "
+    "OUTPUT RAW PYTHON ONLY. NO markdown. NO backticks. "
+    "STRUCTURE: "
+    "import bpy "
+    "import math "
+    "bpy.ops.object.select_all(action='SELECT') "
+    "bpy.ops.object.delete(use_global=False) "
+    "[build objects here] "
+    "bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB') "
+    "RULES: "
+    "1. NEVER use align= parameter "
+    "2. ALL primitive args must be keyword args "
+    "3. Every ( closes on SAME line "
+    "4. No f-strings. No try/except. No functions. No classes. "
+    "5. OUTPUT_PATH is already defined - NEVER redefine it "
+    "6. After every primitive add: "
+    "obj = bpy.context.active_object "
+    "obj.location = (x, y, z) "
+    "obj.scale = (sx, sy, sz) "
+    "CORRECT examples: "
+    "bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0)) "
+    "bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0,0,0)) "
+    "bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=1.0, location=(0,0,0)) "
+    "bpy.ops.mesh.primitive_cone_add(radius1=0.5, radius2=0.0, depth=1.0, location=(0,0,0)) "
+    "bpy.ops.mesh.primitive_torus_add(major_radius=1.0, minor_radius=0.3, location=(0,0,0)) "
+    "WRONG - never use these: "
+    "bpy.ops.mesh.primitive_uv_sphere_add(0.7, enter_editmode=False, align='WORLD') "
+    "MINIMUM 15 objects. LAST LINE MUST BE: "
+    "bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')"
 )
 
 STYLE_DIRECTIVES = {
@@ -2181,17 +2181,8 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
 
     script = strip_md_fences(script_raw)
     
-    # Always inject OUTPUT_PATH as line 1
-    output_line = 'OUTPUT_PATH = r"' + output_path + '"'
-    # Remove any existing OUTPUT_PATH assignments
-    clean_lines = []
-    for line in script.split("\n"):
-        if "OUTPUT_PATH" in line and "=" in line and "filepath" not in line and "export" not in line:
-            continue
-        clean_lines.append(line)
-    script = "\n".join(clean_lines)
-    # Now prepend OUTPUT_PATH after first import
-    script = "import bpy\nimport math\n" + output_line + "\n" + script.replace("import bpy\n","").replace("import math\n","")
+    # BUG 1 FIX - Force injection via helper
+    script = inject_output_path(script, output_path)
 
     fixed_script, fixes = validate_and_fix_script(script)
 
@@ -3092,17 +3083,17 @@ for side in [-1, 1]:
 
 def build_preset_shield(r, g, b):
     return _preset_header() + _mat_block(r, g, b, 0.6, 0.3) + f"""
-# Shield plate - curved front
-bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0,0,0.5))
-plate = bpy.context.active_object; plate.scale=(0.75,0.08,1.0); apply_mat(plate)
-# Pointed bottom
-bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.75, radius2=0.0, depth=0.5, location=(0,0,-0.1))
-point = bpy.context.active_object; point.scale=(1,0.1,1); point.rotation_euler=(0,0,math.radians(45)); apply_mat(point)
+# Shield plate - heater shield shape
+bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0,0,0.65))
+plate = bpy.context.active_object; plate.scale=(0.7,0.06,0.8); apply_mat(plate)
+# Pointed bottom - adjusted to meet plate exactly
+bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.7, radius2=0.0, depth=0.6, location=(0,0,-0.15))
+point = bpy.context.active_object; point.scale=(1,0.086,1); point.rotation_euler=(0,0,math.radians(45)); apply_mat(point)
 # Decorative rim
-bpy.ops.mesh.primitive_torus_add(major_radius=0.76, minor_radius=0.03, location=(0,0.06,0.5))
-rim = bpy.context.active_object; rim.scale=(1,1,2.0); rim.rotation_euler=(math.radians(90),0,0); apply_mat(rim)
+bpy.ops.mesh.primitive_torus_add(major_radius=0.72, minor_radius=0.03, location=(0,0.06,0.45))
+rim = bpy.context.active_object; rim.scale=(1,1,2.8); rim.rotation_euler=(math.radians(90),0,0); apply_mat(rim)
 # Center boss
-bpy.ops.mesh.primitive_uv_sphere_add(radius=0.15, location=(0,-0.08,0.6))
+bpy.ops.mesh.primitive_uv_sphere_add(radius=0.16, location=(0,-0.08,0.72))
 boss = bpy.context.active_object; boss.scale=(1,0.4,1); apply_mat(boss)
 """ + _preset_footer()
 
@@ -3991,7 +3982,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen(f"[CACHE] served from cache: {msg}")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz)
+                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud)
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
@@ -4003,15 +3994,10 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
 
         # ------------------------------------------------------------------
         # STEP 1: Prompt interpreter
-        # ALWAYS call LLM to get rich interpretation (object, features,
-        # parts, style, complexity). This produces much better Blender
-        # scripts in Stage B. Falls back to naive parse only if LLM fails.
         # ------------------------------------------------------------------
         set_state(progress=20, step="interpreting")
         interp = interpret_prompt(prompt, color_hex)
-        # Check if LLM interpretation actually worked
         if not interp or interp.get("object") in ("", "object", None):
-            # LLM failed - use naive local parse as fallback
             color_word = color_name_from_hex(color_hex)
             words = prompt.lower().split()
             for w in words:
@@ -4054,10 +4040,12 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                         sz = os.path.getsize(ROCKET_GLB)
                         log_gen(f"[LIBRARY] success: {msg}")
                         store_cache(ROCKET_GLB, prompt)
-                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz)
+                        _cloud = upload_to_cloudinary(ROCKET_GLB)
+                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud)
                         set_state(status="done", progress=100, step="done",
                                   service="Library", cached=False, glb_size=sz,
-                                  last_model=ROCKET_GLB)
+                                  last_model=ROCKET_GLB,
+                                  cloud_url=_cloud or "")
                         return
             log_gen("[LIBRARY] library search failed, continuing")
 
@@ -4073,20 +4061,22 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[SHAPEE] [MODEL_A] Shap-E success")
                 store_cache(ROCKET_GLB, prompt)
-                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz)
+                _cloud = upload_to_cloudinary(ROCKET_GLB)
+                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud)
                 set_state(status="done", progress=100, step="done",
-                          service="Shap-E", glb_size=sz, last_model=ROCKET_GLB)
+                          service="Shap-E", glb_size=sz, last_model=ROCKET_GLB,
+                          cloud_url=_cloud or "")
                 return
             log_gen("[SHAPEE] Shap-E failed, falling through")
         else:
             log_gen("[SHAPEE] not available - skipping Stage A")
 
         # ------------------------------------------------------------------
-        # STEP 4: Stage B - Gemini + Blender (AI reads full prompt)
+        # STEP 4: Stage B - Gemini + Blender
         # ------------------------------------------------------------------
         set_state(progress=40, step="stage_b_gemini_blender")
         if os.path.exists(BLENDER_EXE):
-            log_gen("[MODEL_B] attempting Gemini+Blender with full prompt...")
+            log_gen("[MODEL_B] attempting Gemini+Blender...")
             set_state(progress=60, step="blender_running")
             ok = stage_b_gemini_blender(prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
             if ok:
@@ -4094,16 +4084,16 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[MODEL_B] Gemini+Blender success")
                 store_cache(ROCKET_GLB, prompt)
-                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz)
+                _cloud = upload_to_cloudinary(ROCKET_GLB)
+                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud)
                 set_state(status="done", progress=100, step="done",
-                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB)
+                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
+                          cloud_url=_cloud or "")
                 return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through to preset")
-        else:
-            log_gen(f"[MODEL_B] Blender not found at {BLENDER_EXE}, skipping Stage B")
 
         # ------------------------------------------------------------------
-        # STEP 5: Stage C - Preset shapes
+        # STEP 5: Stage C - Preset
         # ------------------------------------------------------------------
         set_state(progress=75, step="stage_c_preset")
         ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
@@ -4112,36 +4102,31 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             sz = os.path.getsize(ROCKET_GLB)
             log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
             store_cache(ROCKET_GLB, prompt)
-            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz)
+            _cloud = upload_to_cloudinary(ROCKET_GLB)
+            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud)
             set_state(status="done", progress=100, step="done",
                       service="Preset", glb_size=sz, last_model=ROCKET_GLB,
-                      cloud_url=upload_to_cloudinary(ROCKET_GLB) or "",
+                      cloud_url=_cloud or "",
                       quality_score=score_glb_quality(ROCKET_GLB)[0])
             return
 
         # ------------------------------------------------------------------
-        # STEP 5.5: Shaped fallback using generate_model.py (55 shapes)
-        # This produces RECOGNIZABLE shapes (car, dragon, etc.) instead
-        # of random icosahedrons. Much better user experience.
+        # STEP 5.5: Shaped fallback
         # ------------------------------------------------------------------
         set_state(progress=85, step="shaped_fallback")
-        log_gen("[FALLBACK] Attempting shaped fallback with generate_model.py")
+        log_gen("[FALLBACK] Attempting shaped fallback")
         try:
             from generate_model import generate as gen_fallback_model
-            # Use matched keyword or interpreted object name
-            obj_keyword = match_preset_keyword(prompt)
-            if not obj_keyword:
-                obj_keyword = interp.get("object", "sphere")
-            log_gen(f"[FALLBACK] Shaped fallback for: {obj_keyword}")
+            obj_keyword = match_preset_keyword(prompt) or interp.get("object", "sphere")
             ok = gen_fallback_model(obj_keyword, color_hex, ROCKET_GLB)
             if ok:
                 ok2, msg = validate_glb(ROCKET_GLB)
                 if ok2:
                     sz = os.path.getsize(ROCKET_GLB)
-                    log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword} ({msg})")
+                    log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword}")
                     store_cache(ROCKET_GLB, prompt)
                     _cloud = upload_to_cloudinary(ROCKET_GLB)
-                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz)
+                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud)
                     set_state(status="done", progress=100, step="done",
                               service="Fallback-Shaped", glb_size=sz,
                               last_model=ROCKET_GLB,
@@ -4152,18 +4137,14 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             log_gen(f"[FALLBACK] Shaped fallback failed: {e}")
 
         # ------------------------------------------------------------------
-        # STEP 6: Last Resort - Generic Python GLB (icosahedrons)
-        # This should RARELY be reached. Output does NOT match the prompt.
-        # Do NOT cache it. Show a warning to the user.
+        # STEP 6: Last Resort
         # ------------------------------------------------------------------
         set_state(progress=95, step="generic_fallback")
-        log_gen("[FALLBACK] LAST RESORT: generic icosahedron fallback")
+        log_gen("[FALLBACK] LAST RESORT: generic fallback")
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
-        log_gen(f"[PYGLB] generic fallback written: {sz} bytes")
-        # Do NOT cache generic fallback - it doesn't match the prompt
         _cloud = upload_to_cloudinary(ROCKET_GLB)
-        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz)
+        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
                   cloud_url=_cloud or "",

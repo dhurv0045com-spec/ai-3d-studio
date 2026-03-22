@@ -1747,25 +1747,19 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
     debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
-    # ALWAYS inject OUTPUT_PATH as the very first line after imports
-    # Remove any existing OUTPUT_PATH definitions first to avoid duplicates
-    lines_tmp = current_script.split("\n")
-    # Remove any line that defines OUTPUT_PATH
-    lines_tmp = [l for l in lines_tmp if not (
-        'OUTPUT_PATH' in l and '=' in l and 
-        'export' not in l and 'filepath' not in l
-    )]
-    # Find last import line
-    last_import = 0
-    for idx, ln in enumerate(lines_tmp):
-        if ln.strip().startswith("import ") or ln.strip().startswith("from "):
-            last_import = idx
-    # Inject OUTPUT_PATH right after imports
-    injection = 'OUTPUT_PATH = r"' + output_path + '"'
-    lines_tmp.insert(last_import + 1, injection)
-    current_script = "\n".join(lines_tmp)
-
     for attempt in range(max_retries + 1):
+        # At start of each attempt, re-inject OUTPUT_PATH
+        output_line = 'OUTPUT_PATH = r"' + output_path + '"'
+        lines = current_script.split("\n")
+        lines = [l for l in lines if not ("OUTPUT_PATH" in l and "=" in l and "filepath" not in l and "export" not in l)]
+        # Find last import
+        last_imp = 0
+        for i, l in enumerate(lines):
+            if l.strip().startswith("import ") or l.strip().startswith("from "):
+                last_imp = i
+        lines.insert(last_imp + 1, output_line)
+        current_script = "\n".join(lines)
+
         # Prevent false positives reading from old generation attempts!
         if os.path.exists(output_path):
             try:
@@ -1841,11 +1835,16 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
             
             if fixes == -1 or "SyntaxError" in key_error or "Indentation" in key_error:
                 fix_msg = (
-                    f"The script has a SyntaxError: {key_error}. Rewrite the ENTIRE script from scratch. "
-                    "Do not patch - rewrite completely. Raw Python only, no markdown.\n"
-                    "OUTPUT_PATH is already defined.\n"
-                    "Broken script (first 2000 chars):\n"
-                    + current_script[:2000]
+                    "Rewrite this Blender script from SCRATCH. "
+                    "The previous version had SyntaxError: " + str(key_error) + "\n"
+                    "STRICT RULES:\n"
+                    "- Every ( must close on the SAME line\n"
+                    "- No multiline expressions\n"
+                    "- No f-strings\n"
+                    "- OUTPUT_PATH is already defined, do not define it\n"
+                    "- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')\n"
+                    "- Raw Python only, no markdown\n"
+                    "Write a complete working script for: " + prompt
                 )
             else:
                 fix_msg = (
@@ -1954,64 +1953,22 @@ def run_blender_script(script_text, output_path):
 #  BLENDER SYSTEM PROMPT V2 + PROMPT BUILDERS
 # ---------------------------------------------------------------------------
 BLENDER_SYSTEM = (
-    "You are a Blender 5.0 Python script writer. "
-    "You write bpy scripts that generate 3D models. "
-    "OUTPUT RAW PYTHON ONLY. "
-    "ZERO markdown. ZERO backticks. ZERO explanation. ZERO comments describing intent. "
-    "ZERO blank lines at start or end. "
-    "First character of output must be the letter i from import bpy. "
-    "MANDATORY SCRIPT STRUCTURE: "
-    "import bpy "
-    "import math "
-    "bpy.ops.object.select_all(action=SELECT) "
-    "bpy.ops.object.delete(use_global=False) "
-    "[build model here] "
-    "bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB') "
-    "OUTPUT_PATH IS ALREADY DEFINED AS A VARIABLE. DO NOT define it yourself. "
-    "THE ONLY WAY TO SET TRANSFORMS - DO THIS AFTER EVERY SINGLE PRIMITIVE: "
-    "obj = bpy.context.active_object "
-    "obj.name = PartName "
-    "obj.location = (x, y, z) "
-    "obj.scale = (sx, sy, sz) "
-    "obj.rotation_euler = (rx, ry, rz) "
-    "VALID PRIMITIVE FUNCTIONS ONLY: "
-    "bpy.ops.mesh.primitive_cube_add(location=(x,y,z)) "
-    "bpy.ops.mesh.primitive_cylinder_add(radius=r,depth=d,location=(x,y,z)) "
-    "bpy.ops.mesh.primitive_uv_sphere_add(radius=r,location=(x,y,z)) "
-    "bpy.ops.mesh.primitive_cone_add(radius1=r,radius2=0,depth=d,location=(x,y,z)) "
-    "bpy.ops.mesh.primitive_torus_add(major_radius=r,minor_radius=m,location=(x,y,z)) "
-    "bpy.ops.mesh.primitive_ico_sphere_add(radius=r,location=(x,y,z)) "
-    "bpy.ops.mesh.primitive_plane_add(size=s,location=(x,y,z)) "
-    "FORBIDDEN - NEVER USE: "
-    "bpy.ops.transform.rotate() "
-    "bpy.ops.transform.translate() "
-    "bpy.ops.transform.resize() "
-    "bpy.ops.transform.shrink_fatten() "
-    "bpy.ops.object.transform_apply() "
-    "bpy.ops.mesh.extrude_region_move() "
-    "bpy.ops.mesh.extrude_faces_move() "
-    "orient_type= constraint_axis= proportional= "
-    "COLORING - APPLY TO EVERY SINGLE OBJECT: "
-    "mat = bpy.data.materials.new(name=M) "
-    "mat.use_nodes = True "
-    "bsdf = mat.node_tree.nodes.get(Principled BSDF) "
-    "if bsdf: bsdf.inputs[0].default_value = (R,G,B,1.0) "
-    "if obj.data.materials: obj.data.materials[0] = mat "
-    "else: obj.data.materials.append(mat) "
-    "QUALITY: Minimum 20 separate mesh objects. Aim for 30-40 on complex models. "
-    "Every major part its own object. Realistic proportions. "
-    "Objects must NOT all stack at origin. Place each part at its correct 3D position. "
-    "MENTAL CHECK BEFORE WRITING: "
-    "1. What are all the main parts? "
-    "2. What size is each part? "
-    "3. Where is each part in 3D space? "
-    "4. What rotation does each part need? "
-    "5. Does every line use only allowed functions? "
-    "NO external files. NO textures. NO images. NO try/except. NO print. "
-    "ONLY simple sequential code. One object at a time. "
-    "CRITICAL: Every opening parenthesis ( must have a closing parenthesis ). "
-    "Every if/else/for/while block must have an indented body. "
-    "Before outputting, mentally count all opening ( and verify they are closed."
+    "You write Blender 5.0 Python scripts. "
+    "RULES - NEVER BREAK THESE: "
+    "1. Start with exactly: import bpy\nimport math\n "
+    "2. Line 3 must be exactly: bpy.ops.object.select_all(action='SELECT')\n "
+    "3. Line 4 must be exactly: bpy.ops.object.delete(use_global=False)\n "
+    "4. Every primitive call must be on ONE single line only. No line continuation. "
+    "5. After EVERY primitive add these THREE lines: "
+    "obj = bpy.context.active_object\n "
+    "obj.location = (x, y, z)\n "
+    "obj.scale = (sx, sy, sz)\n "
+    "6. OUTPUT_PATH is already defined - NEVER define it yourself. "
+    "7. Last line must be exactly: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')\n "
+    "8. NO f-strings. NO multiline strings. NO try/except. NO classes. NO functions. "
+    "9. NO line should exceed 120 characters. "
+    "10. Every opening ( must close on the SAME line. "
+    "OUTPUT ONLY RAW PYTHON. NO MARKDOWN. NO BACKTICKS. NO COMMENTS."
 )
 
 STYLE_DIRECTIVES = {
@@ -2223,16 +2180,17 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
 
     script = strip_md_fences(script_raw)
     
-    lines = script.split("\n")
-    lines = [l for l in lines if not (
-        'OUTPUT_PATH' in l and '=' in l and 
-        'export' not in l and 'filepath' not in l
-    )]
-    last_imp = max([i for i,l in enumerate(lines) 
-                   if l.strip().startswith('import') or 
-                   l.strip().startswith('from')] or [0])
-    lines.insert(last_imp + 1, 'OUTPUT_PATH = r"' + output_path + '"')
-    script = "\n".join(lines)
+    # Always inject OUTPUT_PATH as line 1
+    output_line = 'OUTPUT_PATH = r"' + output_path + '"'
+    # Remove any existing OUTPUT_PATH assignments
+    clean_lines = []
+    for line in script.split("\n"):
+        if "OUTPUT_PATH" in line and "=" in line and "filepath" not in line and "export" not in line:
+            continue
+        clean_lines.append(line)
+    script = "\n".join(clean_lines)
+    # Now prepend OUTPUT_PATH after first import
+    script = "import bpy\nimport math\n" + output_line + "\n" + script.replace("import bpy\n","").replace("import math\n","")
 
     fixed_script, fixes = validate_and_fix_script(script)
 

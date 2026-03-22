@@ -1750,6 +1750,13 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
         current_script = "\n".join(lines_tmp)
 
     for attempt in range(max_retries + 1):
+        # Prevent false positives reading from old generation attempts!
+        if os.path.exists(output_path):
+            try:
+                os.remove(output_path)
+            except Exception:
+                pass
+            
         fixed_script, fixes = validate_and_fix_script(current_script)
 
         try:
@@ -1819,7 +1826,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                 "4. Get obj = bpy.context.active_object after every primitive\n"
                 "5. OUTPUT_PATH is already defined - do not redefine it\n"
                 "6. Last line: bpy.ops.export_scene.gltf("
-                "filepath=OUTPUT_PATH,export_format=\'GLB\')\n"
+                "filepath=OUTPUT_PATH, export_format='GLB')\n"
                 "\nBroken script (first 2000 chars):\n"
                 + current_script[:2000]
             )
@@ -1854,6 +1861,13 @@ def run_blender_script(script_text, output_path):
                 last_import = idx
         lines_tmp.insert(last_import + 1, 'OUTPUT_PATH = r"' + output_path + '"')
         script_text = "\n".join(lines_tmp)
+
+    # Delete stale output to avoid falsely returning True on fail
+    if os.path.exists(output_path):
+        try:
+            os.remove(output_path)
+        except Exception:
+            pass
 
     try:
         safe = script_text.encode("ascii", errors="replace").decode("ascii")

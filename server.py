@@ -327,59 +327,52 @@ def upload_to_cloudinary(local_path, public_id=None):
 #  GEMINI KEY SYSTEM - 5 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_gemini_keys():
-    """Build key list: Priority 1 (Env Vars) -> Priority 2 (settings.json) -> Priority 3 (Hardcoded)."""
-    keys = []
-    # PRIORITY 1: Environment Variables (GEMINI_KEY_1 to GEMINI_KEY_20, case-insensitive)
+    """Build key list: Merge Priority 1 (Env Vars) + Priority 2 (settings.json) + Priority 3 (Hardcoded)."""
+    keys_dict = {}  # Using dict to deduplicate by key string
+    
+    # helper to add keys
+    def add_k(name, val, source):
+        if not val or not val.startswith("AIza"):
+            return
+        if val not in keys_dict:
+            keys_dict[val] = {
+                "name":      f"{source}_{name}",
+                "key":       val,
+                "fails":     0,
+                "dead":      False,
+                "last_used": 0.0
+            }
+
+    # SOURCE 1: Environment Variables (GEMINI_KEY_1 to GEMINI_KEY_20, case-insensitive)
     env_keys_lower = {k.lower(): v for k, v in os.environ.items()}
     for i in range(1, 21):
         target = f"gemini_key_{i}"
         val = env_keys_lower.get(target, "").strip()
-        if val and val.startswith("AIza"):
-            keys.append({
-                "name":      "gemini" + str(i),
-                "key":       val,
-                "fails":     0,
-                "dead":      False,
-                "last_used": 0.0
-            })
+        add_k(str(i), val, "env")
     
-    # PRIORITY 2: settings.json
-    if not keys:
-        try:
-            with open("settings.json", "r", encoding="utf-8") as f:
-                settings = json.load(f)
-                gemini_list = settings.get("ai", {}).get("gemini_keys", [])
-                for i, val in enumerate(gemini_list, 1):
-                    if val and val.startswith("AIza"):
-                        keys.append({
-                            "name":      "settings_gemini" + str(i),
-                            "key":       val,
-                            "fails":     0,
-                            "dead":      False,
-                            "last_used": 0.0
-                        })
-        except Exception:
-            pass
+    # SOURCE 2: settings.json
+    try:
+        with open("settings.json", "r", encoding="utf-8") as f:
+            settings = json.load(f)
+            gemini_list = settings.get("ai", {}).get("gemini_keys", [])
+            for i, val in enumerate(gemini_list, 1):
+                add_k(str(i), val, "settings")
+    except Exception:
+        pass
             
-    # PRIORITY 3: Hardcoded fallbacks (Emergency only)
-    if not keys:
-        fallbacks = [
-            ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
-            ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
-            ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
-            ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
-            ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
-        ]
-        for name, val in fallbacks:
-            keys.append({
-                "name":      "fallback_" + name,
-                "key":       val,
-                "fails":     0,
-                "dead":      False,
-                "last_used": 0.0
-            })
+    # SOURCE 3: Hardcoded fallbacks (Emergency only)
+    fallbacks = [
+        ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
+        ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
+        ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
+        ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
+        ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
+    ]
+    for name, val in fallbacks:
+        add_k(name, val, "fallback")
             
-    return keys if keys else [{"name": "none", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}]
+    res = list(keys_dict.values())
+    return res if res else [{"name": "none", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}]
 
 GEMINI_KEYS = _build_gemini_keys()
 _gemini_index = 0
@@ -457,45 +450,42 @@ def get_gemini_key_status():
 #  OPENROUTER KEY SYSTEM - 3 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_openrouter_keys():
-    """Build OpenRouter keys: Env Vars (Priority) -> settings.json."""
-    keys = []
-    # PRIORITY 1: Environment Variables (OPENROUTER_KEY_1 to OPENROUTER_KEY_10, case-insensitive)
+    """Build OpenRouter keys: Merge Env Vars + settings.json."""
+    keys_dict = {}
+    
+    def add_k(name, val, source):
+        if val and val.startswith("sk-or"):
+            if val not in keys_dict:
+                keys_dict[val] = {
+                    "name":      f"{source}_{name}",
+                    "key":       val,
+                    "fails":     0,
+                    "dead":      False,
+                    "last_used": 0.0
+                }
+
+    # SOURCE 1: Environment Variables (OPENROUTER_KEY_1 to OPENROUTER_KEY_10, case-insensitive)
     env_keys_lower = {k.lower(): v for k, v in os.environ.items()}
     for i in range(1, 11):
         target = f"openrouter_key_{i}"
         val = env_keys_lower.get(target, "").strip()
-        if val and val.startswith("sk-or"):
-            keys.append({
-                "name":      "openrouter" + str(i),
-                "key":       val,
-                "fails":     0,
-                "dead":      False,
-                "last_used": 0.0
-            })
+        add_k(str(i), val, "env")
     
-    # PRIORITY 2: settings.json
-    if not keys:
-        try:
-            with open("settings.json", "r", encoding="utf-8") as f:
-                settings = json.load(f)
-                openrouter_keys = settings.get("ai", {}).get("openrouter_keys", [])
-                for i, key in enumerate(openrouter_keys, 1):
-                    if key and key.startswith("sk-or"):
-                        keys.append({
-                            "name":      "settings_openrouter" + str(i),
-                            "key":       key,
-                            "fails":     0,
-                            "dead":      False,
-                            "last_used": 0.0
-                        })
-        except Exception:
-            pass
-    return keys
+    # SOURCE 2: settings.json
+    try:
+        with open("settings.json", "r", encoding="utf-8") as f:
+            settings = json.load(f)
+            openrouter_keys = settings.get("ai", {}).get("openrouter_keys", [])
+            for i, key in enumerate(openrouter_keys, 1):
+                add_k(str(i), key, "settings")
+    except Exception:
+        pass
+    return list(keys_dict.values())
 
 OPENROUTER_KEYS  = _build_openrouter_keys()
 OPENROUTER_MODEL = os.environ.get(
     "OPENROUTER_MODEL",
-    "meta-llama/llama-3.1-8b-instruct:free"
+    "google/gemini-2.0-flash-001"
 ).strip()
 
 
@@ -503,40 +493,37 @@ OPENROUTER_MODEL = os.environ.get(
 #  GROQ KEY SYSTEM - 2 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_groq_keys():
-    """Build Groq keys: Env Vars (Priority) -> settings.json."""
-    keys = []
-    # PRIORITY 1: Environment Variables (GROQ_KEY_1 to GROQ_KEY_10, case-insensitive)
+    """Build Groq keys: Merge Env Vars + settings.json."""
+    keys_dict = {}
+    
+    def add_k(name, val, source):
+        if val and val.startswith("gsk_"):
+            if val not in keys_dict:
+                keys_dict[val] = {
+                    "name":      f"{source}_{name}",
+                    "key":       val,
+                    "fails":     0,
+                    "dead":      False,
+                    "last_used": 0.0
+                }
+
+    # SOURCE 1: Environment Variables (GROQ_KEY_1 to GROQ_KEY_10, case-insensitive)
     env_keys_lower = {k.lower(): v for k, v in os.environ.items()}
     for i in range(1, 11):
         target = f"groq_key_{i}"
         val = env_keys_lower.get(target, "").strip()
-        if val and val.startswith("gsk_"):
-            keys.append({
-                "name":      "groq" + str(i),
-                "key":       val,
-                "fails":     0,
-                "dead":      False,
-                "last_used": 0.0
-            })
+        add_k(str(i), val, "env")
     
-    # PRIORITY 2: settings.json
-    if not keys:
-        try:
-            with open("settings.json", "r", encoding="utf-8") as f:
-                settings = json.load(f)
-                groq_keys = settings.get("ai", {}).get("groq_keys", [])
-                for i, key in enumerate(groq_keys, 1):
-                    if key and key.startswith("gsk_"):
-                        keys.append({
-                            "name":      "settings_groq" + str(i),
-                            "key":       key,
-                            "fails":     0,
-                            "dead":      False,
-                            "last_used": 0.0
-                        })
-        except Exception:
-            pass
-    return keys
+    # SOURCE 2: settings.json
+    try:
+        with open("settings.json", "r", encoding="utf-8") as f:
+            settings = json.load(f)
+            groq_keys = settings.get("ai", {}).get("groq_keys", [])
+            for i, key in enumerate(groq_keys, 1):
+                add_k(str(i), key, "settings")
+    except Exception:
+        pass
+    return list(keys_dict.values())
 
 GROQ_KEYS  = _build_groq_keys()
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
@@ -646,7 +633,9 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
                 log_srv("[OPENROUTER] Key " + k["name"] + " rate limited")
                 time.sleep(3)
             else:
-                log_srv("[OR-DEBUG] status " + str(r.status_code) + ": " + r.text[:200])
+                log_srv(f"[OR-DEBUG] status {r.status_code}: {r.text[:200]}")
+                if r.status_code == 404:
+                    log_srv(f"[OR-DEBUG] Hint: Model identification '{OPENROUTER_MODEL}' might be wrong/unavailable.")
                 k["fails"] += 1
         except Exception as e:
             log_srv("[OR-DEBUG] Exception: " + str(e))

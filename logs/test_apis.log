@@ -1,64 +1,64 @@
 ============================================================
-  AI 3D Studio Diagnostics - 2026-03-21 21:17:04
+  AI 3D Studio Diagnostics - 2026-03-22 12:18:59
 ============================================================
 ============================================================
   AI 3D Studio - System Diagnostics v5.0
-  2026-03-21 21:16:36
+  2026-03-22 12:18:17
   Project: C:\Users\user\Desktop\ai-3d-project
 ============================================================
 
 ============================================================
   SECTION 1 - ENVIRONMENT
 ============================================================
-[21:16:36]   Python version     : 3.13.7  [PASS]
-[21:16:36]   OS                 : Windows 10  [INFO]
-[21:16:36]   Architecture       : AMD64  [INFO]
-[21:16:36]   Disk free          : 26.9 GB  [PASS]
-[21:16:36]   RAM available      : psutil not installed  [SKIP]
-[21:16:36]   Project dir        : C:\Users\user\Desktop\ai-3d-project  [PASS]
-[21:16:36] 
-[21:16:36]   Required directories:
-[21:16:36]     models                                 [PASS]
-[21:16:36]     models/cache                           [PASS]
-[21:16:36]     models/presets                         [PASS]
-[21:16:36]     models/scripts                         [PASS]
-[21:16:36]     logs                                   [PASS]
-[21:16:36]     static                                 [PASS]
-[21:16:36]     storage                                [PASS]
-[21:16:36]     storage/users                          [PASS]
-[21:16:36]     storage/users/user                     [PASS]
-[21:16:36]     storage/users/user/default             [PASS]
-[21:16:36]     storage/users/user/vehicles            [PASS]
-[21:16:36]     storage/users/user/creatures           [PASS]
-[21:16:36]     storage/users/user/buildings           [PASS]
-[21:16:36] 
-[21:16:36]   Required JSON files:
-[21:16:36]     history.json         exists=True  valid=True   [PASS]
-[21:16:36]     folders.json         exists=True  valid=True   [PASS]
-[21:16:36]     settings.json        exists=True  valid=True   [PASS]
-[21:16:36]     state.json           exists=True  valid=True   [PASS]
+[12:18:17]   Python version     : 3.13.7  [PASS]
+[12:18:17]   OS                 : Windows 10  [INFO]
+[12:18:17]   Architecture       : AMD64  [INFO]
+[12:18:17]   Disk free          : 24.2 GB  [PASS]
+[12:18:17]   RAM available      : psutil not installed  [SKIP]
+[12:18:17]   Project dir        : C:\Users\user\Desktop\ai-3d-project  [PASS]
+[12:18:17] 
+[12:18:17]   Required directories:
+[12:18:17]     models                                 [PASS]
+[12:18:17]     models/cache                           [PASS]
+[12:18:17]     models/presets                         [PASS]
+[12:18:17]     models/scripts                         [PASS]
+[12:18:17]     logs                                   [PASS]
+[12:18:17]     static                                 [PASS]
+[12:18:17]     storage                                [PASS]
+[12:18:17]     storage/users                          [PASS]
+[12:18:17]     storage/users/user                     [PASS]
+[12:18:17]     storage/users/user/default             [PASS]
+[12:18:17]     storage/users/user/vehicles            [PASS]
+[12:18:17]     storage/users/user/creatures           [PASS]
+[12:18:17]     storage/users/user/buildings           [PASS]
+[12:18:17] 
+[12:18:17]   Required JSON files:
+[12:18:17]     history.json         exists=True  valid=True   [PASS]
+[12:18:17]     folders.json         exists=True  valid=True   [PASS]
+[12:18:17]     settings.json        exists=True  valid=True   [PASS]
+[12:18:17]     state.json           exists=True  valid=True   [PASS]
 
 ============================================================
   SECTION 2 - DEPENDENCIES
 ============================================================
-[21:16:37]   requests     2.32.5        [PASS] REQUIRED
-[21:16:38]   flask        3.1.2         [PASS] REQUIRED
-[21:16:38]   flask_cors   6.0.2         [PASS] REQUIRED
-[21:16:38]   PIL          12.1.1        [PASS] REQUIRED
-[21:16:39]   pystray      installed     [PASS] REQUIRED
-[21:16:39]   urllib3      2.6.3         [PASS] REQUIRED
-[21:16:39]   yaml         6.0.3         [PASS] OPTIONAL
-[21:16:43]   ipywidgets   8.1.8         [PASS] OPTIONAL
-[21:16:53]   torch        2.10.0+cpu    [PASS] OPTIONAL
-[21:16:53]   shap_e       installed     [PASS] OPTIONAL
+[12:18:18]   requests     2.32.5        [PASS] REQUIRED
+[12:18:18]   flask        3.1.2         [PASS] REQUIRED
+[12:18:18]   flask_cors   6.0.2         [PASS] REQUIRED
+[12:18:18]   PIL          12.1.1        [PASS] REQUIRED
+[12:18:18]   pystray      installed     [PASS] REQUIRED
+[12:18:18]   urllib3      2.6.3         [PASS] REQUIRED
+[12:18:18]   yaml         6.0.3         [PASS] OPTIONAL
+[12:18:19]   ipywidgets   8.1.8         [PASS] OPTIONAL
+[12:18:24]   torch        2.10.0+cpu    [PASS] OPTIONAL
+[12:18:24]   shap_e       installed     [PASS] OPTIONAL
 
 ============================================================
   SECTION 3 - BLENDER
 ============================================================
-[21:16:53]   Blender            : NOT FOUND  [FAIL]
-[21:16:53]   Expected path      : C:\Program Files\Blender Foundation\Blender 5.0\blender.exe
-[21:16:53]   Download from      : https://blender.org
-[21:16:53]   NOTE: Generation falls back to preset shapes without Blender
+[12:18:24]   Blender            : NOT FOUND  [FAIL]
+[12:18:24]   Expected path      : C:\Program Files\Blender Foundation\Blender 5.0\blender.exe
+[12:18:24]   Download from      : https://blender.org
+[12:18:24]   NOTE: Generation falls back to preset shapes without Blender
 
 ============================================================
   SECTION 4 - GEMINI API KEYS (all 10)
@@ -88,32 +88,28 @@
 ============================================================
   SECTION 5 - SERVER ENDPOINT TEST
 ============================================================
-[21:16:58]   Starting server for test...
-[21:17:04]   /ping      Health check             [PASS] 7ms
-[21:17:04]   /status    Generation status        [PASS] 4ms
-[21:17:04]   /folders   Folder list              [PASS] 3ms
-[21:17:04]   /history   History list             [PASS] 4ms
-[21:17:04]   Test server stopped
+[12:18:29]   Starting server for test...
+[12:18:59]   Server did not start within 10s  [FAIL]
 
 ============================================================
   SECTION 6 - GENERATION PIPELINE
 ============================================================
-[21:17:04]   shapee_installed.flag : True  [PASS]
-[21:17:04]   Shap-E packages       : yaml/torch/ipywidgets installed  [INFO]
-[21:17:04]   Preset GLBs cached    : 0  [INFO]
-[21:17:04]   Script library        : 0 scripts  [INFO]
-[21:17:04]   Cache                 : 0 entries, 0.0 MB  [INFO]
+[12:18:59]   shapee_installed.flag : True  [PASS]
+[12:18:59]   Shap-E packages       : yaml/torch/ipywidgets installed  [INFO]
+[12:18:59]   Preset GLBs cached    : 0  [INFO]
+[12:18:59]   Script library        : 0 scripts  [INFO]
+[12:18:59]   Cache                 : 0 entries, 0.0 MB  [INFO]
 
 ============================================================
   SECTION 7 - FILE INTEGRITY
 ============================================================
-[21:17:04]   server.py                        226429 bytes  [PASS]
-[21:17:04]   static/index.html                215353 bytes  [PASS]
-[21:17:04]   tray_launcher.pyw                 19445 bytes  [PASS]
-[21:17:04]   settings.json                      2671 bytes  [PASS]
-[21:17:04]   history.json                          2 bytes  [PASS]
-[21:17:04]   folders.json                         57 bytes  [PASS]
-[21:17:04]   shapee_installed.flag                 0 bytes  [PASS]
+[12:18:59]   server.py                        234027 bytes  [PASS]
+[12:18:59]   static/index.html                215353 bytes  [PASS]
+[12:18:59]   tray_launcher.pyw                 19445 bytes  [PASS]
+[12:18:59]   settings.json                      2778 bytes  [PASS]
+[12:18:59]   history.json                          2 bytes  [PASS]
+[12:18:59]   folders.json                         57 bytes  [PASS]
+[12:18:59]   shapee_installed.flag                 0 bytes  [PASS]
 
 ============================================================
   DIAGNOSTIC SUMMARY
@@ -122,7 +118,7 @@
   Dependencies      : PASS
   Blender           : WARN
   Gemini API        : FAIL
-  Server            : PASS
+  Server            : FAIL
   Pipeline          : PASS
   Files             : PASS
 
@@ -132,4 +128,5 @@
     2. Install Blender 5.0 from https://blender.org
     3. Get free Gemini keys at https://aistudio.google.com/app/apikey
        Add them to settings.json under ai.gemini_keys
+    5. Check logs/error.log for server startup errors
 ============================================================

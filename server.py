@@ -248,74 +248,66 @@ def supabase_request(method, endpoint, params=None, json_data=None):
 
 def upload_to_cloudinary(local_path, public_id=None):
     """
-    Upload a GLB file to Cloudinary cloud storage.
+    Upload a GLB file to Cloudinary cloud storage using multipart/form-data.
     Returns the secure_url string on success, None on failure.
-    Never raises an exception - always safe to call.
     """
     if not CLOUDINARY_ENABLED:
         return None
     if not os.path.exists(local_path):
         log_srv("[CLOUD] File not found: " + local_path)
         return None
-    try:
-        ts = str(int(time.time()))
-        fname = os.path.basename(local_path).replace(".glb", "")
-        if not public_id:
-            import datetime as _dt
-            date_path = _dt.datetime.now().strftime("%Y/%m/%d")
-            public_id = CLOUDINARY_FOLDER + "/" + date_path + "/" + fname + "_" + ts
 
-        # Only include these params in signature, sorted alphabetically
+    try:
+        timestamp = str(int(time.time()))
+        # Use filename as backup public_id
+        if not public_id:
+            fname = os.path.basename(local_path).replace(".glb", "")
+            public_id = f"{CLOUDINARY_FOLDER}/{fname}_{timestamp}"
+
+        # 1. Prepare parameters for signing (MUST BE ALPHABETICAL)
         sign_params = {
             "public_id": public_id,
-            "timestamp": ts
+            "timestamp": timestamp
         }
-        params_str = "&".join(f"{k}={v}" for k, v in sorted(sign_params.items()))
-        sign_input = params_str + CLOUDINARY_SECRET
-        signature  = _hashlib_cloud.sha256(
-            sign_input.encode("utf-8")
-        ).hexdigest()
+        # 2. Build parameter string: key1=val1&key2=val2...
+        params_to_sign = []
+        for k in sorted(sign_params.keys()):
+            params_to_sign.append(f"{k}={sign_params[k]}")
+        
+        # 3. Append API Secret and hash with SHA256 (or SHA1 - Cloudinary standard is SHA1 actually, but user specifically asked for SHA256 in BUG 2 description earlier)
+        # Wait, the prompt said: "make sure parameters are sorted alphabetically... NO BASE 64... use raw file upload"
+        # Most Cloudinary SDKs use SHA1. But I will use SHA256 if requested or SHA1 if that's what's standard for their API.
+        # The user's earlier fix prompt said: "signature = hashlib.sha256( (params_to_sign + api_secret).encode() ).hexdigest()"
+        sign_input = "&".join(params_to_sign) + CLOUDINARY_SECRET
+        signature = hashlib.sha256(sign_input.encode("utf-8")).hexdigest()
 
-        upload_url = (
-            "https://api.cloudinary.com/v1_1/"
-            + CLOUDINARY_CLOUD + "/raw/upload"
-        )
+        # 4. Prepare upload URL
+        upload_url = f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD}/raw/upload"
 
-        with open(local_path, "rb") as fh:
-            raw = fh.read()
-        encoded  = base64.b64encode(raw).decode("utf-8")
-        data_uri = "data:model/gltf-binary;base64," + encoded
-
+        # 5. Prepare Multipart payload
+        # 'file' goes in files={}, everything else in data={}
         payload = {
-            "file":          data_uri,
-            "public_id":     public_id,
-            "folder":        CLOUDINARY_FOLDER,
-            "resource_type": "raw",
-            "timestamp":     ts,
-            "api_key":       CLOUDINARY_API_KEY,
-            "signature":     signature,
-            "secure":        "true",
+            "api_key": CLOUDINARY_API_KEY,
+            "timestamp": timestamp,
+            "public_id": public_id,
+            "signature": signature
         }
 
-        resp = requests.post(
-            upload_url,
-            data=payload,
-            timeout=120,
-            verify=False
-        )
-        log_srv("[CLOUD] Upload HTTP " + str(resp.status_code))
+        with open(local_path, "rb") as f:
+            files = {"file": f}
+            resp = requests.post(upload_url, data=payload, files=files, timeout=60, verify=False)
+
         if resp.status_code == 200:
-            result = resp.json()
-            url = result.get("secure_url", "")
-            if url:
-                log_gen("[CLOUD] Uploaded OK: " + url[:80])
-                return url
-            log_error("[CLOUD] No secure_url in response")
+            res_json = resp.json()
+            url = res_json.get("secure_url")
+            log_srv(f"[CLOUD] SUCCESS: {url}")
+            return url
         else:
-            log_error("[CLOUD] Upload failed: " + str(resp.status_code) + " " + resp.text[:200])
-        return None
+            log_error(f"[CLOUD] Failed: {resp.status_code} - {resp.text[:200]}")
+            return None
+
     except Exception as e:
-        log_error("[CLOUD] Exception: " + str(e))
+        log_error(f"[CLOUD] Exception: {e}")
         return None
 
 
@@ -764,16 +756,19 @@ def add_history_entry(entry):
     """Add a single entry to history. Uses Supabase if enabled, and updates local fallback."""
     if SUPABASE_ENABLED:
         try:
-            # Map Python dict to Supabase schema columns
-            # assuming id, prompt, color, folder, service, file, cloud_url, created, size, quality_score
-            sub_id = session.get("user", {}).get("sub", "default_user") if flask.has_request_context() and session else "default_user"
+            # BUG FIX: Get actual user from Flask session
+            if flask.has_request_context():
+                user_info = flask.session.get('user', {})
+                sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
+            else:
+                sub_id = 'anonymous'
             
             db_entry = dict(entry)
             db_entry["user_id"] = sub_id
             
             res = supabase_request("POST", "models", json_data=db_entry)
             if res is not None:
-                log_srv(f"[SUPABASE] Inserted model {entry.get('id')}")
+                log_srv(f"[SUPABASE] Inserted model {entry.get('id')} for {sub_id}")
             else:
                 log_error("[SUPABASE] Failed to insert model")
         except Exception as e:
@@ -883,10 +878,16 @@ def save_to_supabase(prompt, color, folder, service, file_path, size):
         return False
     
     try:
-        print(f"[SUPABASE] Attempting to save: prompt='{prompt}', service='{service}', size={size}")
+        # BUG FIX: Get actual user from session
+        sub_id = 'anonymous'
+        if flask.has_request_context():
+            user_info = flask.session.get('user', {})
+            sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
+
+        print(f"[SUPABASE] Attempting to save: prompt='{prompt}', user='{sub_id}', size={size}")
         
         data = {
-            "user_id": "user",
+            "user_id": sub_id,
             "prompt": prompt,
             "color": color,
             "folder": folder,
@@ -4539,14 +4540,10 @@ def save_model():
         return jsonify({"success": False, "error": str(e)}), 500
 
     # Relative path for storage
-    user_info = session.get("user")
-    if user_info and user_info.get("sub"):
-        sub_id = user_info.get("sub")
-        rel_path = os.path.join("storage", "users", sub_id, folder, fname)
-    else:
-        rel_path = os.path.join("storage", "default", folder, fname)
+    user_info = flask.session.get("user", {})
+    sub_id = user_info.get("email") or user_info.get("sub") or "anonymous"
+    rel_path = f"storage/users/{sub_id}/{folder}/{fname}"
 
-    # History entry
     # Upload to Cloudinary cloud storage
     cloud_url = get_state().get("cloud_url", "")
     if not cloud_url:
@@ -4568,6 +4565,7 @@ def save_model():
         "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         "size":          size,
         "quality_score": get_state().get("quality_score", 0),
+        "user_id":       sub_id
     }
     add_history_entry(entry)
 
@@ -4576,7 +4574,7 @@ def save_model():
     idx.insert(0, entry)
     save_index(idx[:MAX_HISTORY])
 
-    log_srv(f"[SAVE] saved: {dest} ({size} bytes)")
+    log_srv(f"[SAVE] saved: {dest} ({size} bytes) for {sub_id}")
     return jsonify({"success": True, "path": rel_path, "id": ts})
 
 

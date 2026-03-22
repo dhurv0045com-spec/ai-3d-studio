@@ -1747,16 +1747,23 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
     debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
-    # Inject OUTPUT_PATH into script before first run
-    if "OUTPUT_PATH" not in current_script or "OUTPUT_PATH =" not in current_script:
-        injection = 'OUTPUT_PATH = r"' + output_path + '"\n'
-        lines_tmp = current_script.split("\n")
-        last_import = 0
-        for idx, ln in enumerate(lines_tmp):
-            if ln.strip().startswith("import ") or ln.strip().startswith("from "):
-                last_import = idx
-        lines_tmp.insert(last_import + 1, injection)
-        current_script = "\n".join(lines_tmp)
+    # ALWAYS inject OUTPUT_PATH as the very first line after imports
+    # Remove any existing OUTPUT_PATH definitions first to avoid duplicates
+    lines_tmp = current_script.split("\n")
+    # Remove any line that defines OUTPUT_PATH
+    lines_tmp = [l for l in lines_tmp if not (
+        'OUTPUT_PATH' in l and '=' in l and 
+        'export' not in l and 'filepath' not in l
+    )]
+    # Find last import line
+    last_import = 0
+    for idx, ln in enumerate(lines_tmp):
+        if ln.strip().startswith("import ") or ln.strip().startswith("from "):
+            last_import = idx
+    # Inject OUTPUT_PATH right after imports
+    injection = 'OUTPUT_PATH = r"' + output_path + '"'
+    lines_tmp.insert(last_import + 1, injection)
+    current_script = "\n".join(lines_tmp)
 
     for attempt in range(max_retries + 1):
         # Prevent false positives reading from old generation attempts!
@@ -1874,18 +1881,23 @@ def run_blender_script(script_text, output_path):
     script_path = os.path.join(BASE_DIR, "_temp_preset_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
-    # Inject OUTPUT_PATH if not already present
-    if "OUTPUT_PATH" not in script_text:
-        script_text = 'OUTPUT_PATH = r"' + output_path + '"\n' + script_text
-    elif 'OUTPUT_PATH = ' not in script_text:
-        # OUTPUT_PATH is referenced but not defined - inject it after imports
-        lines_tmp = script_text.split("\n")
-        last_import = 0
-        for idx, ln in enumerate(lines_tmp):
-            if ln.strip().startswith("import ") or ln.strip().startswith("from "):
-                last_import = idx
-        lines_tmp.insert(last_import + 1, 'OUTPUT_PATH = r"' + output_path + '"')
-        script_text = "\n".join(lines_tmp)
+    # ALWAYS inject OUTPUT_PATH as the very first line after imports
+    # Remove any existing OUTPUT_PATH definitions first to avoid duplicates
+    lines_tmp = script_text.split("\n")
+    # Remove any line that defines OUTPUT_PATH
+    lines_tmp = [l for l in lines_tmp if not (
+        'OUTPUT_PATH' in l and '=' in l and 
+        'export' not in l and 'filepath' not in l
+    )]
+    # Find last import line
+    last_import = 0
+    for idx, ln in enumerate(lines_tmp):
+        if ln.strip().startswith("import ") or ln.strip().startswith("from "):
+            last_import = idx
+    # Inject OUTPUT_PATH right after imports
+    injection = 'OUTPUT_PATH = r"' + output_path + '"'
+    lines_tmp.insert(last_import + 1, injection)
+    script_text = "\n".join(lines_tmp)
 
     # Delete stale output to avoid falsely returning True on fail
     if os.path.exists(output_path):
@@ -2211,9 +2223,16 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
 
     script = strip_md_fences(script_raw)
     
-    # Inject OUTPUT_PATH before validation so export line check matches
-    if "OUTPUT_PATH" not in script or "OUTPUT_PATH =" not in script:
-        script = 'OUTPUT_PATH = r"' + output_path + '"\n' + script
+    lines = script.split("\n")
+    lines = [l for l in lines if not (
+        'OUTPUT_PATH' in l and '=' in l and 
+        'export' not in l and 'filepath' not in l
+    )]
+    last_imp = max([i for i,l in enumerate(lines) 
+                   if l.strip().startswith('import') or 
+                   l.strip().startswith('from')] or [0])
+    lines.insert(last_imp + 1, 'OUTPUT_PATH = r"' + output_path + '"')
+    script = "\n".join(lines)
 
     fixed_script, fixes = validate_and_fix_script(script)
 

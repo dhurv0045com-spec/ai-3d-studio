@@ -265,10 +265,13 @@ def upload_to_cloudinary(local_path, public_id=None):
             date_path = _dt.datetime.now().strftime("%Y/%m/%d")
             public_id = CLOUDINARY_FOLDER + "/" + date_path + "/" + fname + "_" + ts
 
-        # Cloudinary requires parameters to be sorted alphabetically 
-        # for signing, omitting 'folder' and 'resource_type' in the signature.
-        params_to_sign = f"public_id={public_id}&timestamp={ts}"
-        sign_input = params_to_sign + CLOUDINARY_SECRET
+        # Only include these params in signature, sorted alphabetically
+        sign_params = {
+            "public_id": public_id,
+            "timestamp": ts
+        }
+        params_str = "&".join(f"{k}={v}" for k, v in sorted(sign_params.items()))
+        sign_input = params_str + CLOUDINARY_SECRET
         signature  = _hashlib_cloud.sha256(
             sign_input.encode("utf-8")
         ).hexdigest()
@@ -1705,6 +1708,12 @@ def validate_and_fix_script(script_text):
         changes += 1
         log_gen("[VALIDATOR] Added missing export line")
 
+    try:
+        compile(fixed_script, '<string>', 'exec')
+    except SyntaxError as e:
+        log_gen(f"[VALIDATOR] SyntaxError detected: {e} - requesting Gemini fix")
+        return fixed_script, -1
+
     if changes > 0:
         log_gen("[VALIDATOR] Auto-fixed " + str(changes) + " issues")
 
@@ -1765,71 +1774,87 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
         except Exception:
             pass
 
-        try:
-            safe = fixed_script.encode("ascii", errors="replace").decode("ascii")
-            with open(script_path, "w", encoding="ascii") as f:
-                f.write(safe)
-        except Exception as e:
-            log_error("[BLENDER] Cannot write script: " + str(e))
-            return False, current_script
+        if fixes == -1:
+            log_gen("[BLENDER] Syntax error detected before running, skipping Blender subprocess")
+            exit_code = 1
+            stderr = "SyntaxError or IndentationError detected by python compile()"
+        else:
+            try:
+                safe = fixed_script.encode("ascii", errors="replace").decode("ascii")
+                with open(script_path, "w", encoding="ascii") as f:
+                    f.write(safe)
+            except Exception as e:
+                log_error("[BLENDER] Cannot write script: " + str(e))
+                return False, current_script
+    
+            log_gen("[BLENDER] attempt=" + str(attempt + 1)
+                    + " chars=" + str(len(fixed_script))
+                    + " fixes=" + str(fixes))
+    
+            try:
+                creation_flags = 0x08000000 if os.name == "nt" else 0
+                result = subprocess.run(
+                    [BLENDER_EXE, "--background", "--python", script_path],
+                    capture_output=True, text=True,
+                    timeout=blender_timeout,
+                    encoding="utf-8", errors="replace",
+                    creationflags=creation_flags,
+                )
+                exit_code = result.returncode
+                stderr    = result.stderr or ""
+                stdout    = result.stdout or ""
+                log_gen("[BLENDER] exit=" + str(exit_code))
+                error_lines = [l for l in stderr.split("\n")
+                               if any(kw in l for kw in
+                                      ["Error", "Traceback", "line ",
+                                       "TypeError", "AttributeError",
+                                       "NameError", "SyntaxError"])]
+                for line in error_lines[:10]:
+                    if line.strip():
+                        log_gen("[BLENDER] " + line.strip()[:200])
+            except subprocess.TimeoutExpired:
+                log_gen("[BLENDER] Timeout on attempt " + str(attempt + 1))
+                if attempt < max_retries:
+                    continue
+                return False, current_script
+            except Exception as e:
+                log_error("[BLENDER] subprocess error: " + str(e))
+                return False, current_script
 
-        log_gen("[BLENDER] attempt=" + str(attempt + 1)
-                + " chars=" + str(len(fixed_script))
-                + " fixes=" + str(fixes))
-
-        try:
-            creation_flags = 0x08000000 if os.name == "nt" else 0
-            result = subprocess.run(
-                [BLENDER_EXE, "--background", "--python", script_path],
-                capture_output=True, text=True,
-                timeout=blender_timeout,
-                encoding="utf-8", errors="replace",
-                creationflags=creation_flags,
-            )
-            exit_code = result.returncode
-            stderr    = result.stderr or ""
-            stdout    = result.stdout or ""
-            log_gen("[BLENDER] exit=" + str(exit_code))
-            error_lines = [l for l in stderr.split("\n")
-                           if any(kw in l for kw in
-                                  ["Error", "Traceback", "line ",
-                                   "TypeError", "AttributeError",
-                                   "NameError", "SyntaxError"])]
-            for line in error_lines[:10]:
-                if line.strip():
-                    log_gen("[BLENDER] " + line.strip()[:200])
-        except subprocess.TimeoutExpired:
-            log_gen("[BLENDER] Timeout on attempt " + str(attempt + 1))
-            if attempt < max_retries:
-                continue
-            return False, current_script
-        except Exception as e:
-            log_error("[BLENDER] subprocess error: " + str(e))
-            return False, current_script
-
-        valid, msg = validate_glb_quality(output_path)
-        if valid:
-            log_gen("[MODEL_B] Blender success attempt "
-                    + str(attempt + 1) + ": " + msg)
-            return True, fixed_script
+        if exit_code == 0 and fixes != -1:
+            valid, msg = validate_glb_quality(output_path)
+            if valid:
+                log_gen("[MODEL_B] Blender success attempt "
+                        + str(attempt + 1) + ": " + msg)
+                return True, fixed_script
 
         if attempt < max_retries:
             key_error = extract_key_error(stderr)
             log_gen("[BLENDER] Failed: " + key_error + " - requesting Gemini fix...")
-            fix_msg = (
-                "This Blender 5.0 script crashed with this error:\n"
-                + key_error
-                + "\n\nFix ONLY the error. Rules:\n"
-                "1. Output raw Python only, no markdown\n"
-                "2. NEVER use bpy.ops.transform functions\n"
-                "3. Use obj.location, obj.scale, obj.rotation_euler ONLY\n"
-                "4. Get obj = bpy.context.active_object after every primitive\n"
-                "5. OUTPUT_PATH is already defined - do not redefine it\n"
-                "6. Last line: bpy.ops.export_scene.gltf("
-                "filepath=OUTPUT_PATH, export_format='GLB')\n"
-                "\nBroken script (first 2000 chars):\n"
-                + current_script[:2000]
-            )
+            
+            if fixes == -1 or "SyntaxError" in key_error or "Indentation" in key_error:
+                fix_msg = (
+                    f"The script has a SyntaxError: {key_error}. Rewrite the ENTIRE script from scratch. "
+                    "Do not patch - rewrite completely. Raw Python only, no markdown.\n"
+                    "OUTPUT_PATH is already defined.\n"
+                    "Broken script (first 2000 chars):\n"
+                    + current_script[:2000]
+                )
+            else:
+                fix_msg = (
+                    "This Blender 5.0 script crashed with this error:\n"
+                    + key_error
+                    + "\n\nFix ONLY the error. Rules:\n"
+                    "1. Output raw Python only, no markdown\n"
+                    "2. NEVER use bpy.ops.transform functions\n"
+                    "3. Use obj.location, obj.scale, obj.rotation_euler ONLY\n"
+                    "4. Get obj = bpy.context.active_object after every primitive\n"
+                    "5. OUTPUT_PATH is already defined - do not redefine it\n"
+                    "6. Last line: bpy.ops.export_scene.gltf("
+                    "filepath=OUTPUT_PATH, export_format='GLB')\n"
+                    "\nBroken script (first 2000 chars):\n"
+                    + current_script[:2000]
+                )
             fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
             if fixed and len(fixed.strip()) > 100:
                 current_script = fixed
@@ -1971,7 +1996,10 @@ BLENDER_SYSTEM = (
     "4. What rotation does each part need? "
     "5. Does every line use only allowed functions? "
     "NO external files. NO textures. NO images. NO try/except. NO print. "
-    "ONLY simple sequential code. One object at a time."
+    "ONLY simple sequential code. One object at a time. "
+    "CRITICAL: Every opening parenthesis ( must have a closing parenthesis ). "
+    "Every if/else/for/while block must have an indented body. "
+    "Before outputting, mentally count all opening ( and verify they are closed."
 )
 
 STYLE_DIRECTIVES = {

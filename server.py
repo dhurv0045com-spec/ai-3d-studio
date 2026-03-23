@@ -207,6 +207,15 @@ def before_request_timer():
 def after_request_logger(response):
     try:
         from flask import g
+        noisy_paths = {
+            "/status",
+            "/log",
+            "/debug/log",
+            "/api/deploy/logs",
+            "/ping",
+        }
+        if request.path in noisy_paths or request.path.startswith("/static/"):
+            return response
         elapsed = time.time() - g.req_start
         ms      = round(elapsed * 1000)
         log_srv("[HTTP] " + request.method + " " + request.path +
@@ -842,10 +851,10 @@ def _ts():
 
 def _write_log(filepath, message):
     try:
-        # Print to stderr for visibility in Railway/Cloud logs
+        # Mirror to stdout so platform deploy logs (Railway/Render/etc.) capture it.
         import sys as _sys
-        _sys.stderr.write(message + "\n")
-        _sys.stderr.flush()
+        _sys.stdout.write(message + "\n")
+        _sys.stdout.flush()
         
         with _log_lock:
             with open(filepath, "a", encoding="ascii", errors="replace") as f:
@@ -880,8 +889,9 @@ def log_gen(msg):
 def log_error(msg):
     """Write to error.log with traceback, also server.log."""
     tb = traceback.format_exc()
+    has_traceback = tb and tb.strip() and tb.strip() != "NoneType: None"
     line = f"[{_ts()}] ERROR SYSTEM: {msg}"
-    detail = line + "\n" + tb
+    detail = line + ("\n" + tb if has_traceback else "")
     _write_log(ERR_LOG, detail)
     _write_log(SERVER_LOG, line)
     with _state_lock:
@@ -4824,6 +4834,46 @@ def get_log():
     return jsonify({"lines": lines, "log": state_log})
 
 
+@app.route("/api/deploy/logs", methods=["GET"])
+def get_deploy_logs():
+    """Return merged recent deploy/runtime logs for cloud debugging."""
+    limit_raw = request.args.get("limit", "120")
+    source = str(request.args.get("source", "all")).strip().lower()
+    try:
+        limit = max(10, min(500, int(limit_raw)))
+    except Exception:
+        limit = 120
+
+    file_map = {
+        "server": SERVER_LOG,
+        "generation": GEN_LOG,
+        "error": ERR_LOG,
+    }
+    if source in file_map:
+        targets = [source]
+    else:
+        targets = ["server", "generation", "error"]
+
+    merged = []
+    for name in targets:
+        path = file_map[name]
+        try:
+            with open(path, "r", encoding="ascii", errors="replace") as f:
+                lines = [ln.rstrip() for ln in f.readlines() if ln.strip()]
+            for ln in lines[-limit:]:
+                merged.append((name, ln))
+        except Exception:
+            continue
+
+    merged = merged[-limit:]
+    return jsonify({
+        "ok": True,
+        "source": source if source in file_map else "all",
+        "limit": limit,
+        "lines": [{"stream": s, "line": l} for s, l in merged]
+    })
+
+
 @app.route("/edit", methods=["POST"])
 def edit_model():
     """Edit an existing model by ID with new instructions."""
@@ -5863,8 +5913,6 @@ _orig_build_preset_for_keyword = build_preset_for_keyword
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
-
-
 
 
 

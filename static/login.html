@@ -51,9 +51,12 @@ nav{
 }
 nav.solid{background:rgba(3,4,10,.9);border-color:var(--border);backdrop-filter:blur(20px);}
 .nav-logo{
+  height:32px;display:flex;align-items:center;gap:10px;text-decoration:none;
+}
+.nav-logo-img{height:100%;filter:drop-shadow(0 0 8px rgba(255,215,0,0.2))}
+.nav-logo-txt{
   font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;
-  letter-spacing:5px;color:var(--white);text-decoration:none;
-  display:flex;align-items:center;gap:10px;
+  letter-spacing:5px;color:var(--white);
 }
 .nav-dot{
   width:6px;height:6px;border-radius:50%;background:var(--gold);
@@ -382,6 +385,7 @@ nav.solid{background:rgba(3,4,10,.9);border-color:var(--border);backdrop-filter:
   display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;
 }
 .l-tag::before,.l-tag::after{content:'';width:24px;height:1px;background:var(--border-g)}
+.l-logo-img{width:120px;height:auto;margin-bottom:20px;filter:drop-shadow(0 0 20px rgba(255,215,0,0.3))}
 .l-h{
   font-family:'Orbitron',sans-serif;font-size:36px;font-weight:900;
   letter-spacing:5px;line-height:1;
@@ -484,7 +488,11 @@ nav.solid{background:rgba(3,4,10,.9);border-color:var(--border);backdrop-filter:
 
 <!-- NAV -->
 <nav id="nav">
-  <a class="nav-logo" href="#hero">AUREX<div class="nav-dot"></div></a>
+  <a class="nav-logo" href="#hero">
+    <img src="static/logo.png" alt="AUREX" class="nav-logo-img">
+    <span class="nav-logo-txt">AUREX</span>
+    <div class="nav-dot"></div>
+  </a>
   <div class="nav-r">
     <a class="nav-link" href="#about">About</a>
     <a class="nav-link" href="#pipeline">Pipeline</a>
@@ -647,6 +655,7 @@ nav.solid{background:rgba(3,4,10,.9);border-color:var(--border);backdrop-filter:
   <div class="login-wrap">
     <div class="l-title rv">
       <div class="l-tag">Enter the system</div>
+      <img src="static/logo.png" alt="AUREX Logo" class="l-logo-img">
       <div class="l-h">AUREX 3D</div>
       <div class="l-sub">3D STUDIO · V7.0</div>
     </div>

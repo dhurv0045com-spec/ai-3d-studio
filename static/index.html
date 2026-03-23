@@ -167,8 +167,9 @@ body:has(a:hover) #cursor-ring{
   transition:opacity .5s,visibility .5s;
 }
 #loading-screen.gone{opacity:0;visibility:hidden;pointer-events:none}
+.ls-logo-img{width:120px;height:auto;margin-bottom:10px;filter:drop-shadow(0 0 15px rgba(255,215,0,0.4))}
 .ls-logo{
-  font-family:'Orbitron',sans-serif;font-size:32px;font-weight:900;
+  font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;
   letter-spacing:8px;
   background:linear-gradient(135deg,var(--gold),#fff,var(--amber));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
@@ -218,8 +219,9 @@ body:has(a:hover) #cursor-ring{
 .lc-tr{top:-1px;right:-1px;border-top:2px solid var(--cyan);border-right:2px solid var(--cyan)}
 .lc-bl{bottom:-1px;left:-1px;border-bottom:2px solid var(--cyan);border-left:2px solid var(--cyan)}
 .lc-br{bottom:-1px;right:-1px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan)}
+.lc-logo-img{width:80px;display:block;margin:0 auto 10px;filter:drop-shadow(0 0 10px rgba(255,215,0,0.3))}
 .lc-logo{
-  font-family:'Orbitron',sans-serif;font-size:32px;font-weight:900;
+  font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;
   letter-spacing:6px;text-align:center;
   background:linear-gradient(135deg,var(--gold),#fff,var(--amber));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
@@ -294,15 +296,16 @@ body:has(a:hover) #cursor-ring{
   z-index:100;
 }
 .nav-logo{
-  font-family:'Orbitron',sans-serif;font-size:11px;font-weight:800;
-  color:var(--gold);letter-spacing:1px;
   width:36px;height:36px;
-  background:linear-gradient(135deg,var(--amber),var(--gold));
+  background:var(--bg-2);
+  border:1px solid var(--bd-2);
   border-radius:var(--r-sm);
   display:flex;align-items:center;justify-content:center;
-  margin-bottom:12px;color:#0a0e17;
-  box-shadow:0 0 12px rgba(255,215,0,.2);
+  margin-bottom:12px;
+  box-shadow:0 0 12px rgba(255,215,0,.1);
+  overflow:hidden;
 }
+.nav-logo-img{width:90%;height:90%;object-fit:contain}
 .nav-item{
   width:36px;height:36px;border-radius:var(--r-sm);
   display:flex;align-items:center;justify-content:center;
@@ -1915,7 +1918,8 @@ nav#nav { display: flex !important; }
 <!-- V7 LOADING SCREEN -->
 <div id="loading-screen">
   <canvas id="ls-canvas"></canvas>
-  <div class="ls-wordmark">AI<span>3D STUDIO &nbsp;V7</span></div>
+  <img src="static/logo.png" alt="AUREX Logo" class="ls-logo-img">
+  <div class="ls-logo">AUREX 3D</div>
   <div class="ls-bar"><div class="ls-bar-fill"></div></div>
 </div>
 
@@ -1958,7 +1962,9 @@ nav#nav { display: flex !important; }
 
 <!-- ====================================================== NAV -->
 <nav id="nav">
-  <div class="nav-logo" onclick="goPage('studio')" title="AI 3D Studio v7">A</div>
+  <div class="nav-logo" title="AUREX 3D STUDIO">
+    <img src="static/logo.png" alt="A" class="nav-logo-img">
+  </div>
 
   <div class="nav-items">
     <div class="nav-item active" data-page="studio" onclick="goPage('studio')">
@@ -2079,6 +2085,10 @@ nav#nav { display: flex !important; }
         <div class="vp-vignette"></div>
         <div class="vp-corner tl"></div>
         <div class="vp-corner tr"></div>
+        <div class="lc-inner" id="lc-inner">
+        <img src="static/logo.png" alt="AUREX Logo" class="lc-logo-img">
+        <div class="lc-logo">AUREX 3D</div>
+        </div>
         <div class="vp-corner bl"></div>
         <div class="vp-corner br"></div>
 

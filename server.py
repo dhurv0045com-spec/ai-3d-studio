@@ -272,6 +272,96 @@ def supabase_request(method, endpoint, params=None, json_data=None):
         log_error(f"[SUPABASE] Request failed: {e}")
         return None
 
+
+def _get_user_id():
+    """Extract user_id from Flask session. Returns 'anonymous' if unavailable."""
+    if flask.has_request_context():
+        user_info = flask.session.get('user', {})
+        return user_info.get('email') or user_info.get('sub') or 'anonymous'
+    return 'anonymous'
+
+
+# ---------------------------------------------------------------------------
+#  SUPABASE — PER-USER FOLDER CRUD
+# ---------------------------------------------------------------------------
+
+def load_folders_from_supabase(user_id):
+    """Load folder names for a specific user from Supabase user_folders table."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return None
+    try:
+        endpoint = f"user_folders?user_id=eq.{user_id}&select=name&order=created_at.asc"
+        res = supabase_request("GET", endpoint)
+        if res is not None and isinstance(res, list):
+            names = [r["name"] for r in res if r.get("name")]
+            if "default" not in names:
+                names.insert(0, "default")
+            return names
+    except Exception as e:
+        log_error(f"[SUPABASE] load_folders err: {e}")
+    return None
+
+
+def save_folder_to_supabase(user_id, folder_name):
+    """Insert a folder for this user into Supabase. Ignores duplicates."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return False
+    try:
+        data = {"user_id": user_id, "name": folder_name}
+        # Use on_conflict to avoid duplicates (via Prefer header)
+        url = f"{SUPABASE_URL}/rest/v1/user_folders"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=ignore-duplicates,return=representation"
+        }
+        r = requests.post(url, headers=headers, json=data, timeout=10)
+        if r.status_code in [200, 201, 204, 409]:
+            log_srv(f"[SUPABASE] Folder saved: {folder_name} for {user_id}")
+            return True
+        log_error(f"[SUPABASE] save_folder err: {r.status_code} {r.text}")
+    except Exception as e:
+        log_error(f"[SUPABASE] save_folder exception: {e}")
+    return False
+
+
+def delete_folder_from_supabase(user_id, folder_name):
+    """Delete a folder for this user from Supabase."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return False
+    try:
+        endpoint = f"user_folders?user_id=eq.{user_id}&name=eq.{folder_name}"
+        res = supabase_request("DELETE", endpoint)
+        if res is not None:
+            log_srv(f"[SUPABASE] Folder deleted: {folder_name} for {user_id}")
+            return True
+    except Exception as e:
+        log_error(f"[SUPABASE] delete_folder exception: {e}")
+    return False
+
+
+def rename_folder_in_supabase(user_id, old_name, new_name):
+    """Rename a folder for this user in Supabase."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return False
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/user_folders?user_id=eq.{user_id}&name=eq.{old_name}"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        r = requests.patch(url, headers=headers, json={"name": new_name}, timeout=10)
+        if r.status_code in [200, 204]:
+            log_srv(f"[SUPABASE] Folder renamed: {old_name}->{new_name} for {user_id}")
+            return True
+        log_error(f"[SUPABASE] rename_folder err: {r.status_code} {r.text}")
+    except Exception as e:
+        log_error(f"[SUPABASE] rename_folder exception: {e}")
+    return False
+
 def upload_to_cloudinary(local_path, public_id=None):
     """
     Upload a GLB file to Cloudinary cloud storage using multipart/form-data.
@@ -753,11 +843,14 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
 # ---------------------------------------------------------------------------
 #  HISTORY AND INDEX FUNCTIONS (Local & Supabase)
 # ---------------------------------------------------------------------------
-def load_history():
+def load_history(user_id=None):
     """Load history. Uses Supabase if enabled, else falls back to local HISTORY_FILE."""
+    if user_id is None:
+        user_id = _get_user_id()
+
     if SUPABASE_ENABLED:
         try:
-            res = supabase_request("GET", "models?order=id.desc")
+            res = supabase_request("GET", f"models?user_id=eq.{user_id}&order=id.desc")
             if res is not None and isinstance(res, list):
                 return res
         except Exception as e:
@@ -822,8 +915,15 @@ def save_index(index):
     except Exception as e:
         log_error(f"[save_index] failed: {e}")
 
-def load_folders():
+def load_folders(user_id=None):
     """Load folders from FOLDERS_FILE."""
+    if user_id is None:
+        user_id = _get_user_id()
+        
+    s_folders = load_folders_from_supabase(user_id)
+    if s_folders is not None:
+        return s_folders
+
     try:
         with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -4677,7 +4777,8 @@ def delete_model():
         # Remove from Supabase if enabled
         if SUPABASE_ENABLED:
             try:
-                res = supabase_request("DELETE", "models?id=eq." + str(target_entry.get("id", "")))
+                user_id = _get_user_id()
+                res = supabase_request("DELETE", f"models?user_id=eq.{user_id}&id=eq.{target_entry.get('id', '')}")
                 if res is not None:
                     log_srv("[SUPABASE] Deleted model " + str(target_entry.get("id")))
                 else:
@@ -4731,7 +4832,9 @@ def folders_post():
 
     folders = load_folders()
     if name not in folders:
+        user_id = _get_user_id()
         folders.append(name)
+        save_folder_to_supabase(user_id, name)
         save_folders(folders)
         folder_dir = os.path.join(STORAGE_DIR, name)
         os.makedirs(folder_dir, exist_ok=True)
@@ -4747,7 +4850,9 @@ def folders_delete(name):
 
     folders = load_folders()
     if name in folders:
+        user_id = _get_user_id()
         folders.remove(name)
+        delete_folder_from_supabase(user_id, name)
         save_folders(folders)
 
     folder_dir = os.path.join(STORAGE_DIR, name)
@@ -5752,8 +5857,10 @@ def rename_folder():
             return jsonify({"success": False, "error": str(e)}), 500
 
     # Update folders list
+    user_id = _get_user_id()
     idx = folders.index(old_name)
     folders[idx] = new_name
+    rename_folder_in_supabase(user_id, old_name, new_name)
     save_folders(folders)
 
     # Update history file references

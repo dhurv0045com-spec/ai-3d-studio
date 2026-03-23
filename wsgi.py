@@ -3,6 +3,9 @@ import os
 import threading
 
 def initialize():
+    print("[WSGI-INIT] Setting up directories...")
+    from server import setup_dirs
+    setup_dirs()
     print("[WSGI-INIT] Loading folders & history...")
     load_folders()
     load_history()

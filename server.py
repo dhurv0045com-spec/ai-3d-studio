@@ -842,6 +842,11 @@ def _ts():
 
 def _write_log(filepath, message):
     try:
+        # Print to stderr for visibility in Railway/Cloud logs
+        import sys as _sys
+        _sys.stderr.write(message + "\n")
+        _sys.stderr.flush()
+        
         with _log_lock:
             with open(filepath, "a", encoding="ascii", errors="replace") as f:
                 f.write(message + "\n")
@@ -1109,17 +1114,20 @@ def setup_dirs():
     if not os.path.exists(FOLDERS_FILE):
         with open(FOLDERS_FILE, "w") as f:
             json.dump(DEFAULT_FOLDERS, f)
-    # index.json
     if not os.path.exists(INDEX_FILE):
         with open(INDEX_FILE, "w") as f:
             json.dump([], f)
-    # log files
-    for lf in [SERVER_LOG, GEN_LOG, ERR_LOG]:
-        if not os.path.exists(lf):
-            open(lf, "w").close()
-    # Reset state on startup
-    reset_state()
-    log_srv("[START] Server startup - state reset to idle")
+
+
+# Auto-initialize on import
+setup_dirs()
+# log files
+for lf in [SERVER_LOG, GEN_LOG, ERR_LOG]:
+    if not os.path.exists(lf):
+        open(lf, "w").close()
+# Reset state on startup
+reset_state()
+log_srv("[START] Server startup - state reset to idle")
 
 
 # ---------------------------------------------------------------------------
@@ -4202,14 +4210,19 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
 @app.route("/")
 def index():
     """Serve the animated login page."""
-    login_path = os.path.join(STATIC_DIR, "login.html")
-    if os.path.exists(login_path):
-        return send_file(login_path)
-    # Fallback to index.html if login.html doesn't exist
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    if os.path.exists(index_path):
-        return send_file(index_path)
-    return "Server running on port 5000", 200
+    try:
+        login_path = os.path.join(STATIC_DIR, "login.html")
+        if os.path.exists(login_path):
+            return send_file(login_path)
+        # Fallback to index.html if login.html doesn't exist
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if os.path.exists(index_path):
+            return send_file(index_path)
+        log_srv(f"[HTTP] Index fallback: files not found in {STATIC_DIR}")
+        return "Server running on port 5000 (static files missing)", 200
+    except Exception as e:
+        log_error(f"Index error: {e}")
+        return f"Internal Server Error: {e}", 500
 
 
 @app.route("/app")
@@ -4914,6 +4927,9 @@ def _tray_on_quit(icon, item):
 
 def start_tray():
     """Start the system tray icon in a background thread."""
+    if _platform.system() == "Linux" or os.environ.get("RAILWAY_ENVIRONMENT"):
+        log_srv("[TRAY] Headless environment detected - skipping tray icon")
+        return
     try:
         import pystray
         from PIL import Image, ImageDraw
@@ -5484,9 +5500,6 @@ if __name__ == "__main__":
     print("Version: " + VERSION)
     print(f"Blender: {BLENDER_EXE}")
     print(f"Shap-E available: {shap_e_available}")
-
-    # Setup directories and reset state
-    setup_dirs()
 
     print(f"Server log: {SERVER_LOG}")
     print("Listening on http://0.0.0.0:8080")

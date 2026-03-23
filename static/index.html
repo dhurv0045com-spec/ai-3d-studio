@@ -2091,19 +2091,17 @@ nav#nav { display: flex !important; }
       <span class="nav-tip">Gallery</span>
     </div>
 
-    <div class="nav-item" data-page="workshop" onclick="goPage('workshop')">
-      <div class="nav-icon-wrench"></div>
-      <span class="nav-tip">Workshop</span>
+    <!-- Removed Workshop tab, integrated into Studio Edit -->
+    <div class="nav-item" data-page="help" onclick="goPage('help')">
+      <div class="nav-icon-q">?</div>
+      <span class="nav-tip">Docs & Shortcuts</span>
     </div>
 
-    <div class="nav-item" data-page="settings" onclick="goPage('settings')">
+    <div style="flex: 1;"></div>
+
+    <div class="nav-item" data-page="settings" onclick="goPage('settings')" style="margin-bottom: 20px;">
       <div class="nav-icon-gear"></div>
       <span class="nav-tip">Settings</span>
-    </div>
-
-    <div class="nav-item" data-page="help" onclick="goPage('help')">
-      <span class="nav-icon-q">?</span>
-      <span class="nav-tip">Help</span>
     </div>
   </div>
 
@@ -2559,211 +2557,99 @@ nav#nav { display: flex !important; }
           <div class="gallery-empty-t">Your creations will live here</div>
           <div class="hist-empty-s">Generate your first model in Studio</div>
         </div>
-      </div>
-    </div>
-
-    <!-- ======================== WORKSHOP ======================== -->
-    <div class="page" id="page-workshop" style="padding:28px;align-items:flex-start;gap:16px">
-      <div style="font-family:var(--font-head);font-size:10px;letter-spacing:0.12em;color:var(--text-2)">
-        Workshop editing is available in the EDIT tab in Studio.
-      </div>
-      <div style="font-size:12px;color:var(--text-3);line-height:1.7;max-width:440px">
-        Select any model from the History tab, click EDIT, make your changes,
-        and apply them with the APPLY EDITS button. Your edited model will load
-        in the viewport automatically when complete.
-      </div>
-    </div>
+      </div>    <!-- ======================== WORKSHOP (Removed/Redirected) ======================== -->
+    <div class="page" id="page-workshop" style="display:none;"></div>
 
     <!-- ======================== SETTINGS ======================== -->
-    <div class="page" id="page-settings">
+    <div class="page" id="page-settings" style="padding: 40px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+      <div style="font-family: 'Orbitron', sans-serif; font-size: 24px; color: var(--gold); margin-bottom: 30px; border-bottom: 1px solid var(--bd-2); padding-bottom: 10px;">
+        SYSTEM SETTINGS
+      </div>
 
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot cyan"></div>System Status</div>
-        <div class="settings-row">
+      <div class="settings-sec" style="background: rgba(26, 34, 54, 0.4); border: 1px solid var(--bd-2); border-radius: var(--r-lg); padding: 24px; margin-bottom: 24px;">
+        <div class="settings-sec-title" style="margin-bottom: 20px; color: var(--cyan); font-size: 14px;"><div class="sec-dot cyan"></div>Connection Status</div>
+        
+        <div class="settings-row" style="padding: 12px 0; border-bottom: 1px solid var(--bd-1);">
           <div class="settings-row-l">
-            <div class="settings-row-lbl">Server</div>
-            <div class="settings-row-sub">localhost:5000</div>
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Backend Server</div>
+            <div class="settings-row-sub" style="font-size: 11px; color: var(--tx-3);">Primary rendering pipeline connection</div>
           </div>
           <div class="settings-st ok" id="set-server-st">
             <div class="settings-st-dot"></div><span>ONLINE</span>
           </div>
         </div>
-        <div class="settings-row">
+
+        <div class="settings-row" style="padding: 12px 0; border-bottom: 1px solid var(--bd-1);">
           <div class="settings-row-l">
-            <div class="settings-row-lbl">Gemini API</div>
-            <div class="settings-row-sub" id="set-gemini-sub">Checking...</div>
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Gemini AI Core</div>
+            <div class="settings-row-sub" id="set-gemini-sub" style="font-size: 11px; color: var(--tx-3);">Checking keys...</div>
           </div>
           <div class="settings-st info" id="set-gemini-st">
-            <div class="settings-st-dot"></div>
-            <span id="set-gemini-text">-</span>
+            <div class="settings-st-dot"></div><span id="set-gemini-text">-</span>
           </div>
         </div>
-        <div class="settings-row">
+
+        <div class="settings-row" style="padding: 12px 0;">
           <div class="settings-row-l">
-            <div class="settings-row-lbl">Blender</div>
-            <div class="settings-row-sub" id="set-blender-path">Not found</div>
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Blender Engine</div>
+            <div class="settings-row-sub" id="set-blender-sub" style="font-size: 11px; color: var(--tx-3);">Checking executable path...</div>
           </div>
-          <div class="settings-st" id="set-blender-st">
-            <div class="settings-st-dot"></div>
-            <span id="set-blender-text">-</span>
-          </div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Shap-E</div>
-            <div class="settings-row-sub">Local AI generation</div>
-          </div>
-          <div class="settings-st warn" id="set-shaper-st">
-            <div class="settings-st-dot"></div>
-            <span id="set-shaper-text">-</span>
+          <div class="settings-st info" id="set-blender-st">
+            <div class="settings-st-dot"></div><span id="set-blender-text">-</span>
           </div>
         </div>
       </div>
-
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot amber"></div>Pipeline</div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Library Mode</div>
-            <div class="settings-row-sub">Search Sketchfab library first</div>
-          </div>
-          <label class="toggle-sw">
-            <input type="checkbox" id="set-lib-toggle">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
+      
+      <div class="settings-sec" style="background: rgba(26, 34, 54, 0.4); border: 1px solid var(--bd-2); border-radius: var(--r-lg); padding: 24px;">
+        <div class="settings-sec-title" style="margin-bottom: 20px; color: var(--amber); font-size: 14px;"><div class="sec-dot amber"></div>Account & Data</div>
+        <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6; margin-bottom: 20px;">
+          Your models and folders are securely isolated within the Supabase cloud infrastructure securely via your Google Login. Ensure your backend policies are correctly tuned.
         </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Cache Enabled</div>
-            <div class="settings-row-sub">Skip generation for identical prompts</div>
-          </div>
-          <label class="toggle-sw">
-            <input type="checkbox" id="set-cache-toggle" checked>
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-      </div>
-
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot red"></div>Data</div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Model Cache</div>
-            <div class="settings-row-sub" id="set-cache-size">-</div>
-          </div>
-          <button class="settings-btn danger" onclick="clearCache()">CLEAR</button>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">History</div>
-            <div class="settings-row-sub" id="set-hist-count">-</div>
-          </div>
-          <button class="settings-btn danger" onclick="clearHistory()">CLEAR</button>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Server State</div>
-            <div class="settings-row-sub">Reset generation pipeline</div>
-          </div>
-          <button class="settings-btn" onclick="resetServer()">RESET</button>
-        </div>
-      </div>
-
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot cyan"></div>About</div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Version</div>
-          </div>
-          <div class="settings-st info">AI 3D Studio v7.0</div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">API Health Check</div>
-            <div class="settings-row-sub">Test all configured API keys</div>
-          </div>
-          <button class="settings-btn" onclick="testApiKeys()">RUN TEST</button>
-        </div>
+        <button class="settings-btn" style="padding: 10px 20px; font-size: 12px;" onclick="if(confirm('Clear local history cache?')) fetch('/api/history/clear',{method:'POST'}).then(()=>location.reload())">CLEAR CACHE</button>
       </div>
 
     </div><!-- end page-settings -->
 
-    <!-- ======================== HELP ======================== -->
-    <div class="page" id="page-help">
-      <div style="padding:22px">
-
-        <div class="help-sec">
-          <div class="help-sec-t">KEYBOARD SHORTCUTS</div>
-          <div class="help-row"><span class="help-key">Ctrl+Enter</span><span class="help-desc">Generate model from current prompt</span></div>
-          <div class="help-row"><span class="help-key">Escape</span><span class="help-desc">Close any open modal or dialog</span></div>
-          <div class="help-row"><span class="help-key">R</span><span class="help-desc">Reset viewport camera to default</span></div>
-          <div class="help-row"><span class="help-key">A</span><span class="help-desc">Toggle auto-rotate on/off</span></div>
-          <div class="help-row"><span class="help-key">W</span><span class="help-desc">Toggle wireframe mode</span></div>
-          <div class="help-row"><span class="help-key">1 to 5</span><span class="help-desc">Set complexity level directly</span></div>
-        </div>
-
-        <div class="help-sec">
-          <div class="help-sec-t">GENERATION PIPELINE</div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--svc-cache);background:rgba(123,58,237,0.08);border-color:rgba(123,58,237,0.25)">CACHE</span>
-            <span class="help-desc">Instant - identical prompt was generated before</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--svc-library);background:rgba(251,113,133,0.08);border-color:rgba(251,113,133,0.25)">LIBRARY</span>
-            <span class="help-desc">Searches Sketchfab (if Library Mode enabled)</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--scott-teal);background:rgba(0,180,166,0.08);border-color:rgba(0,180,166,0.25)">SHAP-E</span>
-            <span class="help-desc">Local AI generation (if installed)</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key">GEMINI</span>
-            <span class="help-desc">Gemini writes a Blender Python script - runs headless</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--kube-amber);background:rgba(184,134,11,0.08);border-color:rgba(184,134,11,0.25)">PRESET</span>
-            <span class="help-desc">54 keyword-matched preset Blender scripts</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--kube-red);background:rgba(204,34,0,0.08);border-color:rgba(204,34,0,0.25)">FALLBACK</span>
-            <span class="help-desc">Pure Python GLB - always succeeds</span>
-          </div>
-        </div>
-
-        <div class="help-sec">
-          <div class="help-sec-t">SERVICE BADGES</div>
-          <div class="help-row"><span class="svc-badge gemini">GEMINI+BLENDER</span><span class="help-desc" style="margin-left:10px">Highest quality - AI wrote a custom Blender script</span></div>
-          <div class="help-row"><span class="svc-badge preset">PRESET</span><span class="help-desc" style="margin-left:10px">Keyword matched to a preset shape template</span></div>
-          <div class="help-row"><span class="svc-badge cache">CACHE</span><span class="help-desc" style="margin-left:10px">Loaded instantly from cache</span></div>
-          <div class="help-row"><span class="svc-badge fallback">FALLBACK</span><span class="help-desc" style="margin-left:10px">All methods failed, geometric fallback</span></div>
-          <div class="help-row"><span class="svc-badge shaper">SHAP-E</span><span class="help-desc" style="margin-left:10px">Local Shap-E AI model</span></div>
-          <div class="help-row"><span class="svc-badge slib">SCRIPT LIBRARY</span><span class="help-desc" style="margin-left:10px">Matched to curated script library</span></div>
-        </div>
-
-        <div class="help-sec">
-          <div class="help-sec-t">DIRECTOR COLOR GUIDE</div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--tara-yellow);background:rgba(255,215,0,0.08);border-color:rgba(255,215,0,0.25)">TARANTINO</span>
-            <span class="help-desc">Yellow-amber = generation energy. Generate button, active state.</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--nolan-cyan);background:rgba(0,180,216,0.08);border-color:rgba(0,180,216,0.25)">NOLAN</span>
-            <span class="help-desc">Steel blue = intelligence. History, data, HUD elements.</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--scott-orange);background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.25)">SCOTT</span>
-            <span class="help-desc">Orange = transformation. Edit tab, apply changes.</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--kuro-ochre);background:rgba(201,168,76,0.08);border-color:rgba(201,168,76,0.25)">KUROSAWA</span>
-            <span class="help-desc">Ochre gold = structure. Folders, workspace organization.</span>
-          </div>
-        </div>
-
+    <!-- ======================== HELP/DOCS ======================== -->
+    <div class="page" id="page-help" style="padding: 40px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+      <div style="font-family: 'Orbitron', sans-serif; font-size: 24px; color: var(--gold); margin-bottom: 30px; border-bottom: 1px solid var(--bd-2); padding-bottom: 10px;">
+        DOCUMENTATION
       </div>
-    </div>
+
+      <div class="help-sec" style="margin-bottom: 30px;">
+        <div class="help-sec-t" style="color: var(--cyan); margin-bottom: 16px; font-size: 14px;"><div class="sec-dot cyan"></div>KEYBOARD SHORTCUTS</div>
+        <div style="background: rgba(10, 14, 23, 0.6); padding: 20px; border-radius: var(--r-md); border: 1px solid var(--bd-1);">
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">Ctrl+Enter</span><span class="help-desc">Generate model from current prompt</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">Escape</span><span class="help-desc">Close open dialogs or mobile navigation</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">R</span><span class="help-desc">Reset the 3D viewport camera to default</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">A</span><span class="help-desc">Toggle continuous auto-rotate</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">W</span><span class="help-desc">Toggle mesh wireframe mode</span></div>
+        </div>
+      </div>
+
+      <div class="help-sec">
+        <div class="help-sec-t" style="color: var(--amber); margin-bottom: 16px; font-size: 14px;"><div class="sec-dot amber"></div>GENERATION PIPELINE</div>
+        <div style="background: rgba(10, 14, 23, 0.6); padding: 20px; border-radius: var(--r-md); border: 1px solid var(--bd-1);">
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--svc-cache);background:rgba(123,58,237,0.08);border-color:rgba(123,58,237,0.25); min-width: 80px; text-align: center;">CACHE</span>
+            <span class="help-desc">Instant delivery - Identical prompt found in global cache</span>
+          </div>
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--svc-library);background:rgba(251,113,133,0.08);border-color:rgba(251,113,133,0.25); min-width: 80px; text-align: center;">LIBRARY</span>
+            <span class="help-desc">Matched from curated Sketchfab presets</span>
+          </div>
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--nolan-cyan);background:rgba(0,180,216,0.08);border-color:rgba(0,180,216,0.25); min-width: 80px; text-align: center;">GEMINI AI</span>
+            <span class="help-desc">AI writes Blender Python script & executes headless</span>
+          </div>
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--kube-amber);background:rgba(184,134,11,0.08);border-color:rgba(184,134,11,0.25); min-width: 80px; text-align: center;">PRESET</span>
+            <span class="help-desc">Keyword matched to a hardcoded logic script</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end page-help -->
 
   </div><!-- end pages -->
 </div><!-- end content -->

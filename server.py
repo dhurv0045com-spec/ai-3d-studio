@@ -1814,6 +1814,10 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
             
         fixed_script, fixes = validate_and_fix_script(current_script)
 
+        # CRITICAL: Always guarantee OUTPUT_PATH is defined BEFORE writing to disk.
+        # validate_and_fix_script() may strip it, so re-inject unconditionally.
+        fixed_script = inject_output_path(fixed_script, output_path)
+
         try:
             with open(debug_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(fixed_script)
@@ -1838,13 +1842,6 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                     + " fixes=" + str(fixes))
     
             try:
-                # Force inject OUTPUT_PATH before every Blender run
-                if 'OUTPUT_PATH' not in fixed_script:
-                    fixed_script = fixed_script.replace(
-                        'import bpy',
-                        'import bpy\nOUTPUT_PATH = r"' + output_path.replace("\\", "/") + '"',
-                        1
-                    )
                 creation_flags = 0x08000000 if os.name == "nt" else 0
                 result = subprocess.run(
                     [BLENDER_EXE, "--background", "--python", script_path],

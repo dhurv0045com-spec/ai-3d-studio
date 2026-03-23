@@ -3987,12 +3987,14 @@ def call_llm_unified(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     return None, None
 
 
-def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3):
+def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous"):
     """Full generation pipeline. Called in background thread."""
     global _generating
+    _gen_start_time = time.time()
 
     try:
-        log_gen(f"[START] Generation started: '{prompt}' color={color_hex}")
+        log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id}")
+        print(f"[PIPELINE] Generation thread alive for '{prompt}'", flush=True)
         set_state(status="generating", prompt=prompt, progress=5,
                   step="started", error="", cached=False, service="", glb_size=0)
 
@@ -4183,24 +4185,29 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
+        err_msg = f"Pipeline error: {e}"
         log_error(f"[ERROR] Generation pipeline exception: {e}")
-        log_error(f"[ERROR] Full traceback: {tb}")
+        log_error(f"[ERROR] Full traceback:\n{tb}")
+        print(f"[PIPELINE-ERROR] {e}\n{tb}", flush=True)
         set_state(status="error", step="error",
-                  error=f"Pipeline error: {e}", progress=0)
-        # Emergency fallback - show something, but don't pretend it worked
+                  error=err_msg, progress=0)
+        # Emergency fallback - produce visible output
         try:
             write_fallback_glb(ROCKET_GLB, "#888888")
             set_state(status="done", progress=100, step="done",
                       service="Fallback",
                       glb_size=os.path.getsize(ROCKET_GLB),
-                      error="Generation failed. Showing placeholder.")
+                      error=f"Generation failed: {e}. Showing placeholder.")
         except Exception as e2:
             log_error(f"[ERROR] Emergency fallback failed: {e2}")
+            print(f"[PIPELINE-FATAL] Emergency fallback also failed: {e2}", flush=True)
     finally:
+        elapsed = time.time() - _gen_start_time
         with _gen_lock:
             global _generating
             _generating = False
-        log_gen("[DONE] Generation thread complete")
+        log_gen(f"[DONE] Generation thread complete in {elapsed:.1f}s")
+        print(f"[PIPELINE] Thread finished in {elapsed:.1f}s", flush=True)
 
 
 # ---------------------------------------------------------------------------

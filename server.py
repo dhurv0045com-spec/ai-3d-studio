@@ -207,6 +207,15 @@ def before_request_timer():
 def after_request_logger(response):
     try:
         from flask import g
+        noisy_paths = {
+            "/status",
+            "/log",
+            "/debug/log",
+            "/api/deploy/logs",
+            "/ping",
+        }
+        if request.path in noisy_paths or request.path.startswith("/static/"):
+            return response
         elapsed = time.time() - g.req_start
         ms      = round(elapsed * 1000)
         log_srv("[HTTP] " + request.method + " " + request.path +
@@ -5904,7 +5913,6 @@ _orig_build_preset_for_keyword = build_preset_for_keyword
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
-
 
 
 

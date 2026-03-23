@@ -1994,6 +1994,12 @@ nav#nav { display: flex !important; }
   .vp-step-txt { font-size: 12px; }
   .prompt-hint { display: none; }
   .vp-corner { width: 20px; height: 20px; border-width: 1px; }
+
+  /* Control bar positioning - move above FABs */
+  #ctrl-bar { bottom: 100px; background: transparent; border: none; justify-content: center; gap: 12px; pointer-events: none; }
+  .ctrl-btn { pointer-events: auto; min-width: auto; min-height: 44px; font-size: 12px; padding: 0 16px; border-radius: 22px; background: rgba(13,18,32,0.85); backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+  .ctrl-btn.save-btn { background: rgba(255, 215, 0, 0.15); border-color: var(--gold); color: var(--gold); }
+
   
   /* Tap targets */
   button, select { min-height: 44px; }

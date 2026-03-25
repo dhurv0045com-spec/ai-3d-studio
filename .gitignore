@@ -1,6 +1,51 @@
-__pycache__
-*.pyc
-.DS_Store
-logs/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Temporary files
 *.tmp
-*.flag
+*.bak
+*.log
+*.cache
+_diag_pid.tmp
+_temp_output.glb
+_last_gemini_script.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Generated files
+*.glb
+!public/*.glb
+state.json
+history.json
+shapee_installed.flag

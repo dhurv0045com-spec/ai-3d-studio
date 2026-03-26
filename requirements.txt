@@ -1,19 +1,19 @@
 # AI 3D Studio - Python Dependencies
-# Generated for server.py V6.1
+# Generated for server.py V7.0
 # Works on Windows (local) and Linux (Railway)
 
 # Core web framework
 flask>=3.0.0
 flask-cors>=4.0.0
 
-# HTTP requests (used for Gemini API and Cloudinary)
+# HTTP requests (used for Gemini API, Cloudinary, and Supabase REST API)
 requests>=2.31.0
 urllib3>=2.0.0
 
 # Image processing (used by tray launcher icon)
 Pillow>=10.0.0
 
-# Scientific computing (required by Shap-E)
+# Scientific computing
 numpy>=1.24.0
 
 # Shap-E dependencies (optional - only needed if shapee_installed.flag exists)
@@ -31,4 +31,7 @@ authlib>=1.3.0
 
 # Production Server
 gunicorn>=21.2.0
-supabase>=2.0.0
+
+# NOTE: supabase Python client removed (was reading wrong env var SUPABASE_KEY
+# instead of SUPABASE_ANON_KEY causing client to always be None in production).
+# All Supabase calls now use REST API via requests (see supabase_request() in server.py)

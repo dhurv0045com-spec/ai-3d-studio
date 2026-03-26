@@ -37,21 +37,10 @@ import datetime
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-# (hardcoded Supabase block removed - see env-var init below)
-# ============================================================
-# SUPABASE INITIALIZATION
-# ============================================================
-from supabase import create_client, Client
-
-SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
-
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print(f"[SUPABASE] Initialized with URL: {SUPABASE_URL[:30]}...")
-else:
-    supabase = None
-    print("[SUPABASE] WARNING: SUPABASE_URL or SUPABASE_KEY not set")
+# SUPABASE: Using REST API only (see supabase_request() below).
+# The Python supabase client is NOT used - it was reading SUPABASE_KEY
+# but the actual env var is SUPABASE_ANON_KEY, causing it to always be None.
+# All Supabase interactions go through supabase_request() which reads SUPABASE_ANON_KEY.
 
 # ============================================================
 # RAILWAY ENVIRONMENT VARIABLES
@@ -843,8 +832,13 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
 # ---------------------------------------------------------------------------
 #  HISTORY AND INDEX FUNCTIONS (Local & Supabase)
 # ---------------------------------------------------------------------------
+def _get_user_history_file(user_id):
+    """Return per-user local history file path."""
+    safe_uid = re.sub(r"[^a-zA-Z0-9_@.\-]", "_", str(user_id))[:64]
+    return os.path.join(BASE_DIR, f"history_{safe_uid}.json")
+
 def load_history(user_id=None):
-    """Load history. Uses Supabase if enabled, else falls back to local HISTORY_FILE."""
+    """Load history. Uses Supabase if enabled, else falls back to per-user local file."""
     if user_id is None:
         user_id = _get_user_id()
 
@@ -852,51 +846,59 @@ def load_history(user_id=None):
         try:
             res = supabase_request("GET", f"models?user_id=eq.{user_id}&order=id.desc")
             if res is not None and isinstance(res, list):
+                log_srv(f"[load_history] Supabase returned {len(res)} entries for {user_id}")
                 return res
         except Exception as e:
             log_error(f"[load_history] Supabase err: {e}")
-            
-    # Fallback to local
+
+    # Fallback to per-user local file (prevents cross-user data mixing)
+    hist_file = _get_user_history_file(user_id)
     try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(hist_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            log_srv(f"[load_history] Local fallback: {len(data)} entries for {user_id}")
+            return data
     except Exception:
         return []
 
-def save_history(history):
-    """Save full history array to local HISTORY_FILE."""
+def save_history(history, user_id=None):
+    """Save full history array to per-user local file."""
+    if user_id is None:
+        user_id = _get_user_id()
+    hist_file = _get_user_history_file(user_id)
     try:
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        with open(hist_file, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2)
     except Exception as e:
         log_error(f"[save_history] failed: {e}")
 
 def add_history_entry(entry):
     """Add a single entry to history. Uses Supabase if enabled, and updates local fallback."""
+    # Determine user_id once for both Supabase and local fallback
+    if flask.has_request_context():
+        user_info = flask.session.get('user', {})
+        sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
+    else:
+        sub_id = entry.get('user_id', 'anonymous')
+
     if SUPABASE_ENABLED:
         try:
-            # BUG FIX: Get actual user from Flask session
-            if flask.has_request_context():
-                user_info = flask.session.get('user', {})
-                sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
-            else:
-                sub_id = 'anonymous'
-            
             db_entry = dict(entry)
             db_entry["user_id"] = sub_id
-            
             res = supabase_request("POST", "models", json_data=db_entry)
             if res is not None:
                 log_srv(f"[SUPABASE] Inserted model {entry.get('id')} for {sub_id}")
             else:
-                log_error("[SUPABASE] Failed to insert model")
+                log_error("[SUPABASE] Failed to insert model - check Supabase table schema")
         except Exception as e:
             log_error(f"[add_history_entry] Supabase err: {e}")
 
-    # Always maintain local fallback
-    h = load_history()
+    # Always maintain per-user local fallback (CRITICAL: pass sub_id so we don't mix users)
+    h = load_history(user_id=sub_id)
+    # Ensure entry has user_id set
+    entry["user_id"] = sub_id
     h.insert(0, entry)
-    save_history(h[:MAX_HISTORY])
+    save_history(h[:MAX_HISTORY], user_id=sub_id)
 
 
 def load_index():
@@ -1001,44 +1003,47 @@ def log_error(msg):
 
 
 # ---------------------------------------------------------------------------
-#  SUPABASE SAVE FUNCTION
+#  SUPABASE SAVE FUNCTION (REST-based, no Python client dependency)
 # ---------------------------------------------------------------------------
 def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=""):
-    """Save model metadata to Supabase 'models' table."""
-    if not supabase:
-        print("[SUPABASE] ERROR: Supabase client not initialized")
-        return False
-    
-    try:
-        # BUG FIX: Get actual user from session
-        sub_id = 'anonymous'
-        if flask.has_request_context():
-            user_info = flask.session.get('user', {})
-            sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
+    """Save model metadata to Supabase 'models' table via REST API.
+    Legacy helper kept for compatibility - add_history_entry() is preferred."""
+    # Get user_id from session
+    sub_id = 'anonymous'
+    if flask.has_request_context():
+        user_info = flask.session.get('user', {})
+        sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
 
-        print(f"[SUPABASE] Attempting to save: prompt='{prompt}', user='{sub_id}', size={size}")
-        
-        data = {
-            "user_id": sub_id,
-            "prompt": prompt,
-            "color": color,
-            "folder": folder,
-            "service": service,
-            "file": file_path,
-            "cloud_url": cloud_url or "",
-            "size": size,
-            "quality_score": get_state().get("quality_score", 0)
-        }
-        
-        result = supabase.table("models").insert(data).execute()
-        print(f"[SUPABASE] SUCCESS: {result}")
-        return True
-        
-    except Exception as e:
-        print(f"[SUPABASE] ERROR: {str(e)}")
-        import traceback
-        print(f"[SUPABASE] TRACEBACK: {traceback.format_exc()}")
-        return False
+    ts = int(time.time())
+    data = {
+        "id":            ts,
+        "user_id":       sub_id,
+        "prompt":        prompt,
+        "color":         color,
+        "folder":        folder,
+        "service":       service,
+        "file":          file_path,
+        "cloud_url":     cloud_url or "",
+        "size":          size,
+        "quality_score": get_state().get("quality_score", 0),
+        "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+    }
+
+    log_srv(f"[SUPABASE] save_to_supabase: prompt='{prompt}', user='{sub_id}', size={size}")
+
+    if SUPABASE_ENABLED:
+        res = supabase_request("POST", "models", json_data=data)
+        if res is not None:
+            log_srv(f"[SUPABASE] save_to_supabase SUCCESS for {sub_id}")
+        else:
+            log_error("[SUPABASE] save_to_supabase failed - saving to local fallback only")
+
+    # Always write local per-user fallback
+    h = load_history(user_id=sub_id)
+    h.insert(0, data)
+    save_history(h[:MAX_HISTORY], user_id=sub_id)
+    return True
+
 
 
 # ---------------------------------------------------------------------------
@@ -4863,10 +4868,11 @@ def folders_delete(name):
         except Exception as e:
             log_error(f"[folders] rmtree failed: {e}")
 
-    # Remove history entries for this folder
-    h = load_history()
+    # Remove history entries for this folder (per-user)
+    user_id = _get_user_id()
+    h = load_history(user_id=user_id)
     h = [e for e in h if e.get("folder") != name]
-    save_history(h)
+    save_history(h, user_id=user_id)
 
     # Remove from index
     idx = load_index()

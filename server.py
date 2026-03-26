@@ -885,6 +885,10 @@ def add_history_entry(entry):
         try:
             db_entry = dict(entry)
             db_entry["user_id"] = sub_id
+            
+            if "created" in db_entry:
+                del db_entry["created"]
+                
             res = supabase_request("POST", "models", json_data=db_entry)
             if res is not None:
                 log_srv(f"[SUPABASE] Inserted model {entry.get('id')} for {sub_id}")
@@ -1032,7 +1036,11 @@ def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=
     log_srv(f"[SUPABASE] save_to_supabase: prompt='{prompt}', user='{sub_id}', size={size}")
 
     if SUPABASE_ENABLED:
-        res = supabase_request("POST", "models", json_data=data)
+        db_data = dict(data)
+        if "created" in db_data:
+            del db_data["created"]
+
+        res = supabase_request("POST", "models", json_data=db_data)
         if res is not None:
             log_srv(f"[SUPABASE] save_to_supabase SUCCESS for {sub_id}")
         else:

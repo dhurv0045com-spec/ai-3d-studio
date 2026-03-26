@@ -227,7 +227,9 @@ CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY
 #  SUPABASE - SCALABLE STORAGE
 # ---------------------------------------------------------------------------
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "").strip()
-SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "").strip()
+SUPABASE_KEY     = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or 
+                    os.environ.get("SUPABASE_KEY") or 
+                    os.environ.get("SUPABASE_ANON_KEY", "")).strip()
 SUPABASE_ENABLED = bool(SUPABASE_URL and SUPABASE_KEY)
 
 def supabase_request(method, endpoint, params=None, json_data=None):

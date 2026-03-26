@@ -1011,14 +1011,15 @@ def log_error(msg):
 # ---------------------------------------------------------------------------
 #  SUPABASE SAVE FUNCTION (REST-based, no Python client dependency)
 # ---------------------------------------------------------------------------
-def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=""):
+def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url="", sub_id=None):
     """Save model metadata to Supabase 'models' table via REST API.
     Legacy helper kept for compatibility - add_history_entry() is preferred."""
     # Get user_id from session
-    sub_id = 'anonymous'
-    if flask.has_request_context():
-        user_info = flask.session.get('user', {})
-        sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
+    if not sub_id:
+        sub_id = 'anonymous'
+        if flask.has_request_context():
+            user_info = flask.session.get('user', {})
+            sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
 
     ts = int(time.time())
     data = {
@@ -4135,7 +4136,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen(f"[CACHE] served from cache: {msg}")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud)
+                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
@@ -4194,7 +4195,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                         log_gen(f"[LIBRARY] success: {msg}")
                         store_cache(ROCKET_GLB, prompt)
                         _cloud = upload_to_cloudinary(ROCKET_GLB)
-                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud)
+                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                         set_state(status="done", progress=100, step="done",
                                   service="Library", cached=False, glb_size=sz,
                                   last_model=ROCKET_GLB,
@@ -4215,7 +4216,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 log_gen("[SHAPEE] [MODEL_A] Shap-E success")
                 store_cache(ROCKET_GLB, prompt)
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud)
+                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Shap-E", glb_size=sz, last_model=ROCKET_GLB,
                           cloud_url=_cloud or "")
@@ -4238,7 +4239,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 log_gen("[MODEL_B] Gemini+Blender success")
                 store_cache(ROCKET_GLB, prompt)
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud)
+                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
                           cloud_url=_cloud or "")
@@ -4256,7 +4257,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
             store_cache(ROCKET_GLB, prompt)
             _cloud = upload_to_cloudinary(ROCKET_GLB)
-            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud)
+            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
             set_state(status="done", progress=100, step="done",
                       service="Preset", glb_size=sz, last_model=ROCKET_GLB,
                       cloud_url=_cloud or "",
@@ -4279,7 +4280,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword}")
                     store_cache(ROCKET_GLB, prompt)
                     _cloud = upload_to_cloudinary(ROCKET_GLB)
-                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud)
+                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                     set_state(status="done", progress=100, step="done",
                               service="Fallback-Shaped", glb_size=sz,
                               last_model=ROCKET_GLB,
@@ -4297,7 +4298,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
         _cloud = upload_to_cloudinary(ROCKET_GLB)
-        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud)
+        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
                   cloud_url=_cloud or "",

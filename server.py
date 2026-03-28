@@ -4804,12 +4804,11 @@ def delete_model():
 
         # Remove from local history file
         try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                local_h = json.load(f)
+            user_id = _get_user_id()
+            local_h = load_history(user_id)
             local_h = [e for e in local_h
                        if str(e.get("id")) != str(target_entry.get("id"))]
-            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-                json.dump(local_h, f, indent=2)
+            save_history(local_h, user_id)
         except Exception:
             pass
 

@@ -1531,7 +1531,25 @@ nav#nav { display: flex !important; }
   border: 1px solid var(--bd-1); cursor: pointer; transition: all .15s; overflow: hidden;
 }
 .gal-card:hover { border-color: var(--bd-2); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.3); }
-.gal-thumb { width: 100%; aspect-ratio: 1; background: var(--bg-3); }
+.gal-thumb { position: relative; width: 100%; aspect-ratio: 1; background: var(--bg-3); }
+.gal-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(1, 8, 20, 0.7); opacity: 0; transition: opacity 0.2s;
+}
+.gal-card:hover .gal-overlay { opacity: 1; }
+.gal-btn {
+  padding: 6px 16px; border-radius: var(--r-sm); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+  background: var(--bg-1); color: var(--tx-1); border: 1px solid var(--bd-2); cursor: pointer; transition: all 0.15s;
+}
+.gal-btn:hover { background: var(--tx-1); color: var(--bg-1); }
+.gal-btn.del { color: var(--red); border-color: rgba(255,68,68,0.3); }
+.gal-btn.del:hover { background: var(--red); color: #fff; }
+.gal-no-prev {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-family: 'JetBrains Mono', monospace; font-size: 24px; color: var(--tx-4); opacity: 0.3; font-weight: 800;
+}
+.gal-colorbar { height: 3px; width: 100%; }
 .gal-info { padding: 8px; }
 .gal-prompt { font-size: 10px; color: var(--tx-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gal-meta { font-size: 9px; color: var(--tx-4); font-family: 'JetBrains Mono', monospace; margin-top: 3px; display: flex; justify-content: space-between; }
@@ -2072,7 +2090,7 @@ nav#nav { display: flex !important; }
     <div class="modal-title">SAVE TO WORKSPACE</div>
     <div class="modal-body">
       <div class="modal-label">Select Folder</div>
-      <select class="modal-inp" id="modal-folder">
+      <select class="modal-inp folder-dropdown" id="modal-folder">
         <option value="default">default</option>
       </select>
     </div>
@@ -2266,6 +2284,7 @@ nav#nav { display: flex !important; }
           <button class="ctrl-btn" id="btn-auto"  onclick="toggleAutoRotate()" aria-label="Toggle auto rotate">AUTO</button>
           <button class="ctrl-btn" id="btn-wire"  onclick="toggleWireframe()" aria-label="Toggle wireframe">WIRE</button>
           <div class="ctrl-sep"></div>
+          <button class="ctrl-btn" id="btn-del-active" onclick="if(APP.selectedModel){deleteHistModel(APP.selectedModel);}else{toast('No saved model loaded.','warn');}" style="color:var(--red, #ff4444);" aria-label="Delete model">DEL</button>
           <button class="ctrl-btn save-btn" onclick="showSaveModal()" aria-label="Save model">SAVE</button>
           <button class="ctrl-btn" id="btn-share" onclick="shareModel()">SHARE</button>
         </div>
@@ -2673,17 +2692,7 @@ nav#nav { display: flex !important; }
 </div><!-- end content -->
 </div><!-- end shell -->
 
-<!-- SAVE MODAL - Kubrick ceremony -->
-<div id="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title">SAVE MODEL</div>
-    <div class="modal-sub">Choose a destination folder for this model</div>
-    <div class="modal-f-lbl">DESTINATION FOLDER</div>
-    <select id="modal-folder" class="folder-dropdown"></select>
-    <button class="modal-save-btn" onclick="saveModel()">SAVE MODEL</button>
-    <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-  </div>
-</div>
+
 
 <!-- TOASTS - Tarantino title cards -->
 <div id="toasts" aria-live="polite" role="status"></div>
@@ -3918,6 +3927,9 @@ function deleteHistModel(item) {
             (APP.selectedModel.id === id || APP.selectedModel.timestamp === id)) {
           APP.selectedModel = null;
           renderEditInfo();
+          var bar = document.getElementById('model-bar');
+          if (bar) bar.classList.remove('shown');
+          if (APP.currentPage === 'studio') { goRTab('history'); }
         }
       } else {
         toast(d.error || 'Delete failed', 'err');

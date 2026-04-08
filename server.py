@@ -207,6 +207,15 @@ def before_request_timer():
 def after_request_logger(response):
     try:
         from flask import g
+        noisy_paths = {
+            "/status",
+            "/log",
+            "/debug/log",
+            "/api/deploy/logs",
+            "/ping",
+        }
+        if request.path in noisy_paths or request.path.startswith("/static/"):
+            return response
         elapsed = time.time() - g.req_start
         ms      = round(elapsed * 1000)
         log_srv("[HTTP] " + request.method + " " + request.path +
@@ -842,10 +851,10 @@ def _ts():
 
 def _write_log(filepath, message):
     try:
-        # Print to stderr for visibility in Railway/Cloud logs
+        # Mirror to stdout so platform deploy logs (Railway/Render/etc.) capture it.
         import sys as _sys
-        _sys.stderr.write(message + "\n")
-        _sys.stderr.flush()
+        _sys.stdout.write(message + "\n")
+        _sys.stdout.flush()
         
         with _log_lock:
             with open(filepath, "a", encoding="ascii", errors="replace") as f:
@@ -880,8 +889,9 @@ def log_gen(msg):
 def log_error(msg):
     """Write to error.log with traceback, also server.log."""
     tb = traceback.format_exc()
+    has_traceback = tb and tb.strip() and tb.strip() != "NoneType: None"
     line = f"[{_ts()}] ERROR SYSTEM: {msg}"
-    detail = line + "\n" + tb
+    detail = line + ("\n" + tb if has_traceback else "")
     _write_log(ERR_LOG, detail)
     _write_log(SERVER_LOG, line)
     with _state_lock:
@@ -893,16 +903,14 @@ def log_error(msg):
 # ---------------------------------------------------------------------------
 #  SUPABASE SAVE FUNCTION
 # ---------------------------------------------------------------------------
-def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=""):
+def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url="", sub_id="anonymous"):
     """Save model metadata to Supabase 'models' table."""
     if not supabase:
         print("[SUPABASE] ERROR: Supabase client not initialized")
         return False
     
     try:
-        # BUG FIX: Get actual user from session
-        sub_id = 'anonymous'
-        if flask.has_request_context():
+        if not sub_id and flask.has_request_context():
             user_info = flask.session.get('user', {})
             sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
 
@@ -3987,7 +3995,7 @@ def call_llm_unified(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     return None, None
 
 
-def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3):
+def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous"):
     """Full generation pipeline. Called in background thread."""
     global _generating
 
@@ -4011,7 +4019,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen(f"[CACHE] served from cache: {msg}")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud)
+                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
@@ -4070,7 +4078,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                         log_gen(f"[LIBRARY] success: {msg}")
                         store_cache(ROCKET_GLB, prompt)
                         _cloud = upload_to_cloudinary(ROCKET_GLB)
-                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud)
+                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                         set_state(status="done", progress=100, step="done",
                                   service="Library", cached=False, glb_size=sz,
                                   last_model=ROCKET_GLB,
@@ -4091,7 +4099,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 log_gen("[SHAPEE] [MODEL_A] Shap-E success")
                 store_cache(ROCKET_GLB, prompt)
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud)
+                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Shap-E", glb_size=sz, last_model=ROCKET_GLB,
                           cloud_url=_cloud or "")
@@ -4114,7 +4122,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 log_gen("[MODEL_B] Gemini+Blender success")
                 store_cache(ROCKET_GLB, prompt)
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud)
+                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
                           cloud_url=_cloud or "")
@@ -4132,7 +4140,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
             store_cache(ROCKET_GLB, prompt)
             _cloud = upload_to_cloudinary(ROCKET_GLB)
-            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud)
+            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
             set_state(status="done", progress=100, step="done",
                       service="Preset", glb_size=sz, last_model=ROCKET_GLB,
                       cloud_url=_cloud or "",
@@ -4155,7 +4163,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword}")
                     store_cache(ROCKET_GLB, prompt)
                     _cloud = upload_to_cloudinary(ROCKET_GLB)
-                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud)
+                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                     set_state(status="done", progress=100, step="done",
                               service="Fallback-Shaped", glb_size=sz,
                               last_model=ROCKET_GLB,
@@ -4173,7 +4181,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
         _cloud = upload_to_cloudinary(ROCKET_GLB)
-        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud)
+        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
                   cloud_url=_cloud or "",
@@ -4822,6 +4830,46 @@ def get_log():
         lines = []
     state_log = get_state().get("log", [])
     return jsonify({"lines": lines, "log": state_log})
+
+
+@app.route("/api/deploy/logs", methods=["GET"])
+def get_deploy_logs():
+    """Return merged recent deploy/runtime logs for cloud debugging."""
+    limit_raw = request.args.get("limit", "120")
+    source = str(request.args.get("source", "all")).strip().lower()
+    try:
+        limit = max(10, min(500, int(limit_raw)))
+    except Exception:
+        limit = 120
+
+    file_map = {
+        "server": SERVER_LOG,
+        "generation": GEN_LOG,
+        "error": ERR_LOG,
+    }
+    if source in file_map:
+        targets = [source]
+    else:
+        targets = ["server", "generation", "error"]
+
+    merged = []
+    for name in targets:
+        path = file_map[name]
+        try:
+            with open(path, "r", encoding="ascii", errors="replace") as f:
+                lines = [ln.rstrip() for ln in f.readlines() if ln.strip()]
+            for ln in lines[-limit:]:
+                merged.append((name, ln))
+        except Exception:
+            continue
+
+    merged = merged[-limit:]
+    return jsonify({
+        "ok": True,
+        "source": source if source in file_map else "all",
+        "limit": limit,
+        "lines": [{"stream": s, "line": l} for s, l in merged]
+    })
 
 
 @app.route("/edit", methods=["POST"])
@@ -5863,9 +5911,6 @@ _orig_build_preset_for_keyword = build_preset_for_keyword
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
-
-
-
 
 
 

@@ -1011,13 +1011,14 @@ def log_error(msg):
 # ---------------------------------------------------------------------------
 #  SUPABASE SAVE FUNCTION (REST-based, no Python client dependency)
 # ---------------------------------------------------------------------------
-def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url="", sub_id=None):
-    """Save model metadata to Supabase 'models' table via REST API.
-    Legacy helper kept for compatibility - add_history_entry() is preferred."""
-    # Get user_id from session
-    if not sub_id:
-        sub_id = 'anonymous'
-        if flask.has_request_context():
+def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url="", sub_id="anonymous"):
+    """Save model metadata to Supabase 'models' table."""
+    if not supabase:
+        print("[SUPABASE] ERROR: Supabase client not initialized")
+        return False
+    
+    try:
+        if not sub_id and flask.has_request_context():
             user_info = flask.session.get('user', {})
             sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
 
@@ -6040,7 +6041,6 @@ _orig_build_preset_for_keyword = build_preset_for_keyword
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
-
 
 
 

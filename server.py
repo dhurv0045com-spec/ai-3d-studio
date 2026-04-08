@@ -37,21 +37,10 @@ import datetime
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-# (hardcoded Supabase block removed - see env-var init below)
-# ============================================================
-# SUPABASE INITIALIZATION
-# ============================================================
-from supabase import create_client, Client
-
-SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
-
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print(f"[SUPABASE] Initialized with URL: {SUPABASE_URL[:30]}...")
-else:
-    supabase = None
-    print("[SUPABASE] WARNING: SUPABASE_URL or SUPABASE_KEY not set")
+# SUPABASE: Using REST API only (see supabase_request() below).
+# The Python supabase client is NOT used - it was reading SUPABASE_KEY
+# but the actual env var is SUPABASE_ANON_KEY, causing it to always be None.
+# All Supabase interactions go through supabase_request() which reads SUPABASE_ANON_KEY.
 
 # ============================================================
 # RAILWAY ENVIRONMENT VARIABLES
@@ -238,7 +227,9 @@ CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY
 #  SUPABASE - SCALABLE STORAGE
 # ---------------------------------------------------------------------------
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "").strip()
-SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "").strip()
+SUPABASE_KEY     = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or 
+                    os.environ.get("SUPABASE_KEY") or 
+                    os.environ.get("SUPABASE_ANON_KEY", "")).strip()
 SUPABASE_ENABLED = bool(SUPABASE_URL and SUPABASE_KEY)
 
 def supabase_request(method, endpoint, params=None, json_data=None):
@@ -271,6 +262,96 @@ def supabase_request(method, endpoint, params=None, json_data=None):
     except Exception as e:
         log_error(f"[SUPABASE] Request failed: {e}")
         return None
+
+
+def _get_user_id():
+    """Extract user_id from Flask session. Returns 'anonymous' if unavailable."""
+    if flask.has_request_context():
+        user_info = flask.session.get('user', {})
+        return user_info.get('email') or user_info.get('sub') or 'anonymous'
+    return 'anonymous'
+
+
+# ---------------------------------------------------------------------------
+#  SUPABASE — PER-USER FOLDER CRUD
+# ---------------------------------------------------------------------------
+
+def load_folders_from_supabase(user_id):
+    """Load folder names for a specific user from Supabase user_folders table."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return None
+    try:
+        endpoint = f"user_folders?user_id=eq.{user_id}&select=name&order=created_at.asc"
+        res = supabase_request("GET", endpoint)
+        if res is not None and isinstance(res, list):
+            names = [r["name"] for r in res if r.get("name")]
+            if "default" not in names:
+                names.insert(0, "default")
+            return names
+    except Exception as e:
+        log_error(f"[SUPABASE] load_folders err: {e}")
+    return None
+
+
+def save_folder_to_supabase(user_id, folder_name):
+    """Insert a folder for this user into Supabase. Ignores duplicates."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return False
+    try:
+        data = {"user_id": user_id, "name": folder_name}
+        # Use on_conflict to avoid duplicates (via Prefer header)
+        url = f"{SUPABASE_URL}/rest/v1/user_folders"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=ignore-duplicates,return=representation"
+        }
+        r = requests.post(url, headers=headers, json=data, timeout=10)
+        if r.status_code in [200, 201, 204, 409]:
+            log_srv(f"[SUPABASE] Folder saved: {folder_name} for {user_id}")
+            return True
+        log_error(f"[SUPABASE] save_folder err: {r.status_code} {r.text}")
+    except Exception as e:
+        log_error(f"[SUPABASE] save_folder exception: {e}")
+    return False
+
+
+def delete_folder_from_supabase(user_id, folder_name):
+    """Delete a folder for this user from Supabase."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return False
+    try:
+        endpoint = f"user_folders?user_id=eq.{user_id}&name=eq.{folder_name}"
+        res = supabase_request("DELETE", endpoint)
+        if res is not None:
+            log_srv(f"[SUPABASE] Folder deleted: {folder_name} for {user_id}")
+            return True
+    except Exception as e:
+        log_error(f"[SUPABASE] delete_folder exception: {e}")
+    return False
+
+
+def rename_folder_in_supabase(user_id, old_name, new_name):
+    """Rename a folder for this user in Supabase."""
+    if not SUPABASE_ENABLED or user_id == 'anonymous':
+        return False
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/user_folders?user_id=eq.{user_id}&name=eq.{old_name}"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        r = requests.patch(url, headers=headers, json={"name": new_name}, timeout=10)
+        if r.status_code in [200, 204]:
+            log_srv(f"[SUPABASE] Folder renamed: {old_name}->{new_name} for {user_id}")
+            return True
+        log_error(f"[SUPABASE] rename_folder err: {r.status_code} {r.text}")
+    except Exception as e:
+        log_error(f"[SUPABASE] rename_folder exception: {e}")
+    return False
 
 def upload_to_cloudinary(local_path, public_id=None):
     """
@@ -753,57 +834,77 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
 # ---------------------------------------------------------------------------
 #  HISTORY AND INDEX FUNCTIONS (Local & Supabase)
 # ---------------------------------------------------------------------------
-def load_history():
-    """Load history. Uses Supabase if enabled, else falls back to local HISTORY_FILE."""
+def _get_user_history_file(user_id):
+    """Return per-user local history file path."""
+    safe_uid = re.sub(r"[^a-zA-Z0-9_@.\-]", "_", str(user_id))[:64]
+    return os.path.join(BASE_DIR, f"history_{safe_uid}.json")
+
+def load_history(user_id=None):
+    """Load history. Uses Supabase if enabled, else falls back to per-user local file."""
+    if user_id is None:
+        user_id = _get_user_id()
+
     if SUPABASE_ENABLED:
         try:
-            res = supabase_request("GET", "models?order=id.desc")
+            res = supabase_request("GET", f"models?user_id=eq.{user_id}&order=id.desc")
             if res is not None and isinstance(res, list):
+                log_srv(f"[load_history] Supabase returned {len(res)} entries for {user_id}")
                 return res
         except Exception as e:
             log_error(f"[load_history] Supabase err: {e}")
-            
-    # Fallback to local
+
+    # Fallback to per-user local file (prevents cross-user data mixing)
+    hist_file = _get_user_history_file(user_id)
     try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(hist_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            log_srv(f"[load_history] Local fallback: {len(data)} entries for {user_id}")
+            return data
     except Exception:
         return []
 
-def save_history(history):
-    """Save full history array to local HISTORY_FILE."""
+def save_history(history, user_id=None):
+    """Save full history array to per-user local file."""
+    if user_id is None:
+        user_id = _get_user_id()
+    hist_file = _get_user_history_file(user_id)
     try:
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        with open(hist_file, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2)
     except Exception as e:
         log_error(f"[save_history] failed: {e}")
 
 def add_history_entry(entry):
     """Add a single entry to history. Uses Supabase if enabled, and updates local fallback."""
+    # Determine user_id once for both Supabase and local fallback
+    if flask.has_request_context():
+        user_info = flask.session.get('user', {})
+        sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
+    else:
+        sub_id = entry.get('user_id', 'anonymous')
+
     if SUPABASE_ENABLED:
         try:
-            # BUG FIX: Get actual user from Flask session
-            if flask.has_request_context():
-                user_info = flask.session.get('user', {})
-                sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
-            else:
-                sub_id = 'anonymous'
-            
             db_entry = dict(entry)
             db_entry["user_id"] = sub_id
             
+            if "created" in db_entry:
+                del db_entry["created"]
+                
             res = supabase_request("POST", "models", json_data=db_entry)
             if res is not None:
                 log_srv(f"[SUPABASE] Inserted model {entry.get('id')} for {sub_id}")
             else:
-                log_error("[SUPABASE] Failed to insert model")
+                log_error("[SUPABASE] Failed to insert model - check Supabase table schema")
         except Exception as e:
             log_error(f"[add_history_entry] Supabase err: {e}")
 
-    # Always maintain local fallback
-    h = load_history()
+    # Always maintain per-user local fallback (CRITICAL: pass sub_id so we don't mix users)
+    h = load_history(user_id=sub_id)
+    # Ensure entry has user_id set
+    entry["user_id"] = sub_id
     h.insert(0, entry)
-    save_history(h[:MAX_HISTORY])
+    save_history(h[:MAX_HISTORY], user_id=sub_id)
 
 
 def load_index():
@@ -822,8 +923,15 @@ def save_index(index):
     except Exception as e:
         log_error(f"[save_index] failed: {e}")
 
-def load_folders():
+def load_folders(user_id=None):
     """Load folders from FOLDERS_FILE."""
+    if user_id is None:
+        user_id = _get_user_id()
+        
+    s_folders = load_folders_from_supabase(user_id)
+    if s_folders is not None:
+        return s_folders
+
     try:
         with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -901,7 +1009,7 @@ def log_error(msg):
 
 
 # ---------------------------------------------------------------------------
-#  SUPABASE SAVE FUNCTION
+#  SUPABASE SAVE FUNCTION (REST-based, no Python client dependency)
 # ---------------------------------------------------------------------------
 def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url="", sub_id="anonymous"):
     """Save model metadata to Supabase 'models' table."""
@@ -914,29 +1022,40 @@ def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=
             user_info = flask.session.get('user', {})
             sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
 
-        print(f"[SUPABASE] Attempting to save: prompt='{prompt}', user='{sub_id}', size={size}")
-        
-        data = {
-            "user_id": sub_id,
-            "prompt": prompt,
-            "color": color,
-            "folder": folder,
-            "service": service,
-            "file": file_path,
-            "cloud_url": cloud_url or "",
-            "size": size,
-            "quality_score": get_state().get("quality_score", 0)
-        }
-        
-        result = supabase.table("models").insert(data).execute()
-        print(f"[SUPABASE] SUCCESS: {result}")
-        return True
-        
-    except Exception as e:
-        print(f"[SUPABASE] ERROR: {str(e)}")
-        import traceback
-        print(f"[SUPABASE] TRACEBACK: {traceback.format_exc()}")
-        return False
+    ts = int(time.time())
+    data = {
+        "id":            ts,
+        "user_id":       sub_id,
+        "prompt":        prompt,
+        "color":         color,
+        "folder":        folder,
+        "service":       service,
+        "file":          file_path,
+        "cloud_url":     cloud_url or "",
+        "size":          size,
+        "quality_score": get_state().get("quality_score", 0),
+        "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+    }
+
+    log_srv(f"[SUPABASE] save_to_supabase: prompt='{prompt}', user='{sub_id}', size={size}")
+
+    if SUPABASE_ENABLED:
+        db_data = dict(data)
+        if "created" in db_data:
+            del db_data["created"]
+
+        res = supabase_request("POST", "models", json_data=db_data)
+        if res is not None:
+            log_srv(f"[SUPABASE] save_to_supabase SUCCESS for {sub_id}")
+        else:
+            log_error("[SUPABASE] save_to_supabase failed - saving to local fallback only")
+
+    # Always write local per-user fallback
+    h = load_history(user_id=sub_id)
+    h.insert(0, data)
+    save_history(h[:MAX_HISTORY], user_id=sub_id)
+    return True
+
 
 
 # ---------------------------------------------------------------------------
@@ -1812,6 +1931,10 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
             
         fixed_script, fixes = validate_and_fix_script(current_script)
 
+        # CRITICAL: Always guarantee OUTPUT_PATH is defined BEFORE writing to disk.
+        # validate_and_fix_script() may strip it, so re-inject unconditionally.
+        fixed_script = inject_output_path(fixed_script, output_path)
+
         try:
             with open(debug_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(fixed_script)
@@ -1836,13 +1959,6 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                     + " fixes=" + str(fixes))
     
             try:
-                # Force inject OUTPUT_PATH before every Blender run
-                if 'OUTPUT_PATH' not in fixed_script:
-                    fixed_script = fixed_script.replace(
-                        'import bpy',
-                        'import bpy\nOUTPUT_PATH = r"' + output_path.replace("\\", "/") + '"',
-                        1
-                    )
                 creation_flags = 0x08000000 if os.name == "nt" else 0
                 result = subprocess.run(
                     [BLENDER_EXE, "--background", "--python", script_path],
@@ -3998,9 +4114,11 @@ def call_llm_unified(system_msg, user_msg, max_tokens=4000, temperature=0.2):
 def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous"):
     """Full generation pipeline. Called in background thread."""
     global _generating
+    _gen_start_time = time.time()
 
     try:
-        log_gen(f"[START] Generation started: '{prompt}' color={color_hex}")
+        log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id}")
+        print(f"[PIPELINE] Generation thread alive for '{prompt}'", flush=True)
         set_state(status="generating", prompt=prompt, progress=5,
                   step="started", error="", cached=False, service="", glb_size=0)
 
@@ -4191,24 +4309,29 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
+        err_msg = f"Pipeline error: {e}"
         log_error(f"[ERROR] Generation pipeline exception: {e}")
-        log_error(f"[ERROR] Full traceback: {tb}")
+        log_error(f"[ERROR] Full traceback:\n{tb}")
+        print(f"[PIPELINE-ERROR] {e}\n{tb}", flush=True)
         set_state(status="error", step="error",
-                  error=f"Pipeline error: {e}", progress=0)
-        # Emergency fallback - show something, but don't pretend it worked
+                  error=err_msg, progress=0)
+        # Emergency fallback - produce visible output
         try:
             write_fallback_glb(ROCKET_GLB, "#888888")
             set_state(status="done", progress=100, step="done",
                       service="Fallback",
                       glb_size=os.path.getsize(ROCKET_GLB),
-                      error="Generation failed. Showing placeholder.")
+                      error=f"Generation failed: {e}. Showing placeholder.")
         except Exception as e2:
             log_error(f"[ERROR] Emergency fallback failed: {e2}")
+            print(f"[PIPELINE-FATAL] Emergency fallback also failed: {e2}", flush=True)
     finally:
+        elapsed = time.time() - _gen_start_time
         with _gen_lock:
             global _generating
             _generating = False
-        log_gen("[DONE] Generation thread complete")
+        log_gen(f"[DONE] Generation thread complete in {elapsed:.1f}s")
+        print(f"[PIPELINE] Thread finished in {elapsed:.1f}s", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -4671,7 +4794,8 @@ def delete_model():
         # Remove from Supabase if enabled
         if SUPABASE_ENABLED:
             try:
-                res = supabase_request("DELETE", "models?id=eq." + str(target_entry.get("id", "")))
+                user_id = _get_user_id()
+                res = supabase_request("DELETE", f"models?user_id=eq.{user_id}&id=eq.{target_entry.get('id', '')}")
                 if res is not None:
                     log_srv("[SUPABASE] Deleted model " + str(target_entry.get("id")))
                 else:
@@ -4681,12 +4805,11 @@ def delete_model():
 
         # Remove from local history file
         try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                local_h = json.load(f)
+            user_id = _get_user_id()
+            local_h = load_history(user_id)
             local_h = [e for e in local_h
                        if str(e.get("id")) != str(target_entry.get("id"))]
-            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-                json.dump(local_h, f, indent=2)
+            save_history(local_h, user_id)
         except Exception:
             pass
 
@@ -4725,7 +4848,9 @@ def folders_post():
 
     folders = load_folders()
     if name not in folders:
+        user_id = _get_user_id()
         folders.append(name)
+        save_folder_to_supabase(user_id, name)
         save_folders(folders)
         folder_dir = os.path.join(STORAGE_DIR, name)
         os.makedirs(folder_dir, exist_ok=True)
@@ -4741,7 +4866,9 @@ def folders_delete(name):
 
     folders = load_folders()
     if name in folders:
+        user_id = _get_user_id()
         folders.remove(name)
+        delete_folder_from_supabase(user_id, name)
         save_folders(folders)
 
     folder_dir = os.path.join(STORAGE_DIR, name)
@@ -4752,10 +4879,11 @@ def folders_delete(name):
         except Exception as e:
             log_error(f"[folders] rmtree failed: {e}")
 
-    # Remove history entries for this folder
-    h = load_history()
+    # Remove history entries for this folder (per-user)
+    user_id = _get_user_id()
+    h = load_history(user_id=user_id)
     h = [e for e in h if e.get("folder") != name]
-    save_history(h)
+    save_history(h, user_id=user_id)
 
     # Remove from index
     idx = load_index()
@@ -5746,8 +5874,10 @@ def rename_folder():
             return jsonify({"success": False, "error": str(e)}), 500
 
     # Update folders list
+    user_id = _get_user_id()
     idx = folders.index(old_name)
     folders[idx] = new_name
+    rename_folder_in_supabase(user_id, old_name, new_name)
     save_folders(folders)
 
     # Update history file references

@@ -1185,6 +1185,7 @@ body:has(a:hover) #cursor-ring{
   display:none;align-items:center;justify-content:center;
 }
 .modal-backdrop.open{display:flex}
+.modal-backdrop.shown{display:flex}
 .modal{
   width:340px;background:var(--bg-2);
   border:1px solid var(--bd-2);border-radius:var(--r-md);
@@ -1530,7 +1531,25 @@ nav#nav { display: flex !important; }
   border: 1px solid var(--bd-1); cursor: pointer; transition: all .15s; overflow: hidden;
 }
 .gal-card:hover { border-color: var(--bd-2); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.3); }
-.gal-thumb { width: 100%; aspect-ratio: 1; background: var(--bg-3); }
+.gal-thumb { position: relative; width: 100%; aspect-ratio: 1; background: var(--bg-3); }
+.gal-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(1, 8, 20, 0.7); opacity: 0; transition: opacity 0.2s;
+}
+.gal-card:hover .gal-overlay { opacity: 1; }
+.gal-btn {
+  padding: 6px 16px; border-radius: var(--r-sm); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+  background: var(--bg-1); color: var(--tx-1); border: 1px solid var(--bd-2); cursor: pointer; transition: all 0.15s;
+}
+.gal-btn:hover { background: var(--tx-1); color: var(--bg-1); }
+.gal-btn.del { color: var(--red); border-color: rgba(255,68,68,0.3); }
+.gal-btn.del:hover { background: var(--red); color: #fff; }
+.gal-no-prev {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-family: 'JetBrains Mono', monospace; font-size: 24px; color: var(--tx-4); opacity: 0.3; font-weight: 800;
+}
+.gal-colorbar { height: 3px; width: 100%; }
 .gal-info { padding: 8px; }
 .gal-prompt { font-size: 10px; color: var(--tx-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gal-meta { font-size: 9px; color: var(--tx-4); font-family: 'JetBrains Mono', monospace; margin-top: 3px; display: flex; justify-content: space-between; }
@@ -1885,24 +1904,131 @@ nav#nav { display: flex !important; }
 }
 #loading-screen.gone { opacity: 0; visibility: hidden; pointer-events: none; }
 
-/* ---- MOBILE ---- */
+/* ---- MOBILE & TABLET ---- */
 @media (max-width: 768px) {
   body { cursor: auto; }
   #cursor-dot, #cursor-ring, .cursor-trail { display: none !important; }
+  
+  /* Topbar Hamburger Menu */
+  #topbar { padding-left: 50px; } /* Room for hamburger */
+  .model-counter { display: none; } /* Hide to save space */
+  
+  /* Sliding Side Drawer Navigation */
   #nav {
-    position: fixed; bottom: 0; top: auto; left: 0; right: 0;
-    width: 100%; height: 50px; flex-direction: row;
-    justify-content: space-around; padding: 0;
-    border-right: none; border-top: 1px solid var(--bd-1);
+    position: fixed; top: 0; bottom: 0; left: 0; right: auto;
+    width: 240px; height: 100%; flex-direction: column;
+    justify-content: flex-start; padding-top: 60px;
+    background: rgba(10,14,23,0.98); backdrop-filter: blur(12px);
+    border-right: 1px solid var(--bd-2); border-top: none;
+    z-index: 9999;
+    transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  #content { left: 0 !important; bottom: 50px !important; }
-  #topbar { left: 0 !important; }
-  #page-studio { flex-direction: column; }
-  #studio-left { width: 100%; height: 180px; border-right: none; border-bottom: 1px solid var(--bd-1); }
-  #studio-right { width: 100%; border-left: none; border-top: 1px solid var(--bd-1); height: 45%; }
-  #studio-center { flex: 1; min-height: 200px; }
-  #sheet-handle { display: block; }
+  #nav.mobile-open { transform: translateX(0); }
+  .nav-item { margin: 10px 0; padding: 10px 20px; align-items: center; justify-content: flex-start; width: 100%; }
+  .nav-tip { display: block !important; position: static; opacity: 1; transform: none; box-shadow: none; background: transparent; padding: 0 16px; font-size: 14px; color: var(--tx-1); pointer-events: auto; }
+  
+  /* Content Area Full Screen */
+  #content { left: 0 !important; width: 100% !important; bottom: 0 !important; }
+  
+  /* 3D Center Area */
+  #page-studio { display: block; position: relative; height: 100%; width: 100%; }
+  #studio-center { position: absolute; inset: 0; z-index: 1; min-height: unset; flex: none; }
+  
+  /* Left Panel into Bottom Drawer */
+  #studio-left {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: 100%; height: auto; max-height: 50vh;
+    background: rgba(10,14,23,0.95); backdrop-filter: blur(16px);
+    border-top: 1px solid var(--bd-2); border-right: none; border-bottom: none;
+    z-index: 100;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 10px; padding-bottom: 20px;
+  }
+  #studio-left.mobile-open { transform: translateY(0); box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
+  
+  /* Right Panel into Bottom Drawer */
+  #studio-right {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: 100%; height: 85vh;
+    background: rgba(10,14,23,0.95); backdrop-filter: blur(16px);
+    border-top: 1px solid var(--bd-2); border-left: none; border-bottom: none;
+    z-index: 101;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column;
+  }
+  #studio-right.mobile-open { transform: translateY(0); box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
+  .r-tabbar { justify-content: space-around; }
+  .r-tab-content { height: calc(100% - 40px); overflow-y: auto; padding-bottom: 80px; }
+  
+  /* Handle for panels */
+  #sheet-handle { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--bd-3); margin: 8px auto; }
+  
+  /* Mobile Only Elements */
+  .mobile-only { display: flex !important; }
+  
+  /* FABs */
+  #mobile-nav-btn {
+    display: flex !important;
+    position: fixed; top: 6px; left: 6px; width: 44px; height: 44px;
+    align-items: center; justify-content: center; z-index: 10000;
+    background: transparent; border: none; font-size: 24px; color: var(--tx-1); cursor: pointer;
+  }
+  #mobile-fab {
+    display: flex !important;
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 60px; border-radius: 30px;
+    background: linear-gradient(135deg, var(--cyan), var(--gold));
+    color: #000; font-size: 24px;
+    align-items: center; justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,212,255,0.4); z-index: 90;
+    border: none; cursor: pointer; transition: transform 0.2s;
+  }
+  #mobile-fab:active { transform: translateX(-50%) scale(0.95); }
+  
+  #mobile-left-fab {
+    display: flex !important;
+    position: fixed; bottom: 30px; left: 20px;
+    width: 44px; height: 44px; border-radius: 22px;
+    background: rgba(31, 42, 64, 0.9); backdrop-filter: blur(8px);
+    border: 1px solid var(--bd-2);
+    color: var(--tx-1); font-size: 18px;
+    align-items: center; justify-content: center; z-index: 90;
+  }
+  
+  /* Shape Buttons Row - Horizontally scrollable */
+  .shapes-grid { 
+    display: flex; flex-wrap: nowrap; overflow-x: auto; 
+    padding-bottom: 8px; scroll-snap-type: x mandatory;
+    grid-template-columns: none; gap: 8px;
+  }
+  .shape-btn { flex: 0 0 auto; min-width: 60px; scroll-snap-align: start; }
+  .shapes-grid::-webkit-scrollbar { display: none; }
+  
+  /* Color Row properly wrapped */
+  .swatches-grid { flex-wrap: wrap; justify-content: flex-start; gap: 6px; }
+  .color-swatch { min-width: 32px; min-height: 32px; flex: 0 0 auto; }
+  
+  /* UI Tweaks */
+  #btn-share, #btn-wire { display: none; } 
+  .vp-step-txt { font-size: 12px; }
+  .prompt-hint { display: none; }
+  .vp-corner { width: 20px; height: 20px; border-width: 1px; }
+
+  /* Control bar positioning - move above FABs */
+  #ctrl-bar { bottom: 100px; background: transparent; border: none; justify-content: center; gap: 12px; pointer-events: none; }
+  .ctrl-btn { pointer-events: auto; min-width: auto; min-height: 44px; font-size: 12px; padding: 0 16px; border-radius: 22px; background: rgba(13,18,32,0.85); backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+  .ctrl-btn.save-btn { background: rgba(255, 215, 0, 0.15); border-color: var(--gold); color: var(--gold); }
+
+  
+  /* Tap targets */
+  button, select { min-height: 44px; }
+  .f-lbl { padding: 10px 0; }
+  .toggle-sw { min-height: 44px; flex-shrink: 0; }
+  #gen-btn { font-size: 16px; min-height: 50px; position: sticky; bottom: 0; z-index: 10; width: 100%; box-shadow: 0 -10px 20px rgba(10,14,23,0.9); }
 }
+
+/* Hide FABs on desktop */
+#mobile-fab, #mobile-left-fab, #mobile-nav-btn { display: none; }
 
 </style>
 </head>
@@ -1958,6 +2084,23 @@ nav#nav { display: flex !important; }
   <div class="st-desc" id="stt-desc"></div>
 </div>
 
+<!-- V7 SAVE MODAL -->
+<div id="modal-overlay" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-title">SAVE TO WORKSPACE</div>
+    <div class="modal-body">
+      <div class="modal-label">Select Folder</div>
+      <select class="modal-inp folder-dropdown" id="modal-folder">
+        <option value="default">default</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal()">CANCEL</button>
+      <button class="modal-btn confirm" onclick="saveModel()">SAVE</button>
+    </div>
+  </div>
+</div>
+
 <div id="shell">
 
 <!-- ====================================================== NAV -->
@@ -1984,19 +2127,17 @@ nav#nav { display: flex !important; }
       <span class="nav-tip">Gallery</span>
     </div>
 
-    <div class="nav-item" data-page="workshop" onclick="goPage('workshop')">
-      <div class="nav-icon-wrench"></div>
-      <span class="nav-tip">Workshop</span>
+    <!-- Removed Workshop tab, integrated into Studio Edit -->
+    <div class="nav-item" data-page="help" onclick="goPage('help')">
+      <div class="nav-icon-q">?</div>
+      <span class="nav-tip">Docs & Shortcuts</span>
     </div>
 
-    <div class="nav-item" data-page="settings" onclick="goPage('settings')">
+    <div style="flex: 1;"></div>
+
+    <div class="nav-item" data-page="settings" onclick="goPage('settings')" style="margin-bottom: 20px;">
       <div class="nav-icon-gear"></div>
       <span class="nav-tip">Settings</span>
-    </div>
-
-    <div class="nav-item" data-page="help" onclick="goPage('help')">
-      <span class="nav-icon-q">?</span>
-      <span class="nav-tip">Help</span>
     </div>
   </div>
 
@@ -2004,6 +2145,9 @@ nav#nav { display: flex !important; }
 </nav>
 
 <!-- ====================================================== CONTENT -->
+<button id="mobile-nav-btn" class="mobile-only" onclick="toggleMobileNav()">
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><rect x="3" y="5" width="18" height="2"/><rect x="3" y="11" width="18" height="2"/><rect x="3" y="17" width="18" height="2"/></svg>
+</button>
 <div id="content">
 
   <!-- TOPBAR -->
@@ -2025,6 +2169,14 @@ nav#nav { display: flex !important; }
 
     <!-- ======================== STUDIO ======================== -->
     <div class="page active" id="page-studio">
+    
+      <!-- MOBILE FABS -->
+      <button id="mobile-left-fab" class="mobile-only" onclick="toggleMobileLeft()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+      </button>
+      <button id="mobile-fab" class="mobile-only" onclick="toggleMobileRight()">
+        <svg viewBox="0 0 24 24" width="28" height="28"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </button>
 
       <!-- LEFT PANEL - Kurosawa Workspace -->
       <div id="studio-left">
@@ -2132,6 +2284,7 @@ nav#nav { display: flex !important; }
           <button class="ctrl-btn" id="btn-auto"  onclick="toggleAutoRotate()" aria-label="Toggle auto rotate">AUTO</button>
           <button class="ctrl-btn" id="btn-wire"  onclick="toggleWireframe()" aria-label="Toggle wireframe">WIRE</button>
           <div class="ctrl-sep"></div>
+          <button class="ctrl-btn" id="btn-del-active" onclick="if(APP.selectedModel){deleteHistModel(APP.selectedModel);}else{toast('No saved model loaded.','warn');}" style="color:var(--red, #ff4444);" aria-label="Delete model">DEL</button>
           <button class="ctrl-btn save-btn" onclick="showSaveModal()" aria-label="Save model">SAVE</button>
           <button class="ctrl-btn" id="btn-share" onclick="shareModel()">SHARE</button>
         </div>
@@ -2441,227 +2594,105 @@ nav#nav { display: flex !important; }
           <div class="gallery-empty-t">Your creations will live here</div>
           <div class="hist-empty-s">Generate your first model in Studio</div>
         </div>
-      </div>
-    </div>
-
-    <!-- ======================== WORKSHOP ======================== -->
-    <div class="page" id="page-workshop" style="padding:28px;align-items:flex-start;gap:16px">
-      <div style="font-family:var(--font-head);font-size:10px;letter-spacing:0.12em;color:var(--text-2)">
-        Workshop editing is available in the EDIT tab in Studio.
-      </div>
-      <div style="font-size:12px;color:var(--text-3);line-height:1.7;max-width:440px">
-        Select any model from the History tab, click EDIT, make your changes,
-        and apply them with the APPLY EDITS button. Your edited model will load
-        in the viewport automatically when complete.
-      </div>
-    </div>
+      </div>    <!-- ======================== WORKSHOP (Removed/Redirected) ======================== -->
+    <div class="page" id="page-workshop" style="display:none;"></div>
 
     <!-- ======================== SETTINGS ======================== -->
-    <div class="page" id="page-settings">
+    <div class="page" id="page-settings" style="padding: 40px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+      <div style="font-family: 'Orbitron', sans-serif; font-size: 24px; color: var(--gold); margin-bottom: 30px; border-bottom: 1px solid var(--bd-2); padding-bottom: 10px;">
+        SYSTEM SETTINGS
+      </div>
 
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot cyan"></div>System Status</div>
-        <div class="settings-row">
+      <div class="settings-sec" style="background: rgba(26, 34, 54, 0.4); border: 1px solid var(--bd-2); border-radius: var(--r-lg); padding: 24px; margin-bottom: 24px;">
+        <div class="settings-sec-title" style="margin-bottom: 20px; color: var(--cyan); font-size: 14px;"><div class="sec-dot cyan"></div>Connection Status</div>
+        
+        <div class="settings-row" style="padding: 12px 0; border-bottom: 1px solid var(--bd-1);">
           <div class="settings-row-l">
-            <div class="settings-row-lbl">Server</div>
-            <div class="settings-row-sub">localhost:5000</div>
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Backend Server</div>
+            <div class="settings-row-sub" style="font-size: 11px; color: var(--tx-3);">Primary rendering pipeline connection</div>
           </div>
           <div class="settings-st ok" id="set-server-st">
             <div class="settings-st-dot"></div><span>ONLINE</span>
           </div>
         </div>
-        <div class="settings-row">
+
+        <div class="settings-row" style="padding: 12px 0; border-bottom: 1px solid var(--bd-1);">
           <div class="settings-row-l">
-            <div class="settings-row-lbl">Gemini API</div>
-            <div class="settings-row-sub" id="set-gemini-sub">Checking...</div>
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Gemini AI Core</div>
+            <div class="settings-row-sub" id="set-gemini-sub" style="font-size: 11px; color: var(--tx-3);">Checking keys...</div>
           </div>
           <div class="settings-st info" id="set-gemini-st">
-            <div class="settings-st-dot"></div>
-            <span id="set-gemini-text">-</span>
+            <div class="settings-st-dot"></div><span id="set-gemini-text">-</span>
           </div>
         </div>
-        <div class="settings-row">
+
+        <div class="settings-row" style="padding: 12px 0;">
           <div class="settings-row-l">
-            <div class="settings-row-lbl">Blender</div>
-            <div class="settings-row-sub" id="set-blender-path">Not found</div>
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Blender Engine</div>
+            <div class="settings-row-sub" id="set-blender-sub" style="font-size: 11px; color: var(--tx-3);">Checking executable path...</div>
           </div>
-          <div class="settings-st" id="set-blender-st">
-            <div class="settings-st-dot"></div>
-            <span id="set-blender-text">-</span>
-          </div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Shap-E</div>
-            <div class="settings-row-sub">Local AI generation</div>
-          </div>
-          <div class="settings-st warn" id="set-shaper-st">
-            <div class="settings-st-dot"></div>
-            <span id="set-shaper-text">-</span>
+          <div class="settings-st info" id="set-blender-st">
+            <div class="settings-st-dot"></div><span id="set-blender-text">-</span>
           </div>
         </div>
       </div>
-
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot amber"></div>Pipeline</div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Library Mode</div>
-            <div class="settings-row-sub">Search Sketchfab library first</div>
-          </div>
-          <label class="toggle-sw">
-            <input type="checkbox" id="set-lib-toggle">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
+      
+      <div class="settings-sec" style="background: rgba(26, 34, 54, 0.4); border: 1px solid var(--bd-2); border-radius: var(--r-lg); padding: 24px;">
+        <div class="settings-sec-title" style="margin-bottom: 20px; color: var(--amber); font-size: 14px;"><div class="sec-dot amber"></div>Account & Data</div>
+        <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6; margin-bottom: 20px;">
+          Your models and folders are securely isolated within the Supabase cloud infrastructure securely via your Google Login. Ensure your backend policies are correctly tuned.
         </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Cache Enabled</div>
-            <div class="settings-row-sub">Skip generation for identical prompts</div>
-          </div>
-          <label class="toggle-sw">
-            <input type="checkbox" id="set-cache-toggle" checked>
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-      </div>
-
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot red"></div>Data</div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Model Cache</div>
-            <div class="settings-row-sub" id="set-cache-size">-</div>
-          </div>
-          <button class="settings-btn danger" onclick="clearCache()">CLEAR</button>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">History</div>
-            <div class="settings-row-sub" id="set-hist-count">-</div>
-          </div>
-          <button class="settings-btn danger" onclick="clearHistory()">CLEAR</button>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Server State</div>
-            <div class="settings-row-sub">Reset generation pipeline</div>
-          </div>
-          <button class="settings-btn" onclick="resetServer()">RESET</button>
-        </div>
-      </div>
-
-      <div class="settings-sec">
-        <div class="settings-sec-title"><div class="sec-dot cyan"></div>About</div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">Version</div>
-          </div>
-          <div class="settings-st info">AI 3D Studio v7.0</div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-l">
-            <div class="settings-row-lbl">API Health Check</div>
-            <div class="settings-row-sub">Test all configured API keys</div>
-          </div>
-          <button class="settings-btn" onclick="testApiKeys()">RUN TEST</button>
-        </div>
+        <button class="settings-btn" style="padding: 10px 20px; font-size: 12px;" onclick="if(confirm('Clear local history cache?')) fetch('/api/history/clear',{method:'POST'}).then(()=>location.reload())">CLEAR CACHE</button>
       </div>
 
     </div><!-- end page-settings -->
 
-    <!-- ======================== HELP ======================== -->
-    <div class="page" id="page-help">
-      <div style="padding:22px">
-
-        <div class="help-sec">
-          <div class="help-sec-t">KEYBOARD SHORTCUTS</div>
-          <div class="help-row"><span class="help-key">Ctrl+Enter</span><span class="help-desc">Generate model from current prompt</span></div>
-          <div class="help-row"><span class="help-key">Escape</span><span class="help-desc">Close any open modal or dialog</span></div>
-          <div class="help-row"><span class="help-key">R</span><span class="help-desc">Reset viewport camera to default</span></div>
-          <div class="help-row"><span class="help-key">A</span><span class="help-desc">Toggle auto-rotate on/off</span></div>
-          <div class="help-row"><span class="help-key">W</span><span class="help-desc">Toggle wireframe mode</span></div>
-          <div class="help-row"><span class="help-key">1 to 5</span><span class="help-desc">Set complexity level directly</span></div>
-        </div>
-
-        <div class="help-sec">
-          <div class="help-sec-t">GENERATION PIPELINE</div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--svc-cache);background:rgba(123,58,237,0.08);border-color:rgba(123,58,237,0.25)">CACHE</span>
-            <span class="help-desc">Instant - identical prompt was generated before</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--svc-library);background:rgba(251,113,133,0.08);border-color:rgba(251,113,133,0.25)">LIBRARY</span>
-            <span class="help-desc">Searches Sketchfab (if Library Mode enabled)</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--scott-teal);background:rgba(0,180,166,0.08);border-color:rgba(0,180,166,0.25)">SHAP-E</span>
-            <span class="help-desc">Local AI generation (if installed)</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key">GEMINI</span>
-            <span class="help-desc">Gemini writes a Blender Python script - runs headless</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--kube-amber);background:rgba(184,134,11,0.08);border-color:rgba(184,134,11,0.25)">PRESET</span>
-            <span class="help-desc">54 keyword-matched preset Blender scripts</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--kube-red);background:rgba(204,34,0,0.08);border-color:rgba(204,34,0,0.25)">FALLBACK</span>
-            <span class="help-desc">Pure Python GLB - always succeeds</span>
-          </div>
-        </div>
-
-        <div class="help-sec">
-          <div class="help-sec-t">SERVICE BADGES</div>
-          <div class="help-row"><span class="svc-badge gemini">GEMINI+BLENDER</span><span class="help-desc" style="margin-left:10px">Highest quality - AI wrote a custom Blender script</span></div>
-          <div class="help-row"><span class="svc-badge preset">PRESET</span><span class="help-desc" style="margin-left:10px">Keyword matched to a preset shape template</span></div>
-          <div class="help-row"><span class="svc-badge cache">CACHE</span><span class="help-desc" style="margin-left:10px">Loaded instantly from cache</span></div>
-          <div class="help-row"><span class="svc-badge fallback">FALLBACK</span><span class="help-desc" style="margin-left:10px">All methods failed, geometric fallback</span></div>
-          <div class="help-row"><span class="svc-badge shaper">SHAP-E</span><span class="help-desc" style="margin-left:10px">Local Shap-E AI model</span></div>
-          <div class="help-row"><span class="svc-badge slib">SCRIPT LIBRARY</span><span class="help-desc" style="margin-left:10px">Matched to curated script library</span></div>
-        </div>
-
-        <div class="help-sec">
-          <div class="help-sec-t">DIRECTOR COLOR GUIDE</div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--tara-yellow);background:rgba(255,215,0,0.08);border-color:rgba(255,215,0,0.25)">TARANTINO</span>
-            <span class="help-desc">Yellow-amber = generation energy. Generate button, active state.</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--nolan-cyan);background:rgba(0,180,216,0.08);border-color:rgba(0,180,216,0.25)">NOLAN</span>
-            <span class="help-desc">Steel blue = intelligence. History, data, HUD elements.</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--scott-orange);background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.25)">SCOTT</span>
-            <span class="help-desc">Orange = transformation. Edit tab, apply changes.</span>
-          </div>
-          <div class="help-row">
-            <span class="help-key" style="color:var(--kuro-ochre);background:rgba(201,168,76,0.08);border-color:rgba(201,168,76,0.25)">KUROSAWA</span>
-            <span class="help-desc">Ochre gold = structure. Folders, workspace organization.</span>
-          </div>
-        </div>
-
+    <!-- ======================== HELP/DOCS ======================== -->
+    <div class="page" id="page-help" style="padding: 40px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+      <div style="font-family: 'Orbitron', sans-serif; font-size: 24px; color: var(--gold); margin-bottom: 30px; border-bottom: 1px solid var(--bd-2); padding-bottom: 10px;">
+        DOCUMENTATION
       </div>
-    </div>
+
+      <div class="help-sec" style="margin-bottom: 30px;">
+        <div class="help-sec-t" style="color: var(--cyan); margin-bottom: 16px; font-size: 14px;"><div class="sec-dot cyan"></div>KEYBOARD SHORTCUTS</div>
+        <div style="background: rgba(10, 14, 23, 0.6); padding: 20px; border-radius: var(--r-md); border: 1px solid var(--bd-1);">
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">Ctrl+Enter</span><span class="help-desc">Generate model from current prompt</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">Escape</span><span class="help-desc">Close open dialogs or mobile navigation</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">R</span><span class="help-desc">Reset the 3D viewport camera to default</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">A</span><span class="help-desc">Toggle continuous auto-rotate</span></div>
+          <div class="help-row" style="margin-bottom: 12px;"><span class="help-key" style="min-width: 90px; text-align: center;">W</span><span class="help-desc">Toggle mesh wireframe mode</span></div>
+        </div>
+      </div>
+
+      <div class="help-sec">
+        <div class="help-sec-t" style="color: var(--amber); margin-bottom: 16px; font-size: 14px;"><div class="sec-dot amber"></div>GENERATION PIPELINE</div>
+        <div style="background: rgba(10, 14, 23, 0.6); padding: 20px; border-radius: var(--r-md); border: 1px solid var(--bd-1);">
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--svc-cache);background:rgba(123,58,237,0.08);border-color:rgba(123,58,237,0.25); min-width: 80px; text-align: center;">CACHE</span>
+            <span class="help-desc">Instant delivery - Identical prompt found in global cache</span>
+          </div>
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--svc-library);background:rgba(251,113,133,0.08);border-color:rgba(251,113,133,0.25); min-width: 80px; text-align: center;">LIBRARY</span>
+            <span class="help-desc">Matched from curated Sketchfab presets</span>
+          </div>
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--nolan-cyan);background:rgba(0,180,216,0.08);border-color:rgba(0,180,216,0.25); min-width: 80px; text-align: center;">GEMINI AI</span>
+            <span class="help-desc">AI writes Blender Python script & executes headless</span>
+          </div>
+          <div class="help-row" style="margin-bottom: 14px;">
+            <span class="help-key" style="color:var(--kube-amber);background:rgba(184,134,11,0.08);border-color:rgba(184,134,11,0.25); min-width: 80px; text-align: center;">PRESET</span>
+            <span class="help-desc">Keyword matched to a hardcoded logic script</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end page-help -->
 
   </div><!-- end pages -->
 </div><!-- end content -->
 </div><!-- end shell -->
 
-<!-- SAVE MODAL - Kubrick ceremony -->
-<div id="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title">SAVE MODEL</div>
-    <div class="modal-sub">Choose a destination folder for this model</div>
-    <div class="modal-f-lbl">DESTINATION FOLDER</div>
-    <select id="modal-folder" class="folder-dropdown"></select>
-    <button class="modal-save-btn" onclick="saveModel()">SAVE MODEL</button>
-    <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-  </div>
-</div>
+
 
 <!-- TOASTS - Tarantino title cards -->
 <div id="toasts" aria-live="polite" role="status"></div>
@@ -3006,6 +3037,11 @@ function goPage(name) {
   if (name === 'gallery')  { renderGallery(); }
   if (name === 'settings') { loadSystemInfo(); }
   if (name === 'studio')   { setTimeout(resizeRenderer, 60); }
+  
+  // Close any open mobile panels when navigating
+  if (typeof closeAllMobilePanels === 'function') {
+    closeAllMobilePanels();
+  }
 }
 
 function goRTab(name) {
@@ -3891,6 +3927,9 @@ function deleteHistModel(item) {
             (APP.selectedModel.id === id || APP.selectedModel.timestamp === id)) {
           APP.selectedModel = null;
           renderEditInfo();
+          var bar = document.getElementById('model-bar');
+          if (bar) bar.classList.remove('shown');
+          if (APP.currentPage === 'studio') { goRTab('history'); }
         }
       } else {
         toast(d.error || 'Delete failed', 'err');
@@ -4142,6 +4181,7 @@ function saveModel() {
         closeModal();
         refreshHistory();
         updateFolderCounts();
+        if (typeof renderGallery === 'function') renderGallery();
         toast('Saved to ' + folder, 'ok');
       } else {
         toast(d.error || 'Save failed', 'err');
@@ -5009,6 +5049,38 @@ document.addEventListener('keyup', function(e) {
   if (e.key === 'Escape') { hideShortcutOverlay(); }
 });
 
+/* ============================================================
+   MOBILE PANEL TOGGLES
+   ============================================================ */
+function toggleMobileNav() {
+  var nav = document.getElementById('nav');
+  if(nav) nav.classList.toggle('mobile-open');
+}
+function toggleMobileLeft() {
+  document.getElementById('studio-left').classList.toggle('mobile-open');
+  document.getElementById('studio-right').classList.remove('mobile-open');
+  document.getElementById('nav').classList.remove('mobile-open');
+}
+function toggleMobileRight() {
+  document.getElementById('studio-right').classList.toggle('mobile-open');
+  document.getElementById('studio-left').classList.remove('mobile-open');
+  document.getElementById('nav').classList.remove('mobile-open');
+}
+function closeAllMobilePanels() {
+  var l = document.getElementById('studio-left');
+  var r = document.getElementById('studio-right');
+  var n = document.getElementById('nav');
+  if(l) l.classList.remove('mobile-open');
+  if(r) r.classList.remove('mobile-open');
+  if(n) n.classList.remove('mobile-open');
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var cvs = document.getElementById('three-canvas');
+  if(cvs) {
+    cvs.addEventListener('mousedown', closeAllMobilePanels);
+    cvs.addEventListener('touchstart', closeAllMobilePanels);
+  }
+});
 
 /* ============================================================
    INIT - Everything starts here

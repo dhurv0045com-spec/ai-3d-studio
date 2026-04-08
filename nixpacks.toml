@@ -1,0 +1,40 @@
+[phases.setup]
+aptPkgs = [
+  "wget",
+  "xz-utils",
+  "libxi6",
+  "libxfixes3",
+  "libxrender1",
+  "libxrandr2",
+  "libxkbcommon0",
+  "libxxf86vm1",
+  "libglib2.0-0",
+  "libgl1",
+  "libsm6",
+  "libice6",
+  "libx11-6",
+  "libxext6",
+  "libfreetype6",
+  "libfontconfig1",
+  "libgomp1",
+  "ca-certificates",
+  "libglu1-mesa"
+]
+
+[phases.install]
+cmds = [
+  "python -m pip install --upgrade pip",
+  "pip install --no-cache-dir -r requirements.txt",
+  "mkdir -p /app/blender",
+  "wget -q https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz -O /tmp/blender.tar.xz",
+  "tar -xf /tmp/blender.tar.xz --strip-components=1 -C /app/blender",
+  "rm -f /tmp/blender.tar.xz",
+  "chmod +x /app/blender/blender"
+]
+
+[variables]
+BLENDER_PATH = "/app/blender/blender"
+APP_BASE_DIR = "/app"
+
+[start]
+cmd = "gunicorn --timeout 300 --workers 2 --bind 0.0.0.0:${PORT:-8080} wsgi:app"

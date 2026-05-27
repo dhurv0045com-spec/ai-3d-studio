@@ -1,4 +1,4 @@
-from server import app, load_folders, load_history, startup_health_check, start_key_resurrection, ROCKET_GLB
+from server import app, build_fallback_glb, load_folders, load_history, startup_health_check, start_key_resurrection, ROCKET_GLB
 import os
 import threading
 
@@ -14,10 +14,10 @@ def initialize():
     print("[WSGI-INIT] Starting Gemini key resurrection thread...")
     start_key_resurrection()
 
-    # Create dummy rocket.glb if not exists
+    # Create a valid placeholder GLB if no generated model exists yet.
     if not os.path.exists(ROCKET_GLB):
         with open(ROCKET_GLB, "wb") as f:
-            f.write(b"")
+            f.write(build_fallback_glb("#888888"))
 
 # We run initialize once when this script is loaded.
 initialize()

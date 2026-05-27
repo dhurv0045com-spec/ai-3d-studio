@@ -1,0 +1,35 @@
+{
+  "_description": "Optional local development settings. Do not put real secrets in git.",
+  "ai": {
+    "provider": "openrouter",
+    "model": "google/gemini-2.0-flash-001",
+    "temperature": 0.2,
+    "max_tokens": 4000,
+    "timeout_seconds": 90,
+    "gemini_keys": [],
+    "openrouter_keys": [],
+    "groq_keys": []
+  },
+  "generation": {
+    "default_style": "realistic",
+    "default_complexity": 3,
+    "default_folder": "default",
+    "auto_save": true,
+    "cache_enabled": true,
+    "library_mode_default": false
+  },
+  "blender": {
+    "path": "",
+    "version": "4.2",
+    "export_format": "GLB"
+  },
+  "paths": {
+    "models_dir": "models",
+    "cache_dir": "models/cache",
+    "presets_dir": "models/presets",
+    "scripts_dir": "models/scripts",
+    "storage_dir": "storage/users/user",
+    "logs_dir": "logs",
+    "static_dir": "static"
+  }
+}

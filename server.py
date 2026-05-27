@@ -441,6 +441,7 @@ def _build_gemini_keys():
                 "key":       val,
                 "fails":     0,
                 "dead":      False,
+                "dead_reason": "",
                 "last_used": 0.0
             }
 
@@ -477,10 +478,17 @@ def get_gemini_key():
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             for k in GEMINI_KEYS:
+                if k.get("dead_reason") == "auth":
+                    continue
                 k["dead"] = False
                 k["fails"] = 0
+                k["dead_reason"] = ""
             alive = list(GEMINI_KEYS)
-            log_srv("[GEMINI] All keys reset - fresh rotation started")
+            alive = [k for k in GEMINI_KEYS if not k["dead"]]
+            if not alive:
+                log_srv("[GEMINI] No usable keys; all dead keys are auth failures")
+                return None
+            log_srv("[GEMINI] Transient dead keys reset - fresh rotation started")
         alive.sort(key=lambda x: x["last_used"])
         return alive[0]["key"]
 
@@ -492,7 +500,7 @@ def get_gemini_key_info():
             return None
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
-            return GEMINI_KEYS[0]
+            return None
         alive.sort(key=lambda x: x["last_used"])
         return alive[0]
 
@@ -510,6 +518,7 @@ def rotate_gemini_key():
                 k["last_used"] = time.time()
                 if k["fails"] >= 3:
                     k["dead"] = True
+                    k["dead_reason"] = "transient_failures"
                     log_srv("[GEMINI] Key " + k["name"] + " dead after 3 fails")
                 break
     log_srv("[GEMINI] Rotated - next key queued")
@@ -522,6 +531,7 @@ def mark_key_dead(key_val):
             if k["key"] == key_val:
                 k["dead"] = True
                 k["fails"] = 99
+                k["dead_reason"] = "auth"
                 log_srv("[GEMINI] Key " + k["name"] + " killed on auth error")
                 break
 
@@ -532,6 +542,8 @@ def mark_key_success(key_val):
         for k in GEMINI_KEYS:
             if k["key"] == key_val:
                 k["fails"] = 0
+                k["dead"] = False
+                k["dead_reason"] = ""
                 k["last_used"] = time.time()
                 break
 
@@ -541,6 +553,59 @@ def get_gemini_key_status():
     alive = [k["name"] for k in GEMINI_KEYS if not k["dead"]]
     dead  = [k["name"] for k in GEMINI_KEYS if k["dead"]]
     return alive, dead
+
+
+_key_resurrection_started = False
+_key_resurrection_thread = None
+
+
+def resurrect_transient_gemini_keys():
+    """Mark temporarily failed Gemini keys alive again after a cooldown."""
+    reset_names = []
+    with _gemini_lock:
+        for k in GEMINI_KEYS:
+            if not k.get("dead"):
+                continue
+            if k.get("dead_reason") == "auth":
+                continue
+            k["dead"] = False
+            k["fails"] = 0
+            k["dead_reason"] = ""
+            k["last_used"] = 0.0
+            reset_names.append(k["name"])
+    if reset_names:
+        log_srv("[GEMINI] Resurrected transient keys: " + ", ".join(reset_names))
+    return len(reset_names)
+
+
+def start_key_resurrection(interval_seconds=None):
+    """Start one per-process background thread that revives transient key failures."""
+    global _key_resurrection_started, _key_resurrection_thread
+    if _key_resurrection_started:
+        return _key_resurrection_thread
+    try:
+        interval = int(interval_seconds or os.environ.get("KEY_RESURRECTION_INTERVAL", "900"))
+    except Exception:
+        interval = 900
+    interval = max(interval, 60)
+
+    def _worker():
+        log_srv("[GEMINI] Key resurrection thread started; interval=" + str(interval) + "s")
+        while True:
+            time.sleep(interval)
+            try:
+                resurrect_transient_gemini_keys()
+            except Exception as e:
+                log_error("[GEMINI] Key resurrection error: " + str(e))
+
+    _key_resurrection_started = True
+    _key_resurrection_thread = threading.Thread(
+        target=_worker,
+        name="gemini-key-resurrection",
+        daemon=True
+    )
+    _key_resurrection_thread.start()
+    return _key_resurrection_thread
 
 
 # ---------------------------------------------------------------------------
@@ -1779,6 +1844,28 @@ if os.path.exists(SHAPEE_FLAG):
         shap_e_available = True
     except ImportError as _e:
         shap_e_available = False
+
+
+def check_shap_e():
+    """Refresh Shap-E availability without failing application startup."""
+    global shap_e_available
+    if not os.path.exists(SHAPEE_FLAG):
+        shap_e_available = False
+        log_srv("[SHAPEE] disabled - install flag not present")
+        return False
+    try:
+        import torch  # noqa: F401
+        from shap_e.diffusion.sample import sample_latents  # noqa: F401
+        from shap_e.diffusion.gaussian_diffusion import diffusion_from_config  # noqa: F401
+        from shap_e.models.download import load_model, load_config  # noqa: F401
+        from shap_e.util.notebooks import decode_latent_mesh  # noqa: F401
+        shap_e_available = True
+        log_srv("[SHAPEE] available")
+        return True
+    except Exception as e:
+        shap_e_available = False
+        log_srv("[SHAPEE] unavailable: " + str(e))
+        return False
 
 
 def run_shap_e(prompt, output_path):
@@ -5587,7 +5674,7 @@ def add_gemini_key():
             return jsonify({"success": False, "error": "Key already exists"})
     GEMINI_KEYS.append({
         "name": name, "key": key, "fails": 0,
-        "dead": False, "last_used": 0.0
+        "dead": False, "dead_reason": "", "last_used": 0.0
     })
     log_srv("[GEMINI] Added new key: " + name)
     alive, dead = get_gemini_key_status()
@@ -5601,6 +5688,7 @@ def reset_gemini_keys():
         for k in GEMINI_KEYS:
             k["dead"]  = False
             k["fails"] = 0
+            k["dead_reason"] = ""
             k["last_used"] = 0.0
     log_srv("[GEMINI] All keys reset to alive")
     alive, dead = get_gemini_key_status()
@@ -5626,6 +5714,7 @@ def gemini_status():
         keys_detail.append({
             "name":  k["name"],
             "dead":  k["dead"],
+            "dead_reason": k.get("dead_reason", ""),
             "fails": k["fails"],
             "key_prefix": k["key"][:16] + "..."
         })
@@ -5724,6 +5813,7 @@ def api_keys_rotate():
         if k.get("dead", False):
             k["dead"]  = False
             k["fails"] = 0
+            k["dead_reason"] = ""
             reset_count += 1
     alive = len([k for k in GEMINI_KEYS if not k.get("dead", False)])
     log_srv("[KEYS] Rotated keys. Alive: " + str(alive))

@@ -1,4 +1,4 @@
-# server.py  -  AI 3D Studio  -  VERSION 7.0 (Production-ready)
+# server.py  -  AI 3D Studio  -  VERSION 8.0 (Production-ready)
 # Changes: cross-platform paths, env vars for all secrets, PORT support
 # Single-file Flask backend for local Windows 3D model generation.
 # Target: 3400+ lines. Zero placeholders. Zero emoji. ASCII only.
@@ -74,10 +74,12 @@ from flask_cors import CORS
 # ---------------------------------------------------------------------------
 # Auto-detect base directory: works on Windows locally AND Railway Linux cloud
 import platform as _platform
-if _platform.system() == "Linux" or os.environ.get("RAILWAY_ENVIRONMENT"):
-    BASE_DIR = os.environ.get("APP_BASE_DIR", "/app")
+if os.environ.get("APP_BASE_DIR"):
+    BASE_DIR = os.environ["APP_BASE_DIR"]
+elif os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER"):
+    BASE_DIR = "/app"
 else:
-    BASE_DIR = os.environ.get("APP_BASE_DIR", r"C:\Users\user\Desktop\ai-3d-project")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR      = os.path.join(BASE_DIR, "static")
 MODELS_DIR      = os.path.join(BASE_DIR, "models")
 CACHE_DIR       = os.path.join(BASE_DIR, "models", "cache")
@@ -114,7 +116,7 @@ def _find_blender_exe():
 
 BLENDER_EXE = _find_blender_exe()
 BLENDER_PATH = BLENDER_EXE  # alias for Railway compatibility
-VERSION         = "7.0"
+VERSION         = "8.0"
 MAX_HISTORY     = 200
 MAX_LOG_LINES   = 80
 
@@ -217,9 +219,9 @@ def after_request_logger(response):
 # ---------------------------------------------------------------------------
 #  CLOUDINARY - AUTOMATIC CLOUD STORAGE FOR ALL MODELS
 # ---------------------------------------------------------------------------
-CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME",  "root")
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY",    "847967395866559")
-CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "h9OL5-hsJdbxpMV3RpVxdLF7G-Q")
+CLOUDINARY_CLOUD   = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_SECRET  = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
 CLOUDINARY_FOLDER  = os.environ.get("CLOUDINARY_FOLDER",     "ai3d_studio")
 CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY_SECRET)
 
@@ -426,7 +428,7 @@ def upload_to_cloudinary(local_path, public_id=None):
 #  GEMINI KEY SYSTEM - 5 KEYS MAX
 # ---------------------------------------------------------------------------
 def _build_gemini_keys():
-    """Build key list: Merge Priority 1 (Env Vars) + Priority 2 (settings.json) + Priority 3 (Hardcoded)."""
+    """Build key list from environment variables and optional local settings.json."""
     keys_dict = {}  # Using dict to deduplicate by key string
     
     # helper to add keys
@@ -459,19 +461,8 @@ def _build_gemini_keys():
     except Exception:
         pass
             
-    # SOURCE 3: Hardcoded fallbacks (Emergency only)
-    fallbacks = [
-        ("key1", "AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY"),
-        ("key2", "AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M"),
-        ("key3", "AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44"),
-        ("key4", "AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU"),
-        ("key5", "AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI"),
-    ]
-    for name, val in fallbacks:
-        add_k(name, val, "fallback")
-            
     res = list(keys_dict.values())
-    return res if res else [{"name": "none", "key": "NOKEY", "fails": 0, "dead": False, "last_used": 0.0}]
+    return res
 
 GEMINI_KEYS = _build_gemini_keys()
 _gemini_index = 0
@@ -481,6 +472,8 @@ _gemini_lock  = threading.Lock()
 def get_gemini_key():
     """Return the least-recently-used alive key string."""
     with _gemini_lock:
+        if not GEMINI_KEYS:
+            return None
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             for k in GEMINI_KEYS:
@@ -495,6 +488,8 @@ def get_gemini_key():
 def get_gemini_key_info():
     """Return the full key info dict for the next key to use."""
     with _gemini_lock:
+        if not GEMINI_KEYS:
+            return None
         alive = [k for k in GEMINI_KEYS if not k["dead"]]
         if not alive:
             return GEMINI_KEYS[0]
@@ -505,6 +500,9 @@ def get_gemini_key_info():
 def rotate_gemini_key():
     """Advance to next key, incrementing fail count on current."""
     info = get_gemini_key_info()
+    if not info:
+        log_srv("[GEMINI] No keys available to rotate")
+        return
     with _gemini_lock:
         for k in GEMINI_KEYS:
             if k["key"] == info["key"]:
@@ -743,12 +741,61 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     return None
 
 
+def call_openrouter_payload(body):
+    """Call OpenRouter with a prebuilt chat-completions payload."""
+    alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
+    if not alive:
+        log_srv("[OR-PAYLOAD] No alive OpenRouter keys")
+        return None
+    payload = dict(body or {})
+    if "model" not in payload:
+        payload["model"] = OPENROUTER_MODEL
+    for k in alive:
+        try:
+            r = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": "Bearer " + k["key"],
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://aurex-3d.up.railway.app",
+                    "X-Title": "Aurex 3D"
+                },
+                json=payload,
+                timeout=90,
+                verify=False
+            )
+            log_srv(f"[OR-PAYLOAD] Key {k['name']} status: {r.status_code}")
+            if r.status_code == 200:
+                choices = r.json().get("choices", [])
+                if choices:
+                    text = choices[0].get("message", {}).get("content", "").strip()
+                    if text:
+                        k["fails"] = 0
+                        k["last_used"] = time.time()
+                        return text
+            elif r.status_code in (401, 403):
+                k["dead"] = True
+                k["fails"] = 99
+            elif r.status_code == 429:
+                k["fails"] += 1
+                time.sleep(3)
+            else:
+                k["fails"] += 1
+                log_srv(f"[OR-PAYLOAD] status {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            k["fails"] += 1
+            log_srv("[OR-PAYLOAD] Exception: " + str(e))
+    return None
+
+
 # ---------------------------------------------------------------------------
 #  UNIFIED LLM CALL  
 #  Priority: OpenRouter FIRST (most reliable), then Gemini, then Groq
 # ---------------------------------------------------------------------------
-def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
+def call_llm(system_msg, user_msg=None, max_tokens=4000, temperature=0.2):
     """Call LLM API with priority: OpenRouter > Gemini > Groq."""
+    if isinstance(system_msg, dict) and user_msg is None:
+        return call_openrouter_payload(system_msg)
     
     # PRIORITY 1: OpenRouter (most reliable, fast)
     if OPENROUTER_KEYS:
@@ -829,6 +876,27 @@ def call_llm(system_msg, user_msg, max_tokens=4000, temperature=0.2):
 
     log_srv("[LLM] ERROR: ALL providers failed (OpenRouter, Gemini, Groq)")
     return None
+
+
+def enhance_prompt(raw_prompt: str) -> str:
+    """
+    Expand a short user prompt into a rich 3D-ready description.
+    Returns the original prompt unchanged on any failure. Never raises.
+    """
+    system = (
+        "You are a 3D modeling assistant. The user gives you a short description. "
+        "Expand it into a single detailed sentence (max 60 words) that describes the "
+        "object's shape, surface details, proportions, and visual characteristics "
+        "suitable for a 3D modeling pipeline. Output ONLY the expanded description. "
+        "No preamble. No quotes. No punctuation other than commas."
+    )
+    try:
+        result = call_llm(system, raw_prompt, max_tokens=120, temperature=0.7)
+        if result and len(result.strip()) > 10:
+            return result.strip()
+    except Exception as e:
+        log_srv("[enhance] failed: " + str(e))
+    return raw_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -1013,48 +1081,47 @@ def log_error(msg):
 # ---------------------------------------------------------------------------
 def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url="", sub_id="anonymous"):
     """Save model metadata to Supabase 'models' table."""
-    if not supabase:
-        print("[SUPABASE] ERROR: Supabase client not initialized")
-        return False
-    
     try:
         if not sub_id and flask.has_request_context():
             user_info = flask.session.get('user', {})
             sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
 
-    ts = int(time.time())
-    data = {
-        "id":            ts,
-        "user_id":       sub_id,
-        "prompt":        prompt,
-        "color":         color,
-        "folder":        folder,
-        "service":       service,
-        "file":          file_path,
-        "cloud_url":     cloud_url or "",
-        "size":          size,
-        "quality_score": get_state().get("quality_score", 0),
-        "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-    }
+        ts = int(time.time())
+        data = {
+            "id":            ts,
+            "user_id":       sub_id,
+            "prompt":        prompt,
+            "color":         color,
+            "folder":        folder,
+            "service":       service,
+            "file":          file_path,
+            "cloud_url":     cloud_url or "",
+            "size":          size,
+            "quality_score": get_state().get("quality_score", 0),
+            "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
 
-    log_srv(f"[SUPABASE] save_to_supabase: prompt='{prompt}', user='{sub_id}', size={size}")
+        log_srv(f"[SUPABASE] save_to_supabase: prompt='{prompt}', user='{sub_id}', size={size}")
 
-    if SUPABASE_ENABLED:
-        db_data = dict(data)
-        if "created" in db_data:
-            del db_data["created"]
+        if SUPABASE_ENABLED:
+            db_data = dict(data)
+            if "created" in db_data:
+                del db_data["created"]
 
-        res = supabase_request("POST", "models", json_data=db_data)
-        if res is not None:
-            log_srv(f"[SUPABASE] save_to_supabase SUCCESS for {sub_id}")
-        else:
-            log_error("[SUPABASE] save_to_supabase failed - saving to local fallback only")
+            res = supabase_request("POST", "models", json_data=db_data)
+            if res is not None:
+                log_srv(f"[SUPABASE] save_to_supabase SUCCESS for {sub_id}")
+            else:
+                log_error("[SUPABASE] save_to_supabase failed - saving to local fallback only")
 
-    # Always write local per-user fallback
-    h = load_history(user_id=sub_id)
-    h.insert(0, data)
-    save_history(h[:MAX_HISTORY], user_id=sub_id)
-    return True
+        # Always write local per-user fallback
+        h = load_history(user_id=sub_id)
+        h.insert(0, data)
+        save_history(h[:MAX_HISTORY], user_id=sub_id)
+        return True
+    except Exception as e:
+        log_error("[SUPABASE] save_to_supabase exception: " + str(e))
+        return False
 
 
 
@@ -1131,6 +1198,8 @@ _state = copy.deepcopy(IDLE_STATE)
 _state_lock = threading.Lock()
 _generating = False
 _gen_lock = threading.Lock()
+_variant_jobs = {}
+_variant_jobs_lock = threading.Lock()
 
 
 def set_state(**kwargs):
@@ -4111,16 +4180,22 @@ def call_llm_unified(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     return None, None
 
 
-def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous"):
+def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous", history_prompt=None):
     """Full generation pipeline. Called in background thread."""
     global _generating
     _gen_start_time = time.time()
+    original_prompt = history_prompt or prompt
 
     try:
         log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id}")
         print(f"[PIPELINE] Generation thread alive for '{prompt}'", flush=True)
-        set_state(status="generating", prompt=prompt, progress=5,
-                  step="started", error="", cached=False, service="", glb_size=0)
+        set_state(status="generating", prompt=original_prompt, progress=5,
+                  step="enhancing_prompt", error="", cached=False, service="", glb_size=0)
+
+        log_gen("[enhance] expanding prompt...")
+        enhanced_prompt = enhance_prompt(prompt)
+        log_gen(f"[enhance] '{prompt}' -> '{enhanced_prompt}'")
+        gen_prompt = enhanced_prompt
 
         temp_path = os.path.join(BASE_DIR, "_temp_output.glb")
 
@@ -4128,7 +4203,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 0: Cache check
         # ------------------------------------------------------------------
         set_state(progress=10, step="cache_check")
-        cached = check_cache(prompt)
+        cached = check_cache(gen_prompt)
         if cached:
             set_state(progress=15, step="cache_hit")
             shutil.copy2(cached, ROCKET_GLB)
@@ -4136,8 +4211,10 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             if ok:
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen(f"[CACHE] served from cache: {msg}")
+                set_state(progress=80, step="uploading_cloudinary")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                set_state(progress=95, step="saving_supabase")
+                save_to_supabase(original_prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
@@ -4151,10 +4228,10 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 1: Prompt interpreter
         # ------------------------------------------------------------------
         set_state(progress=20, step="interpreting")
-        interp = interpret_prompt(prompt, color_hex)
+        interp = interpret_prompt(gen_prompt, color_hex)
         if not interp or interp.get("object") in ("", "object", None):
             color_word = color_name_from_hex(color_hex)
-            words = prompt.lower().split()
+            words = gen_prompt.lower().split()
             for w in words:
                 if w in COLOR_MAP:
                     color_word = w
@@ -4170,7 +4247,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 "multi_object":    "false",
                 "complexity":      complexity,
                 "search_keywords": f"{obj} 3d model",
-                "notes":           prompt
+                "notes":           gen_prompt
             }
             log_gen(f"[INTERPRETER] LLM failed, using local parse: obj={obj} color={color_word}")
         else:
@@ -4181,7 +4258,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         if library_mode:
             set_state(step="library_search")
-            keywords = interp.get("search_keywords", interp.get("object", prompt))
+            keywords = interp.get("search_keywords", interp.get("object", gen_prompt))
             log_gen(f"[LIBRARY] library_mode=True, searching: {keywords}")
             model_info = library_search(keywords)
             if model_info:
@@ -4194,9 +4271,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                         shutil.copy2(temp_path, ROCKET_GLB)
                         sz = os.path.getsize(ROCKET_GLB)
                         log_gen(f"[LIBRARY] success: {msg}")
-                        store_cache(ROCKET_GLB, prompt)
+                        store_cache(ROCKET_GLB, gen_prompt)
+                        set_state(progress=80, step="uploading_cloudinary")
                         _cloud = upload_to_cloudinary(ROCKET_GLB)
-                        save_to_supabase(prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                        set_state(progress=95, step="saving_supabase")
+                        save_to_supabase(original_prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                         set_state(status="done", progress=100, step="done",
                                   service="Library", cached=False, glb_size=sz,
                                   last_model=ROCKET_GLB,
@@ -4207,17 +4286,19 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         # STEP 3: Stage A - Shap-E
         # ------------------------------------------------------------------
-        set_state(progress=30, step="stage_a_shapee")
+        set_state(progress=15, step="stage_a_shapee")
         if shap_e_available:
             log_gen("[SHAPEE] attempting Shap-E generation...")
-            ok = run_shap_e(prompt, temp_path)
+            ok = run_shap_e(gen_prompt, temp_path)
             if ok:
                 shutil.copy2(temp_path, ROCKET_GLB)
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[SHAPEE] [MODEL_A] Shap-E success")
-                store_cache(ROCKET_GLB, prompt)
+                store_cache(ROCKET_GLB, gen_prompt)
+                set_state(progress=80, step="uploading_cloudinary")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                set_state(progress=95, step="saving_supabase")
+                save_to_supabase(original_prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Shap-E", glb_size=sz, last_model=ROCKET_GLB,
                           cloud_url=_cloud or "")
@@ -4229,18 +4310,19 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         # STEP 4: Stage B - Gemini + Blender
         # ------------------------------------------------------------------
-        set_state(progress=40, step="stage_b_gemini_blender")
+        set_state(progress=35, step="stage_b_gemini_blender")
         if os.path.exists(BLENDER_EXE):
             log_gen("[MODEL_B] attempting Gemini+Blender...")
-            set_state(progress=60, step="blender_running")
-            ok = stage_b_gemini_blender(prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
+            ok = stage_b_gemini_blender(gen_prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
             if ok:
                 shutil.copy2(temp_path, ROCKET_GLB)
                 sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[MODEL_B] Gemini+Blender success")
-                store_cache(ROCKET_GLB, prompt)
+                store_cache(ROCKET_GLB, gen_prompt)
+                set_state(progress=80, step="uploading_cloudinary")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
-                save_to_supabase(prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                set_state(progress=95, step="saving_supabase")
+                save_to_supabase(original_prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
                           cloud_url=_cloud or "")
@@ -4250,15 +4332,17 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         # STEP 5: Stage C - Preset
         # ------------------------------------------------------------------
-        set_state(progress=75, step="stage_c_preset")
-        ok, matched_kw = stage_c_preset(prompt, interp, color_hex, temp_path)
+        set_state(progress=70, step="stage_c_preset")
+        ok, matched_kw = stage_c_preset(gen_prompt, interp, color_hex, temp_path)
         if ok:
             shutil.copy2(temp_path, ROCKET_GLB)
             sz = os.path.getsize(ROCKET_GLB)
             log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
-            store_cache(ROCKET_GLB, prompt)
+            store_cache(ROCKET_GLB, gen_prompt)
+            set_state(progress=80, step="uploading_cloudinary")
             _cloud = upload_to_cloudinary(ROCKET_GLB)
-            save_to_supabase(prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+            set_state(progress=95, step="saving_supabase")
+            save_to_supabase(original_prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
             set_state(status="done", progress=100, step="done",
                       service="Preset", glb_size=sz, last_model=ROCKET_GLB,
                       cloud_url=_cloud or "",
@@ -4268,20 +4352,22 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         # STEP 5.5: Shaped fallback
         # ------------------------------------------------------------------
-        set_state(progress=85, step="shaped_fallback")
+        set_state(progress=70, step="shaped_fallback")
         log_gen("[FALLBACK] Attempting shaped fallback")
         try:
             from generate_model import generate as gen_fallback_model
-            obj_keyword = match_preset_keyword(prompt) or interp.get("object", "sphere")
+            obj_keyword = match_preset_keyword(gen_prompt) or interp.get("object", "sphere")
             ok = gen_fallback_model(obj_keyword, color_hex, ROCKET_GLB)
             if ok:
                 ok2, msg = validate_glb(ROCKET_GLB)
                 if ok2:
                     sz = os.path.getsize(ROCKET_GLB)
                     log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword}")
-                    store_cache(ROCKET_GLB, prompt)
+                    store_cache(ROCKET_GLB, gen_prompt)
+                    set_state(progress=80, step="uploading_cloudinary")
                     _cloud = upload_to_cloudinary(ROCKET_GLB)
-                    save_to_supabase(prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                    set_state(progress=95, step="saving_supabase")
+                    save_to_supabase(original_prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                     set_state(status="done", progress=100, step="done",
                               service="Fallback-Shaped", glb_size=sz,
                               last_model=ROCKET_GLB,
@@ -4294,12 +4380,14 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         # STEP 6: Last Resort
         # ------------------------------------------------------------------
-        set_state(progress=95, step="generic_fallback")
+        set_state(progress=70, step="generic_fallback")
         log_gen("[FALLBACK] LAST RESORT: generic fallback")
         ok = write_fallback_glb(ROCKET_GLB, color_hex)
         sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
+        set_state(progress=80, step="uploading_cloudinary")
         _cloud = upload_to_cloudinary(ROCKET_GLB)
-        save_to_supabase(prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+        set_state(progress=95, step="saving_supabase")
+        save_to_supabase(original_prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
                   cloud_url=_cloud or "",
@@ -4468,6 +4556,7 @@ def generate():
     base_prompt    = str(data.get("base_prompt", ""))
     edit_instr     = str(data.get("edit_instruction", ""))
     raw_prompt     = str(data.get("prompt", "a 3d object"))
+    original_prompt = str(data.get("original_prompt", raw_prompt))
     color_hex      = str(data.get("color", "#aaaaaa"))
     folder         = str(data.get("folder", "default"))
     add_list       = data.get("add", [])
@@ -4484,6 +4573,7 @@ def generate():
         prompt = base_prompt + ", " + edit_instr
     else:
         prompt = raw_prompt
+    history_prompt = original_prompt if not is_edit else prompt
 
     # Validate color
     if not re.match(r"^#[0-9a-fA-F]{6}$", color_hex):
@@ -4502,7 +4592,7 @@ def generate():
 
     t = threading.Thread(
         target=run_generation,
-        args=(prompt, color_hex, folder, add_list, remove_list, library_mode, style, complexity, sub_id),
+        args=(prompt, color_hex, folder, add_list, remove_list, library_mode, style, complexity, sub_id, history_prompt),
         daemon=True
     )
     t.start()
@@ -4513,6 +4603,186 @@ def generate():
 def status():
     """Return current generation state."""
     return jsonify(get_state())
+
+
+@app.route("/api/enhance_prompt", methods=["POST"])
+def api_enhance_prompt():
+    """Preview prompt enhancement without starting generation."""
+    data = request.get_json(force=True, silent=True) or {}
+    raw = str(data.get("prompt", "")).strip()
+    if not raw:
+        return jsonify({"error": "empty prompt"}), 400
+    enhanced = enhance_prompt(raw)
+    return jsonify({"original": raw, "enhanced": enhanced})
+
+
+@app.route("/api/image_to_prompt", methods=["POST"])
+def image_to_prompt():
+    """
+    Accept an image upload and convert it into a 3D modeling prompt.
+    Returns {prompt, enhanced_prompt} for the client to use.
+    """
+    if "image" not in request.files:
+        return jsonify({"error": "no image"}), 400
+
+    f = request.files["image"]
+    mime = f.content_type or "image/jpeg"
+    if mime not in ("image/jpeg", "image/png", "image/webp"):
+        return jsonify({"error": "unsupported image type"}), 400
+
+    import base64
+    img_bytes = f.read()
+    if len(img_bytes) > 5 * 1024 * 1024:
+        return jsonify({"error": "image too large (max 5MB)"}), 400
+    b64 = base64.b64encode(img_bytes).decode("ascii")
+
+    body = {
+        "model": "openai/gpt-4o-mini",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime};base64,{b64}"}
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "Describe the main object in this image as a 3D modeling prompt. "
+                            "Focus on: shape, geometry, surface texture, proportions, distinctive features. "
+                            "Output ONE sentence, max 50 words. No preamble. Start with the object name."
+                        )
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 100
+    }
+
+    try:
+        result = call_llm(body)
+        if not result:
+            return jsonify({"error": "vision LLM returned empty"}), 500
+        result = result.strip()
+        enhanced = enhance_prompt(result)
+        return jsonify({"prompt": result, "enhanced": enhanced, "enhanced_prompt": enhanced})
+    except Exception as e:
+        log_error(f"[image_to_prompt] error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/community", methods=["GET"])
+def community_gallery():
+    """Return the latest public generations across users."""
+    try:
+        params = {
+            "select": "id,user_id,prompt,color,service,created,cloud_url,quality_score",
+            "order": "created.desc",
+            "limit": "50"
+        }
+        rows = supabase_request("GET", "models", params=params)
+        if rows is None:
+            rows = []
+        return jsonify({"models": rows})
+    except Exception as e:
+        log_error(f"[community] error: {e}")
+        return jsonify({"models": [], "error": str(e)})
+
+
+@app.route("/generate_variants", methods=["POST"])
+def generate_variants():
+    import uuid
+
+    data = request.get_json(force=True, silent=True) or {}
+    raw_prompt = str(data.get("prompt", "a 3d object")).strip() or "a 3d object"
+    color_hex = str(data.get("color", "#aaaaaa"))
+    style = str(data.get("style", "realistic"))
+    complexity = int(data.get("complexity", 3))
+    if not re.match(r"^#[0-9a-fA-F]{6}$", color_hex):
+        color_hex = "#aaaaaa"
+    if style not in STYLE_DIRECTIVES:
+        style = "realistic"
+    complexity = max(1, min(5, complexity))
+
+    variant_instructions = [
+        raw_prompt,
+        raw_prompt + ", viewed from above, emphasize top geometry",
+        raw_prompt + ", more stylized, exaggerated proportions"
+    ]
+
+    job_id = str(uuid.uuid4())[:8]
+    with _variant_jobs_lock:
+        _variant_jobs[job_id] = {"status": "running", "results": [], "total": 3}
+
+    def run_variant(idx, variant_prompt):
+        ok = False
+        cloud_url = ""
+        out_path = os.path.join(BASE_DIR, "models", f"variant_{job_id}_{idx}.glb")
+        local_url = f"/models/variant_{job_id}_{idx}.glb"
+        enhanced = variant_prompt
+        try:
+            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            enhanced = enhance_prompt(variant_prompt)
+            interp = interpret_prompt(enhanced, color_hex)
+            if not interp:
+                words = enhanced.lower().split()
+                obj = words[-1] if words else "object"
+                interp = {
+                    "object": obj,
+                    "style": style,
+                    "material": None,
+                    "features": [],
+                    "size": "medium",
+                    "color": color_name_from_hex(color_hex),
+                    "multi_object": "false",
+                    "complexity": complexity,
+                    "search_keywords": f"{obj} 3d model",
+                    "notes": enhanced
+                }
+            if os.path.exists(BLENDER_EXE):
+                ok = stage_b_gemini_blender(enhanced, interp, color_hex, out_path,
+                                             style=style, complexity=complexity)
+            if not ok:
+                ok, _matched = stage_c_preset(enhanced, interp, color_hex, out_path)
+            if ok and os.path.exists(out_path):
+                cloud_url = upload_to_cloudinary(out_path) or ""
+        except Exception as e:
+            log_error(f"[variants] job={job_id} idx={idx} error: {e}")
+            ok = False
+
+        result = {
+            "index": idx,
+            "prompt": variant_prompt,
+            "enhanced": enhanced,
+            "ok": ok,
+            "cloud_url": cloud_url,
+            "local_url": local_url if ok else "",
+            "local_path": out_path if ok else ""
+        }
+        with _variant_jobs_lock:
+            job = _variant_jobs.get(job_id)
+            if not job:
+                return
+            job["results"].append(result)
+            if len(job["results"]) >= job["total"]:
+                job["results"].sort(key=lambda r: r.get("index", 0))
+                job["status"] = "done"
+
+    for i, vp in enumerate(variant_instructions):
+        t = threading.Thread(target=run_variant, args=(i, vp), daemon=True)
+        t.start()
+
+    return jsonify({"status": "started", "job_id": job_id})
+
+
+@app.route("/variants/<job_id>", methods=["GET"])
+def get_variants(job_id):
+    with _variant_jobs_lock:
+        job = copy.deepcopy(_variant_jobs.get(job_id))
+    if not job:
+        return jsonify({"error": "job not found"}), 404
+    return jsonify(job)
 
 
 @app.route("/rocket.glb", methods=["GET"])
@@ -5630,7 +5900,7 @@ def api_version():
     return jsonify({
         "version":    VERSION,
         "built_with": "Flask + Blender + Gemini + Cloudinary",
-        "routes":     45,
+        "routes":     50,
     })
 
 @app.errorhandler(403)
@@ -6041,7 +6311,3 @@ _orig_build_preset_for_keyword = build_preset_for_keyword
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
-
-
-
-

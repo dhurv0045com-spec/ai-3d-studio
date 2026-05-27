@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+*.pyc
 *.py[cod]
 *$py.class
 *.so
@@ -28,6 +29,7 @@ wheels/
 _diag_pid.tmp
 _temp_output.glb
 _last_gemini_script.py
+github-recovery-codes.txt
 
 # OS files
 .DS_Store
@@ -44,8 +46,16 @@ Thumbs.db
 .env.local
 
 # Generated files
+logs/
+storage/
+shap_e_model_cache/
 *.glb
+models/*.glb
+models/**/*.glb
 !public/*.glb
+settings.json
+folders.json
 state.json
 history.json
+history_*.json
 shapee_installed.flag

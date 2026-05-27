@@ -125,16 +125,15 @@ IMPORTANT: Do this BEFORE the first deploy finishes.
 
    Variable Name          Value
    ─────────────────────────────────────────────────
-   GEMINI_KEY_1           AIzaSyC4YaR8aFNzc6gFfHvET7F_vLmowP-bbdY
-   GEMINI_KEY_2           AIzaSyC9V7aXuv2arhuN1BgMb_ZJXR3E7lNgT2M
-   GEMINI_KEY_3           AIzaSyDddKpd9HlZjmtmGpep6SDGoDm2mXLyi44
-   GEMINI_KEY_4           AIzaSyD2aY7Mrjbxra_oDiVHNrAYWVo5YM-HiNU
-   GEMINI_KEY_5           AIzaSyA88sqEBEzqfSiECA51T-QiGLB8gNqqvCI
-   GEMINI_KEY_6           AIzaSyDXsfLELFLRgoNfUXZGUtsK6X2-c--rqAM
-   GEMINI_KEY_7           AIzaSyBXLDQzk9_5naaxS4V5wG-RujQewfJKdw4
-   CLOUDINARY_CLOUD_NAME  root
-   CLOUDINARY_API_KEY     847967395866559
-   CLOUDINARY_API_SECRET  h9OL5-hsJdbxpMV3RpVxdLF7G-Q
+   GEMINI_KEY_1           your_gemini_key_1
+   GEMINI_KEY_2           your_gemini_key_2
+   OPENROUTER_KEY_1       your_openrouter_key_1
+   GROQ_KEY_1             your_groq_key_1
+   CLOUDINARY_CLOUD_NAME  your_cloudinary_cloud
+   CLOUDINARY_API_KEY     your_cloudinary_api_key
+   CLOUDINARY_API_SECRET  your_cloudinary_api_secret
+   SUPABASE_URL           your_supabase_url
+   SUPABASE_ANON_KEY      your_supabase_anon_key
 
 4. After adding all variables, Railway redeploys automatically
 

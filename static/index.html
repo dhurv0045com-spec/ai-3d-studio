@@ -16,7 +16,7 @@
 <meta property="og:type" content="website">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFD700'/%3E%3Ctext x='16' y='23' font-size='18' font-family='Arial' font-weight='900' text-anchor='middle' fill='%230A0A0A'%3EA%3C/text%3E%3C/svg%3E">
-<title>AI 3D STUDIO v7</title>
+<title>AI 3D STUDIO v8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -1075,7 +1075,7 @@ body:has(a:hover) #cursor-ring{
 .export-btn.obj:hover{background:rgba(255,165,0,.08)}
 
 /* ---- OTHER PAGES ---- */
-#page-gallery,#page-workshop,#page-settings,#page-help{
+#page-gallery,#page-community,#page-workshop,#page-settings,#page-help{
   padding:24px;overflow-y:auto;flex-direction:column;
 }
 .page-hdr{
@@ -1386,7 +1386,7 @@ nav#nav { display: flex !important; }
 #shell { display: flex; width: 100%; height: 100%; }
 #pages { display: flex; flex: 1; overflow: hidden; height: 100%; }
 #page-studio { flex-direction: row; }
-#page-gallery, #page-workshop, #page-settings, #page-help {
+#page-gallery, #page-community, #page-workshop, #page-settings, #page-help {
   flex-direction: column; overflow-y: auto; padding: 24px;
 }
 
@@ -1714,6 +1714,164 @@ nav#nav { display: flex !important; }
 }
 .hist-empty-s { font-size: 11px; color: var(--tx-4); }
 
+.enhance-btn {
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.enhance-btn:hover { background: var(--gold-faint); }
+.enhance-btn:disabled { opacity: 0.45; cursor: wait; }
+.enhance-preview {
+  font-size: 11px;
+  color: var(--tx-3);
+  padding: 6px 10px;
+  background: var(--bg-3);
+  border-radius: 6px;
+  margin-top: 4px;
+  display: none;
+  line-height: 1.5;
+}
+.enhance-preview.visible { display: block; }
+@keyframes goldShimmer {
+  0%,100% { border-color: var(--bd-2); }
+  50% { border-color: var(--gold); box-shadow: 0 0 8px var(--gold-faint); }
+}
+.shimmer { animation: goldShimmer 0.8s ease; }
+.prompt-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.img-upload-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.img-upload-btn {
+  background: var(--bg-3);
+  border: 1px dashed var(--bd-3);
+  color: var(--tx-2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.img-upload-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.img-upload-name { font-size: 11px; color: var(--tx-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.img-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-3);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.img-detected-prompt {
+  font-size: 11px;
+  color: var(--tx-2);
+  flex: 1;
+  line-height: 1.45;
+}
+.variant-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 10px;
+  color: var(--tx-3);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.variant-toggle input { accent-color: var(--gold); }
+.variants-panel {
+  display: none;
+  gap: 12px;
+  margin-top: 16px;
+}
+.variants-panel.visible { display: flex; }
+.variant-card {
+  flex: 1;
+  background: var(--bg-3);
+  border: 1px solid var(--bd-2);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  text-align: center;
+  min-width: 0;
+}
+.variant-card:hover { border-color: var(--cyan); }
+.variant-card.selected { border-color: var(--gold); }
+.variant-card canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--bg-2);
+  border-radius: 6px;
+  display: block;
+}
+.variant-label {
+  font-size: 11px;
+  color: var(--tx-3);
+  margin-top: 6px;
+  min-height: 30px;
+  line-height: 1.35;
+}
+.btn-use-variant {
+  background: var(--gold-faint);
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.pipeline-viz {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  background: var(--bg-2);
+  border-radius: 10px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.pipe-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--bd-1);
+  background: var(--bg-3);
+  min-width: 70px;
+  transition: all 0.3s;
+  opacity: 0.4;
+}
+.pipe-stage.active {
+  border-color: var(--cyan);
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(0,212,255,0.2);
+  animation: pipePulse 1s infinite;
+}
+.pipe-stage.done {
+  border-color: #22c55e;
+  opacity: 1;
+}
+.pipe-icon { font-size: 18px; }
+.pipe-label { font-size: 10px; color: var(--tx-3); }
+.pipe-status { font-size: 9px; color: var(--tx-4); }
+.pipe-arrow { color: var(--tx-4); font-size: 14px; }
+@keyframes pipePulse {
+  0%,100% { box-shadow: 0 0 6px rgba(0,212,255,0.2); }
+  50% { box-shadow: 0 0 14px rgba(0,212,255,0.5); }
+}
+
 /* ---- HELP PAGE (HTML uses .help-key, .help-desc) ---- */
 .help-key {
   font-family: 'JetBrains Mono', monospace; font-size: 9px;
@@ -1869,6 +2027,8 @@ nav#nav { display: flex !important; }
 /* ---- PAGE LAYOUT FIXES ---- */
 #page-gallery { display: none; flex-direction: column; padding: 20px; overflow: hidden; }
 #page-gallery.active { display: flex; }
+#page-community { display: none; flex-direction: column; padding: 20px; overflow: hidden; }
+#page-community.active { display: flex; }
 #page-workshop { display: none; flex-direction: column; overflow-y: auto; padding: 28px; }
 #page-workshop.active { display: flex; }
 #page-settings { display: none; flex-direction: column; overflow-y: auto; padding: 20px; gap: 0; }
@@ -2127,6 +2287,11 @@ nav#nav { display: flex !important; }
       <span class="nav-tip">Gallery</span>
     </div>
 
+    <div class="nav-item" data-page="community" onclick="goPage('community')">
+      <div class="nav-icon-q">C</div>
+      <span class="nav-tip">Community</span>
+    </div>
+
     <!-- Removed Workshop tab, integrated into Studio Edit -->
     <div class="nav-item" data-page="help" onclick="goPage('help')">
       <div class="nav-icon-q">?</div>
@@ -2141,7 +2306,7 @@ nav#nav { display: flex !important; }
     </div>
   </div>
 
-  <div class="nav-ver">v7.0</div>
+  <div class="nav-ver">v8.0</div>
 </nav>
 
 <!-- ====================================================== CONTENT -->
@@ -2306,7 +2471,19 @@ nav#nav { display: flex !important; }
           <div id="tab-create">
 
             <div class="f-wrap">
-              <div class="f-lbl"><div class="f-dot amber"></div>Describe Your Model</div>
+              <div class="f-lbl prompt-title-row">
+                <span style="display:flex;align-items:center;gap:6px"><div class="f-dot amber"></div>Describe Your Model</span>
+                <button type="button" id="btn-enhance" class="enhance-btn" onclick="enhancePrompt()">Enhance</button>
+              </div>
+              <div id="img-upload-zone" class="img-upload-zone">
+                <input type="file" id="img-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+                <button type="button" id="btn-img-upload" class="img-upload-btn" onclick="document.getElementById('img-file-input').click()">Generate from Image</button>
+                <span id="img-upload-name" class="img-upload-name"></span>
+              </div>
+              <div id="img-preview-card" class="img-preview-card" style="display:none">
+                <img id="img-preview-thumb" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px">
+                <div id="img-detected-prompt" class="img-detected-prompt"></div>
+              </div>
               <div class="prompt-wrap">
                 <textarea id="prompt"
                   placeholder="a massive crimson dragon with spread wings and molten eyes, perched on a volcano at sunset..."
@@ -2315,6 +2492,7 @@ nav#nav { display: flex !important; }
                 <button class="pr-link" onclick="togglePrDrop()">Recent</button>
                 <span class="prompt-counter" id="prompt-counter">0 / 500</span>
               </div>
+              <div id="enhance-preview" class="enhance-preview"></div>
               <div id="pr-drop"></div>
             </div>
 
@@ -2440,7 +2618,11 @@ nav#nav { display: flex !important; }
             </div>
 
             <!-- THE TARANTINO BUTTON -->
+            <label class="variant-toggle">
+              <input type="checkbox" id="chk-variants"> Generate 3 Variants
+            </label>
             <button id="gen-btn" onclick="generate()">GENERATE MODEL</button>
+            <div id="variants-panel" class="variants-panel"></div>
 
           </div>
         </div>
@@ -2562,15 +2744,36 @@ nav#nav { display: flex !important; }
             <span class="prog-pct"  id="prog-pct">0%</span>
             <span id="gen-timer">0:00</span>
           </div>
-          <div class="prog-bar-bg">
-            <div class="prog-bar-fill" id="prog-fill"></div>
-          </div>
-          <div class="pdots">
-            <div class="pdot-wrap"><div class="pdot" id="pd0"></div><div class="pdot-lbl">CACHE</div></div>
-            <div class="pdot-wrap"><div class="pdot" id="pd1"></div><div class="pdot-lbl">PARSE</div></div>
-            <div class="pdot-wrap"><div class="pdot" id="pd2"></div><div class="pdot-lbl">AI</div></div>
-            <div class="pdot-wrap"><div class="pdot" id="pd3"></div><div class="pdot-lbl">BUILD</div></div>
-            <div class="pdot-wrap"><div class="pdot" id="pd4"></div><div class="pdot-lbl">DONE</div></div>
+          <div id="pipeline-viz" class="pipeline-viz" style="display:none">
+            <div class="pipe-stage" id="pipe-enhance">
+              <div class="pipe-icon">✨</div>
+              <div class="pipe-label">Enhance</div>
+              <div class="pipe-status"></div>
+            </div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-stage" id="pipe-llm">
+              <div class="pipe-icon">🧠</div>
+              <div class="pipe-label">LLM Script</div>
+              <div class="pipe-status"></div>
+            </div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-stage" id="pipe-blender">
+              <div class="pipe-icon">⚙️</div>
+              <div class="pipe-label">Blender</div>
+              <div class="pipe-status"></div>
+            </div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-stage" id="pipe-upload">
+              <div class="pipe-icon">☁️</div>
+              <div class="pipe-label">Upload</div>
+              <div class="pipe-status"></div>
+            </div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-stage" id="pipe-done">
+              <div class="pipe-icon">✅</div>
+              <div class="pipe-label">Done</div>
+              <div class="pipe-status"></div>
+            </div>
           </div>
           <div class="log-box" id="log-box"></div>
           <div class="err-box" id="err-box"></div>
@@ -2594,7 +2797,19 @@ nav#nav { display: flex !important; }
           <div class="gallery-empty-t">Your creations will live here</div>
           <div class="hist-empty-s">Generate your first model in Studio</div>
         </div>
-      </div>    <!-- ======================== WORKSHOP (Removed/Redirected) ======================== -->
+      </div>
+    </div><!-- end page-gallery -->
+
+    <!-- ======================== COMMUNITY ======================== -->
+    <div id="page-community" class="page">
+      <div class="gallery-bar">
+        <span class="gallery-cnt">Community Creations - <em id="community-count">...</em></span>
+        <button class="gallery-filter" onclick="loadCommunity()">Refresh</button>
+      </div>
+      <div id="community-grid" class="gallery-grid"></div>
+    </div>
+
+    <!-- ======================== WORKSHOP (Removed/Redirected) ======================== -->
     <div class="page" id="page-workshop" style="display:none;"></div>
 
     <!-- ======================== SETTINGS ======================== -->
@@ -2985,6 +3200,32 @@ function showModelBar(promptText, service) {
   if (bar) { bar.classList.add('shown'); }
 }
 
+function loadModelUrl(url, promptText) {
+  if (!url) { return; }
+  var sep = url.indexOf('?') === -1 ? '?' : '&';
+  loadGLB(url + sep + 't=' + Date.now(), function() {
+    var es = document.getElementById('empty-state');
+    if (es) { es.classList.add('gone'); }
+    showModelBar(promptText || 'Community model', 'Cloud');
+    APP.lastPrompt = promptText || APP.lastPrompt || '';
+    goPage('studio');
+  });
+}
+
+function escapeHTML(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function anonymizeCreator(value) {
+  var s = String(value || 'anon');
+  return s.slice(0, 3) + '***';
+}
+
 /* ============================================================
    QUICK SHAPES - Wes Anderson grid
    ============================================================ */
@@ -3016,11 +3257,89 @@ function chipFill(text) {
   if (inp) { inp.value = text; inp.focus(); updateCounter(); goRTab('create'); }
 }
 
+function enhancePrompt() {
+  var inp = document.getElementById('prompt');
+  var btn = document.getElementById('btn-enhance');
+  var preview = document.getElementById('enhance-preview');
+  var raw = inp ? inp.value.trim() : '';
+  if (!raw) {
+    toast('Enter a prompt to enhance', 'warn');
+    if (inp) { inp.focus(); }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Enhancing...'; }
+  fetch('/api/enhance_prompt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: raw })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { throw new Error(data.error); }
+      APP.enhanceOriginalPrompt = data.original || raw;
+      APP.enhanceEnhancedPrompt = data.enhanced || raw;
+      if (inp) {
+        inp.value = data.enhanced || raw;
+        inp.classList.remove('shimmer');
+        void inp.offsetWidth;
+        inp.classList.add('shimmer');
+        updateCounter();
+      }
+      if (preview) {
+        preview.innerHTML = '<strong>Original:</strong> ' + escapeHTML(data.original || raw) +
+          ' &rarr; <strong>Enhanced:</strong> ' + escapeHTML(data.enhanced || raw);
+        preview.classList.add('visible');
+      }
+    })
+    .catch(function(err) { toast(err.message || 'Enhance failed', 'err'); })
+    .finally(function() {
+      if (btn) { btn.disabled = false; btn.textContent = 'Enhance'; }
+    });
+}
+
+var imgInput = document.getElementById('img-file-input');
+if (imgInput) {
+  imgInput.addEventListener('change', function(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) { return; }
+    var thumb = document.getElementById('img-preview-thumb');
+    var card = document.getElementById('img-preview-card');
+    var detected = document.getElementById('img-detected-prompt');
+    if (thumb) { thumb.src = URL.createObjectURL(file); }
+    if (card) { card.style.display = 'flex'; }
+    if (detected) { detected.textContent = 'Analyzing image...'; }
+
+    var fd = new FormData();
+    fd.append('image', file);
+    fetch('/api/image_to_prompt', { method: 'POST', body: fd })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.error) { throw new Error(data.error); }
+        var inp = document.getElementById('prompt');
+        if (inp) {
+          inp.value = data.enhanced_prompt || data.enhanced || data.prompt || '';
+          inp.classList.remove('shimmer');
+          void inp.offsetWidth;
+          inp.classList.add('shimmer');
+          updateCounter();
+        }
+        APP.enhanceOriginalPrompt = data.prompt || '';
+        APP.enhanceEnhancedPrompt = data.enhanced_prompt || data.enhanced || data.prompt || '';
+        var nameEl = document.getElementById('img-upload-name');
+        if (nameEl) { nameEl.textContent = file.name; }
+        if (detected) { detected.textContent = 'Detected: ' + (data.prompt || 'object'); }
+      })
+      .catch(function(err) {
+        if (detected) { detected.textContent = 'Error: ' + err.message; }
+      });
+  });
+}
+
 /* ============================================================
    NAV - page switching
    ============================================================ */
 var PAGE_TITLES = {
-  studio: 'STUDIO', gallery: 'GALLERY',
+  studio: 'STUDIO', gallery: 'GALLERY', community: 'COMMUNITY',
   workshop: 'WORKSHOP', settings: 'SETTINGS', help: 'HELP'
 };
 
@@ -3035,6 +3354,7 @@ function goPage(name) {
   var ttl = document.getElementById('page-title');
   if (ttl) { ttl.textContent = PAGE_TITLES[name] || name.toUpperCase(); }
   if (name === 'gallery')  { renderGallery(); }
+  if (name === 'community') { loadCommunity(); }
   if (name === 'settings') { loadSystemInfo(); }
   if (name === 'studio')   { setTimeout(resizeRenderer, 60); }
   
@@ -3357,6 +3677,52 @@ function resetPipelineDots() {
   }
 }
 
+var PIPE_STAGE_MAP = {
+  enhancing_prompt: 'pipe-enhance',
+  stage_a_shapee: 'pipe-llm',
+  interpreting: 'pipe-llm',
+  stage_b_gemini_blender: 'pipe-blender',
+  stage_c_preset: 'pipe-blender',
+  shaped_fallback: 'pipe-blender',
+  generic_fallback: 'pipe-blender',
+  uploading_cloudinary: 'pipe-upload',
+  saving_supabase: 'pipe-upload',
+  done: 'pipe-done'
+};
+var PIPE_ORDER = ['pipe-enhance', 'pipe-llm', 'pipe-blender', 'pipe-upload', 'pipe-done'];
+
+function updatePipelineViz(step, progress) {
+  var viz = document.getElementById('pipeline-viz');
+  if (!viz) { return; }
+
+  if (progress > 0 && progress < 100) {
+    viz.style.display = 'flex';
+  } else if (progress === 0 || progress === 100) {
+    setTimeout(function() { viz.style.display = 'none'; }, 2000);
+  }
+
+  var activeId = PIPE_STAGE_MAP[step];
+  if (!activeId) { return; }
+
+  var activeIdx = PIPE_ORDER.indexOf(activeId);
+  PIPE_ORDER.forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (!el) { return; }
+    el.classList.remove('active', 'done');
+    if (i < activeIdx) { el.classList.add('done'); }
+    else if (i === activeIdx) { el.classList.add('active'); }
+  });
+}
+
+function resetPipelineViz() {
+  PIPE_ORDER.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.remove('active', 'done'); }
+  });
+  var viz = document.getElementById('pipeline-viz');
+  if (viz) { viz.style.display = 'none'; }
+}
+
 /* Error box */
 function showError(msg, boxId) {
   var box = document.getElementById(boxId || 'err-box');
@@ -3425,6 +3791,7 @@ function doPoll() {
     .then(function(d) {
       updateProgressUI(d);
       updatePipelineDots(d.progress);
+      updatePipelineViz(d.step, d.progress);
       appendNewLogLines(d.log, 'log-box', 'logLineCount');
 
       if (d.status === 'done') {
@@ -3446,6 +3813,7 @@ function doPoll() {
           updateModelCounter();
           setGenerating(false);
           updatePipelineDots(100);
+          updatePipelineViz('done', 100);
           setTimeout(hideProgress, 3600);
           if (d.quality_score !== undefined) { setQualityBadge(d.quality_score); }
         var timerStr = stopGenTimer();
@@ -3472,6 +3840,7 @@ function doEditPoll() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       updateProgressUI(d);
+      updatePipelineViz(d.step, d.progress);
       appendNewLogLines(d.log, 'log-box', 'logLineCount');
 
       if (d.status === 'done') {
@@ -3506,6 +3875,7 @@ function checkIfGenerating() {
         APP.logLineCount = d.log ? d.log.length : 0;
         setGenerating(true);
         showProgress();
+        updatePipelineViz(d.step, d.progress);
         startPoll();
         toast('Resuming generation...', 'warn');
       } else if (d.status === 'done' && d.glb_exists) {
@@ -3539,14 +3909,16 @@ function generate() {
     return;
   }
 
-  APP.lastPrompt   = prompt;
+  var displayPrompt = (APP.enhanceEnhancedPrompt === prompt ? APP.enhanceOriginalPrompt : prompt) || prompt;
+  APP.lastPrompt   = displayPrompt;
   APP.genTs        = Date.now();
   APP.logLineCount = 0;
-  addToPromptHistory(prompt);
+  addToPromptHistory(displayPrompt);
 
   clearLogBox('log-box');
   hideError('err-box');
   resetPipelineDots();
+  resetPipelineViz();
   showProgress();
   setGenerating(true);
 
@@ -3556,6 +3928,7 @@ function generate() {
 
   var body = {
     prompt:       prompt,
+    original_prompt: displayPrompt,
     color:        APP.selectedColor,
     folder:       folderEl ? folderEl.value : 'default',
     add:          APP.addTags,
@@ -3564,6 +3937,12 @@ function generate() {
     style:        APP.selectedStyle,
     complexity:   APP.complexity
   };
+
+  var variantsOn = document.getElementById('chk-variants');
+  if (variantsOn && variantsOn.checked) {
+    generateVariants(body);
+    return;
+  }
 
   fetch('/generate', {
     method:  'POST',
@@ -3590,6 +3969,126 @@ function generate() {
       hideProgress();
       toast('Cannot connect to server', 'err');
     });
+}
+
+function generateVariants(body) {
+  var panel = document.getElementById('variants-panel');
+  if (panel) {
+    panel.classList.add('visible');
+    panel.innerHTML = '<div style="color:var(--tx-3);font-size:11px;padding:12px">Generating variants...</div>';
+  }
+  updatePipelineViz('stage_b_gemini_blender', 35);
+
+  fetch('/generate_variants', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status !== 'started') { throw new Error(d.error || 'Failed to start variants'); }
+      toast('Variant generation started...', 'default');
+      pollVariants(d.job_id);
+    })
+    .catch(function(err) {
+      setGenerating(false);
+      hideProgress();
+      toast(err.message || 'Variant generation failed', 'err');
+    });
+}
+
+function pollVariants(jobId) {
+  var tries = 0;
+  var timer = setInterval(function() {
+    tries += 1;
+    fetch('/variants/' + encodeURIComponent(jobId))
+      .then(function(r) { return r.json(); })
+      .then(function(job) {
+        if (job.error) { throw new Error(job.error); }
+        var total = job.total || 3;
+        var doneCount = (job.results || []).length;
+        updateProgressUI({ progress: Math.min(95, 35 + doneCount * 20), step: 'stage_b_gemini_blender' });
+        if (job.status === 'done' || doneCount >= total) {
+          clearInterval(timer);
+          renderVariants(job.results || []);
+          setGenerating(false);
+          updatePipelineViz('done', 100);
+          setTimeout(hideProgress, 2200);
+          toast('Variants ready', 'ok');
+        }
+      })
+      .catch(function(err) {
+        if (tries > 2) {
+          clearInterval(timer);
+          setGenerating(false);
+          hideProgress();
+          toast(err.message || 'Variant polling failed', 'err');
+        }
+      });
+  }, 3000);
+}
+
+function renderVariants(results) {
+  var panel = document.getElementById('variants-panel');
+  if (!panel) { return; }
+  var okResults = (results || []).filter(function(r) { return r.ok && (r.cloud_url || r.local_url); });
+  if (!okResults.length) {
+    panel.classList.add('visible');
+    panel.innerHTML = '<div style="color:var(--red);font-size:11px;padding:12px">No variants completed.</div>';
+    return;
+  }
+  panel.classList.add('visible');
+  panel.innerHTML = '';
+  okResults.forEach(function(item) {
+    var url = item.cloud_url || item.local_url;
+    var card = document.createElement('div');
+    card.className = 'variant-card';
+    var canvas = document.createElement('canvas');
+    var label = document.createElement('div');
+    label.className = 'variant-label';
+    label.textContent = 'Variant ' + (Number(item.index) + 1) + ': ' + (item.prompt || '').slice(0, 46);
+    var btn = document.createElement('button');
+    btn.className = 'btn-use-variant';
+    btn.textContent = 'Use This';
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      document.querySelectorAll('.variant-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      loadModelUrl(url, item.prompt || item.enhanced || 'Variant');
+    });
+    card.addEventListener('click', function() { btn.click(); });
+    card.appendChild(canvas);
+    card.appendChild(label);
+    card.appendChild(btn);
+    panel.appendChild(card);
+    renderVariantPreview(canvas, url);
+  });
+}
+
+function renderVariantPreview(canvas, url) {
+  if (!canvas || !window.THREE || !THREE.GLTFLoader) { return; }
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  var size = Math.max(120, canvas.clientWidth || 140);
+  renderer.setSize(size, size, false);
+  var sceneMini = new THREE.Scene();
+  var cam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  cam.position.set(2.5, 1.8, 3.2);
+  sceneMini.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.4));
+  var loader = new THREE.GLTFLoader();
+  loader.load(url, function(gltf) {
+    var model = gltf.scene;
+    var box = new THREE.Box3().setFromObject(model);
+    var center = box.getCenter(new THREE.Vector3());
+    var modelSize = box.getSize(new THREE.Vector3());
+    var maxDim = Math.max(modelSize.x, modelSize.y, modelSize.z);
+    model.scale.setScalar(maxDim > 0 ? 2.2 / maxDim : 1);
+    center.multiplyScalar(model.scale.x);
+    model.position.sub(center);
+    sceneMini.add(model);
+    renderer.render(sceneMini, cam);
+  }, undefined, function() {
+    renderer.render(sceneMini, cam);
+  });
 }
 
 /* ============================================================
@@ -4415,6 +4914,100 @@ function buildGalCard(item) {
 var galSearch = document.getElementById('gal-search');
 // Moved to after debounce function definition
 // if (galSearch) { galSearch.addEventListener('input', debounce(renderGallery, 280)); }
+
+function loadCommunity() {
+  var grid = document.getElementById('community-grid');
+  var count = document.getElementById('community-count');
+  if (!grid) { return; }
+  grid.innerHTML = '<div style="color:var(--tx-3);padding:20px">Loading...</div>';
+  fetch('/api/community')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var models = data.models || [];
+      if (count) { count.textContent = models.length + ' models'; }
+      grid.innerHTML = '';
+      if (!models.length) {
+        grid.innerHTML = '<div class="gallery-empty"><div class="gallery-empty-t">No public models yet</div></div>';
+        return;
+      }
+      models.forEach(function(m) {
+        grid.appendChild(buildCommunityCard(m));
+      });
+    })
+    .catch(function() {
+      grid.innerHTML = '<div style="color:var(--red);padding:20px">Community gallery failed to load.</div>';
+    });
+}
+
+function buildCommunityCard(item) {
+  var colorHex = item.color || '#333333';
+  if (colorHex.charAt(0) !== '#') { colorHex = '#' + colorHex; }
+
+  var card = document.createElement('div');
+  card.className = 'gal-card';
+  card.addEventListener('click', function() {
+    loadCommunityModel(item.cloud_url, item.prompt || 'Community model');
+  });
+
+  var thumb = document.createElement('div');
+  thumb.className = 'gal-thumb';
+  thumb.style.background = colorHex;
+  thumb.style.display = 'flex';
+  thumb.style.alignItems = 'center';
+  thumb.style.justifyContent = 'center';
+  thumb.style.color = '#fff';
+  thumb.style.fontSize = '10px';
+  thumb.style.padding = '8px';
+  thumb.style.textAlign = 'center';
+  thumb.textContent = (item.prompt || 'untitled').slice(0, 42);
+
+  var overlay = document.createElement('div');
+  overlay.className = 'gal-overlay';
+  var loadBtn = document.createElement('button');
+  loadBtn.className = 'gal-btn view';
+  loadBtn.textContent = 'LOAD';
+  loadBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    loadCommunityModel(item.cloud_url, item.prompt || 'Community model');
+  });
+  overlay.appendChild(loadBtn);
+  thumb.appendChild(overlay);
+
+  var bar = document.createElement('div');
+  bar.className = 'gal-colorbar';
+  bar.style.background = colorHex;
+
+  var info = document.createElement('div');
+  info.className = 'gal-info';
+  var name = document.createElement('div');
+  name.className = 'gal-prompt';
+  name.textContent = (item.prompt || 'untitled').slice(0, 44);
+  name.title = item.prompt || '';
+  var meta = document.createElement('div');
+  meta.className = 'gal-meta';
+  var created = item.created ? String(item.created).slice(0, 10) : '';
+  meta.innerHTML = '<span>' + escapeHTML(anonymizeCreator(item.user_id)) + '</span><span>' + escapeHTML(created) + '</span>';
+  var svc = document.createElement('div');
+  svc.className = 'gal-meta';
+  svc.innerHTML = '<span>' + escapeHTML(item.service || '') + '</span><span>' +
+    (item.quality_score ? escapeHTML(String(item.quality_score)) : '') + '</span>';
+
+  info.appendChild(name);
+  info.appendChild(meta);
+  info.appendChild(svc);
+  card.appendChild(thumb);
+  card.appendChild(bar);
+  card.appendChild(info);
+  return card;
+}
+
+function loadCommunityModel(cloudUrl, prompt) {
+  if (!cloudUrl) {
+    toast('This community model has no cloud URL', 'warn');
+    return;
+  }
+  loadModelUrl(cloudUrl, prompt);
+}
 </script>
 <script>
 /* ============================================================
@@ -4606,7 +5199,15 @@ document.addEventListener('keydown', function(e) {
    PROMPT COUNTER EVENT
    ============================================================ */
 var promptEl = document.getElementById('prompt');
-if (promptEl) { promptEl.addEventListener('input', updateCounter); }
+if (promptEl) {
+  promptEl.addEventListener('input', function() {
+    updateCounter();
+    if (APP.enhanceEnhancedPrompt && promptEl.value !== APP.enhanceEnhancedPrompt) {
+      APP.enhanceOriginalPrompt = '';
+      APP.enhanceEnhancedPrompt = '';
+    }
+  });
+}
 
 /* ============================================================
    V7 DEBOUNCE UTILITY - MUST BE FIRST

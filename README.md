@@ -2,7 +2,7 @@
   <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='88' viewBox='0 0 360 88'%3E%3Crect width='360' height='88' rx='14' fill='%230a0e17'/%3E%3Crect x='8' y='8' width='344' height='72' rx='10' fill='%23111827' stroke='%23ffd700' stroke-width='2'/%3E%3Ctext x='180' y='38' font-family='Arial, sans-serif' font-size='22' font-weight='800' text-anchor='middle' fill='%23ffd700'%3EAUREX AI 3D STUDIO%3C/text%3E%3Ctext x='180' y='60' font-family='Arial, sans-serif' font-size='13' text-anchor='middle' fill='%2300d4ff'%3EV8 TEXT + IMAGE TO GLB PIPELINE%3C/text%3E%3C/svg%3E" alt="Aurex AI 3D Studio Badge" width="360"/>
   <h1>🌌 Aurex AI 3D Studio (V8.0)</h1>
   <p><strong>Next-Generation Text-to-3D Generation Pipeline</strong></p>
-  <p><strong>Live Demo:</strong> <a href="https://aurex-3d.up.railway.app">https://aurex-3d.up.railway.app</a></p>
+  <p><strong>Live Demo:</strong> <a href="https://aurexs3d.up.railway.app/app">https://aurexs3d.up.railway.app/app</a></p>
   
   [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
   [![Flask](https://img.shields.io/badge/Flask-3.0.0-000000.svg?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)

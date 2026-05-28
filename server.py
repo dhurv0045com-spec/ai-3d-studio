@@ -761,7 +761,7 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
                 headers={
                     "Authorization":  "Bearer " + k["key"],
                     "Content-Type":   "application/json",
-                    "HTTP-Referer":   "https://aurex-3d.up.railway.app",
+                    "HTTP-Referer":   "https://aurexs3d.up.railway.app/app",
                     "X-Title":        "Aurex 3D"
                 },
                 json={
@@ -822,7 +822,7 @@ def call_openrouter_payload(body):
                 headers={
                     "Authorization": "Bearer " + k["key"],
                     "Content-Type": "application/json",
-                    "HTTP-Referer": "https://aurex-3d.up.railway.app",
+                    "HTTP-Referer": "https://aurexs3d.up.railway.app/app",
                     "X-Title": "Aurex 3D"
                 },
                 json=payload,

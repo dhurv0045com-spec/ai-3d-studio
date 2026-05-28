@@ -3269,8 +3269,12 @@ var APP = {
 var scene, camera, renderer, currentObject;
 var placeholderObject = null;
 var pollTimer = null, editPollTimer = null;
-var sph = { theta: 0.5, phi: 1.1, radius: 5.5,
-            tTheta: 0.5, tPhi: 1.1, tRadius: 5.5 };
+var sph = {
+  theta: 0.5, phi: 1.1, radius: 5.5,
+  tTheta: 0.5, tPhi: 1.1, tRadius: 5.5,
+  targetX: 0, targetY: 0, targetZ: 0,
+  tTargetX: 0, tTargetY: 0, tTargetZ: 0
+};
 var ms = { down: false, lx: 0, ly: 0, btn: 0 };
 
 /* ============================================================
@@ -3285,11 +3289,87 @@ var HAND = {
   hands: null,
   cam: null,
   video: null,
-  last: { x: null, y: null, pinch: null },
-  smooth: { dx: 0, dy: 0, dz: 0 },
-  settings: { sensitivity: 1.0, showPreview: false, twoHand: true },
-  ui: { panel: null }
+  last: { x: null, y: null, pinch: null, angle: null },
+  smooth: { dx: 0, dy: 0, dz: 0, panX: 0, panY: 0 },
+  settings: { sensitivity: 1.0, showPreview: false, twoHand: true, partControl: true },
+  ui: { panel: null },
+  gestureCooldownAt: 0
 };
+var PARTS = { meshes: [], index: -1 };
+
+function _partsClearVisuals() {
+  PARTS.meshes.forEach(function(mesh) {
+    if (!mesh || !mesh.material || !mesh.userData || !mesh.userData._baseMaterial) { return; }
+    mesh.material = mesh.userData._baseMaterial;
+  });
+}
+
+function _partsCollectMeshes() {
+  PARTS.meshes = [];
+  PARTS.index = -1;
+  if (!currentObject) { return; }
+  currentObject.traverse(function(node) {
+    if (!node || !node.isMesh || !node.material) { return; }
+    if (!node.userData._baseMaterial) { node.userData._baseMaterial = node.material; }
+    PARTS.meshes.push(node);
+  });
+}
+
+function _partsFocus(index) {
+  if (!PARTS.meshes.length) { return; }
+  PARTS.index = (index + PARTS.meshes.length) % PARTS.meshes.length;
+  PARTS.meshes.forEach(function(mesh, i) {
+    if (!mesh || !mesh.userData || !mesh.userData._baseMaterial) { return; }
+    var baseMat = mesh.userData._baseMaterial;
+    if (i === PARTS.index) {
+      var hi = baseMat.clone ? baseMat.clone() : baseMat;
+      if (hi.emissive && hi.emissive.clone) { hi.emissive = hi.emissive.clone().addScalar(0.12); }
+      hi.opacity = 1;
+      hi.transparent = !!(hi.opacity < 1);
+      mesh.material = hi;
+    } else {
+      var dim = baseMat.clone ? baseMat.clone() : baseMat;
+      dim.opacity = 0.18;
+      dim.transparent = true;
+      mesh.material = dim;
+    }
+  });
+  var active = PARTS.meshes[PARTS.index];
+  if (active) {
+    var box = new THREE.Box3().setFromObject(active);
+    var center = box.getCenter(new THREE.Vector3());
+    sph.tTargetX = center.x;
+    sph.tTargetY = center.y;
+    sph.tTargetZ = center.z;
+  }
+  toast('Part focus ' + (PARTS.index + 1) + '/' + PARTS.meshes.length, 'info');
+}
+
+function _partsCycleFocus() {
+  if (!HAND.settings.partControl) { return; }
+  if (!PARTS.meshes.length) { _partsCollectMeshes(); }
+  if (!PARTS.meshes.length) { return; }
+  _partsFocus(PARTS.index + 1);
+}
+
+function _partsClearFocus() {
+  _partsClearVisuals();
+  PARTS.index = -1;
+  sph.tTargetX = 0;
+  sph.tTargetY = 0;
+  sph.tTargetZ = 0;
+}
+
+function _handFingerCount(lm) {
+  if (!lm || lm.length < 21) { return 0; }
+  var count = 0;
+  if (lm[4].x > lm[3].x) { count += 1; } // thumb (mirrored webcam approximation)
+  if (lm[8].y < lm[6].y) { count += 1; }  // index
+  if (lm[12].y < lm[10].y) { count += 1; } // middle
+  if (lm[16].y < lm[14].y) { count += 1; } // ring
+  if (lm[20].y < lm[18].y) { count += 1; } // pinky
+  return count;
+}
 
 function _handEnsurePanel() {
   if (HAND.ui.panel) { return HAND.ui.panel; }
@@ -3301,16 +3381,19 @@ function _handEnsurePanel() {
     '<div class="hp-row"><label>Sensitivity</label><input id="hp-sens" type="range" min="0.4" max="2.2" step="0.05" value="1.0"></div>' +
     '<div class="hp-row"><label>Camera preview</label><input id="hp-prev" type="checkbox"></div>' +
     '<div class="hp-row"><label>Two-hand zoom</label><input id="hp-two" type="checkbox" checked></div>' +
-    '<div class="hp-mini">Move hand to rotate. Pinch to zoom. Two hands = smoother zoom.</div>';
+    '<div class="hp-row"><label>Part gestures</label><input id="hp-parts" type="checkbox" checked></div>' +
+    '<div class="hp-mini">Open hand = rotate. Pinch = zoom. Fist = pan. Peace sign = next part focus.</div>';
   wrap.appendChild(p);
   HAND.ui.panel = p;
 
   var sens = p.querySelector('#hp-sens');
   var prev = p.querySelector('#hp-prev');
   var two  = p.querySelector('#hp-two');
+  var parts = p.querySelector('#hp-parts');
   if (sens) sens.addEventListener('input', function() { HAND.settings.sensitivity = parseFloat(sens.value || '1') || 1; });
   if (prev) prev.addEventListener('change', function() { HAND.settings.showPreview = !!prev.checked; _handSyncPreview(); });
   if (two)  two.addEventListener('change', function() { HAND.settings.twoHand = !!two.checked; });
+  if (parts)  parts.addEventListener('change', function() { HAND.settings.partControl = !!parts.checked; if (!parts.checked) { _partsClearFocus(); } });
 
   return p;
 }
@@ -3358,8 +3441,8 @@ function startHandControl() {
     var v = _handEnsureVideo();
     var panel = _handEnsurePanel();
     if (panel) { panel.classList.add('shown'); }
-    HAND.last = { x: null, y: null, pinch: null };
-    HAND.smooth = { dx: 0, dy: 0, dz: 0 };
+    HAND.last = { x: null, y: null, pinch: null, angle: null };
+    HAND.smooth = { dx: 0, dy: 0, dz: 0, panX: 0, panY: 0 };
 
     if (!window.Hands || !window.Camera) {
       toast('Hand control unavailable (scripts not loaded)', 'err');
@@ -3375,7 +3458,7 @@ function startHandControl() {
       }
     });
     HAND.hands.setOptions({
-      maxNumHands: 1,
+      maxNumHands: 2,
       modelComplexity: 1,
       minDetectionConfidence: 0.65,
       minTrackingConfidence: 0.6
@@ -3384,12 +3467,12 @@ function startHandControl() {
     HAND.hands.onResults(function(res) {
       if (!HAND.enabled) { return; }
       if (!res || !res.multiHandLandmarks || !res.multiHandLandmarks.length) {
-        HAND.last.x = null; HAND.last.y = null; HAND.last.pinch = null;
+        HAND.last.x = null; HAND.last.y = null; HAND.last.pinch = null; HAND.last.angle = null;
         return;
       }
       var sens = HAND.settings.sensitivity || 1.0;
 
-      // Two-hand mode: smoother zoom using hand-to-hand distance
+      // Two-hand mode: cinematic zoom + pan from midpoint.
       if (HAND.settings.twoHand && res.multiHandLandmarks.length >= 2) {
         var a = res.multiHandLandmarks[0];
         var b = res.multiHandLandmarks[1];
@@ -3398,9 +3481,10 @@ function startHandControl() {
         var midX = (aC.x + bC.x) * 0.5;
         var midY = (aC.y + bC.y) * 0.5;
         var dist = Math.hypot(aC.x - bC.x, aC.y - bC.y);
+        var angle = Math.atan2(bC.y - aC.y, bC.x - aC.x);
 
         if (HAND.last.x == null) {
-          HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist;
+          HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist; HAND.last.angle = angle;
           return;
         }
 
@@ -3409,16 +3493,23 @@ function startHandControl() {
         HAND.smooth.dx = HAND.smooth.dx * 0.78 + dx2 * 0.22;
         HAND.smooth.dy = HAND.smooth.dy * 0.78 + dy2 * 0.22;
 
-        var rotSpeed2 = 2.1 * sens;
-        sph.tTheta -= HAND.smooth.dx * rotSpeed2;
-        sph.tPhi   -= HAND.smooth.dy * rotSpeed2;
-        sph.tPhi    = Math.max(0.08, Math.min(Math.PI - 0.08, sph.tPhi));
+        HAND.smooth.panX = HAND.smooth.panX * 0.78 + dx2 * 0.22;
+        HAND.smooth.panY = HAND.smooth.panY * 0.78 + dy2 * 0.22;
+        sph.tTargetX -= HAND.smooth.panX * 7.2 * sens;
+        sph.tTargetY += HAND.smooth.panY * 5.4 * sens;
 
         var dd = dist - (HAND.last.pinch || dist);
         HAND.smooth.dz = HAND.smooth.dz * 0.75 + dd * 0.25;
-        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 120));
+        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 118 * sens));
 
-        HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist;
+        if (HAND.last.angle != null) {
+          var dAng = angle - HAND.last.angle;
+          if (dAng > Math.PI) { dAng -= Math.PI * 2; }
+          if (dAng < -Math.PI) { dAng += Math.PI * 2; }
+          sph.tTheta -= dAng * 0.6 * sens;
+        }
+
+        HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist; HAND.last.angle = angle;
         return;
       }
 
@@ -3434,13 +3525,23 @@ function startHandControl() {
 
       var pinch = Math.hypot(ix.x - tt.x, ix.y - tt.y);
       var isPinch = pinch < 0.055;
+      var fingers = _handFingerCount(lm);
+      var isFist = fingers <= 1;
+      var isOpen = fingers >= 4;
+      var isPeace = (lm[8].y < lm[6].y) && (lm[12].y < lm[10].y) && (lm[16].y > lm[14].y) && (lm[20].y > lm[18].y);
 
       if (HAND.last.x == null) {
         HAND.last.x = cx; HAND.last.y = cy; HAND.last.pinch = pinch;
         return;
       }
 
-      // Rotation from hand movement
+      // Gesture trigger: peace sign cycles model parts.
+      if (isPeace && Date.now() - HAND.gestureCooldownAt > 900) {
+        HAND.gestureCooldownAt = Date.now();
+        _partsCycleFocus();
+      }
+
+      // Movement from hand motion
       var dx = cx - HAND.last.x;
       var dy = cy - HAND.last.y;
 
@@ -3448,22 +3549,30 @@ function startHandControl() {
       HAND.smooth.dx = HAND.smooth.dx * 0.75 + dx * 0.25;
       HAND.smooth.dy = HAND.smooth.dy * 0.75 + dy * 0.25;
 
-      // Map to orbit deltas (tuned)
-      var rotSpeed = 2.4 * sens;
-      sph.tTheta -= HAND.smooth.dx * rotSpeed;
-      sph.tPhi   -= HAND.smooth.dy * rotSpeed;
-      sph.tPhi    = Math.max(0.08, Math.min(Math.PI - 0.08, sph.tPhi));
+      if (isFist) {
+        // Fist = pan like professional viewport controls.
+        HAND.smooth.panX = HAND.smooth.panX * 0.78 + dx * 0.22;
+        HAND.smooth.panY = HAND.smooth.panY * 0.78 + dy * 0.22;
+        sph.tTargetX -= HAND.smooth.panX * 8.2 * sens;
+        sph.tTargetY += HAND.smooth.panY * 6.2 * sens;
+      } else if (isOpen || !isPinch) {
+        // Open hand = stable orbit.
+        var rotSpeed = 2.6 * sens;
+        sph.tTheta -= HAND.smooth.dx * rotSpeed;
+        sph.tPhi   -= HAND.smooth.dy * rotSpeed;
+        sph.tPhi    = Math.max(0.08, Math.min(Math.PI - 0.08, sph.tPhi));
+      }
 
       // Zoom only while pinching
       if (isPinch && HAND.last.pinch != null) {
         var dp = pinch - HAND.last.pinch; // + means fingers separating
         HAND.smooth.dz = HAND.smooth.dz * 0.7 + dp * 0.3;
-        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 80 * sens));
+        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 88 * sens));
       } else {
         HAND.smooth.dz = HAND.smooth.dz * 0.7;
       }
 
-      HAND.last.x = cx; HAND.last.y = cy; HAND.last.pinch = pinch;
+      HAND.last.x = cx; HAND.last.y = cy; HAND.last.pinch = pinch; HAND.last.angle = null;
     });
 
     HAND.cam = new Camera(v, {
@@ -3492,7 +3601,7 @@ function stopHandControl() {
     if (HAND.hands && HAND.hands.close) { HAND.hands.close(); }
   } catch (e2) {}
   HAND.hands = null;
-  HAND.last = { x: null, y: null, pinch: null };
+  HAND.last = { x: null, y: null, pinch: null, angle: null };
   if (HAND.ui.panel) { HAND.ui.panel.classList.remove('shown'); }
 
   // Stop webcam tracks if any
@@ -3710,12 +3819,14 @@ function updateCam() {
   var x = sph.radius * Math.sin(sph.phi) * Math.sin(sph.theta);
   var y = sph.radius * Math.cos(sph.phi);
   var z = sph.radius * Math.sin(sph.phi) * Math.cos(sph.theta);
-  camera.position.set(x, y, z);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(x + sph.targetX, y + sph.targetY, z + sph.targetZ);
+  camera.lookAt(sph.targetX, sph.targetY, sph.targetZ);
 }
 
 function resetCamera() {
   sph.tTheta = 0.5; sph.tPhi = 1.1; sph.tRadius = 5.5;
+  sph.tTargetX = 0; sph.tTargetY = 0; sph.tTargetZ = 0;
+  _partsClearFocus();
   toast('Camera reset', 'default');
 }
 
@@ -3745,6 +3856,9 @@ function animate() {
   sph.theta  += (sph.tTheta  - sph.theta)  * d;
   sph.phi    += (sph.tPhi    - sph.phi)    * d;
   sph.radius += (sph.tRadius - sph.radius) * d;
+  sph.targetX += (sph.tTargetX - sph.targetX) * d;
+  sph.targetY += (sph.tTargetY - sph.targetY) * d;
+  sph.targetZ += (sph.tTargetZ - sph.targetZ) * d;
   if (APP.autoRotate) { sph.tTheta -= 0.0038; }
   updateCam();
   var es = document.getElementById('empty-state');
@@ -3773,7 +3887,11 @@ function resizeRenderer() {
    ============================================================ */
 function loadGLB(url, onDone, onError) {
   removePlaceholder();
-  if (currentObject) { scene.remove(currentObject); currentObject = null; }
+  if (currentObject) {
+    _partsClearFocus();
+    scene.remove(currentObject);
+    currentObject = null;
+  }
   var loader = new THREE.GLTFLoader();
   loader.load(url, function(gltf) {
     var model  = gltf.scene;
@@ -3796,6 +3914,8 @@ function loadGLB(url, onDone, onError) {
     });
     scene.add(model);
     currentObject = model;
+    _partsCollectMeshes();
+    sph.tTargetX = 0; sph.tTargetY = 0; sph.tTargetZ = 0;
     var es = document.getElementById('empty-state');
     if (es) { es.classList.add('gone'); }
     if (onDone) { onDone(); }
@@ -4750,6 +4870,21 @@ function checkIfGenerating() {
 /* ============================================================
    GENERATE - The Tarantino moment
    ============================================================ */
+function buildGenerationPrompt(prompt, style, complexity) {
+  var clean = (prompt || '').trim();
+  if (!clean) { return clean; }
+  var styleLabel = style || 'realistic';
+  var comp = Math.max(1, Math.min(5, parseInt(complexity, 10) || 3));
+  var partHints = '';
+  if (!/[,\-]/.test(clean) || clean.split(',').length < 3) {
+    partHints = ' Include key physical parts, joints, panels, and functional details.';
+  }
+  var quality = comp >= 4
+    ? ' High fidelity geometry with clean topology and distinct separable parts.'
+    : ' Clean geometry with clear silhouette and recognizable components.';
+  return clean + '. Style: ' + styleLabel + '. Complexity: ' + comp + '/5.' + partHints + quality;
+}
+
 function generate() {
   var promptEl = document.getElementById('prompt');
   var prompt   = promptEl ? promptEl.value.trim() : '';
@@ -4784,8 +4919,9 @@ function generate() {
   var cpEl     = document.getElementById('color-picker');
   if (cpEl) { APP.selectedColor = cpEl.value; }
 
+  var enrichedPrompt = buildGenerationPrompt(prompt, APP.selectedStyle, APP.complexity);
   var body = {
-    prompt:       prompt,
+    prompt:       enrichedPrompt,
     original_prompt: displayPrompt,
     color:        APP.selectedColor,
     folder:       folderEl ? folderEl.value : 'default',

@@ -29,18 +29,31 @@ When finished, the viewer loads the new model and you can:
 
 - Click **HAND** to enable.
 - Allow camera permissions.
-- **1 hand**:
-  - Move hand = rotate
-  - Pinch (thumb + index) = zoom
-- **2 hands** (if enabled in the hand panel):
-  - Move both hands (midpoint) = rotate
-  - Change distance between hands = smooth zoom
+- **1 hand (Jarvis-style controls)**:
+  - **Open hand** = cinematic rotate/orbit
+  - **Pinch (thumb + index)** = precision zoom
+  - **Fist** = pan/shift camera target (like pro 3D viewport)
+  - **Peace sign** = cycle through model parts (part focus mode)
+- **2 hands** (if enabled in hand panel):
+  - Move both hands (midpoint) = smooth pan
+  - Increase/decrease hand distance = cinematic zoom
+  - Twist hand pair angle = subtle orbit adjustment
+- **Part gestures toggle** in hand panel:
+  - ON: peace sign cycles and focuses parts
+  - OFF: disables part focus and returns full-model view
 
 Turn it off anytime by clicking **HAND** again (camera is released).
 
 ## Enhance Prompt
 
 Use **Enhance** when your prompt is short. It expands your prompt into a more “3D-ready” description before generation.
+
+The studio now also enriches generation input with:
+- selected style
+- complexity level
+- extra part-detail instructions (when prompt is too generic)
+
+This improves part separation, silhouette quality, and overall model realism.
 
 ## Generate from Image
 
@@ -67,4 +80,6 @@ Use **Generate from Image** to upload a reference image. The app extracts a text
 - Add 5–10 concrete physical parts:
   - `wings, engines, cockpit canopy, landing gear, thrusters, panel seams`
 - Use **Complexity 4–5** for professional results.
+- For best part-level control, describe part relationships:
+  - `robot arm with shoulder joint, elbow actuator, wrist gimbal, gripper fingers`
 

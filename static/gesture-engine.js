@@ -154,21 +154,25 @@ var GestureEngine = (function() {
     var palmWidth = dist3(lm[5], lm[17]);
     if (palmWidth < 0.02) { palmWidth = 0.14; }
     var wrist = lm[0];
-    var indexMcp = lm[5];
-    var wristIndex = vecSub(indexMcp, wrist);
 
-    function fingerExtended(mcp, pip, dip, tip) {
-      var extY = tip.y < pip.y && pip.y < mcp.y;
-      var reach = dist3(tip, mcp) > palmWidth * 0.55;
-      var ang = jointAngle(lm[mcp === 5 ? 0 : mcp - 4], lm[pip], lm[tip]);
-      return (extY && reach) || ang > 155;
+    /* Works for upright hand, tilted hand, and palm-facing-camera */
+    function fingerExtended(tipIdx, pipIdx, mcpIdx) {
+      var dTip = dist3(wrist, lm[tipIdx]);
+      var dPip = dist3(wrist, lm[pipIdx]);
+      var dMcp = dist3(wrist, lm[mcpIdx]);
+      var reach = dist3(lm[tipIdx], lm[mcpIdx]) > palmWidth * 0.42;
+      var extByWrist = dTip > dPip * 1.06 && dTip > dMcp * 0.92;
+      var extByY = lm[tipIdx].y < lm[pipIdx].y && lm[pipIdx].y < lm[mcpIdx].y;
+      var ang = jointAngle(wrist, lm[pipIdx], lm[tipIdx]);
+      return reach && (extByWrist || extByY || ang > 150);
     }
 
-    var thumbExt = Math.abs(lm[4].x - lm[2].x) > palmWidth * 0.22;
-    var indexExt = fingerExtended(5, 6, 7, 8);
-    var middleExt = fingerExtended(9, 10, 11, 12);
-    var ringExt = fingerExtended(13, 14, 15, 16);
-    var pinkyExt = fingerExtended(17, 18, 19, 20);
+    var thumbExt = dist3(wrist, lm[4]) > dist3(wrist, lm[2]) * 1.05 ||
+      Math.abs(lm[4].x - lm[2].x) > palmWidth * 0.18;
+    var indexExt = fingerExtended(8, 6, 5);
+    var middleExt = fingerExtended(12, 10, 9);
+    var ringExt = fingerExtended(16, 14, 13);
+    var pinkyExt = fingerExtended(20, 18, 17);
 
     var palmCenter = {
       x: (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5,
@@ -548,19 +552,18 @@ var GestureEngine = (function() {
     pushBuffer(gesture);
 
     if (engine.machineState === 'CALIBRATING') {
-      if (fingers.count >= 4) {
+      drawSkeleton(lm, 'ORBIT');
+      var elapsed = Date.now() - engine.calStartedAt;
+      if (fingers.count >= 2 || dist3(lm[0], lm[9]) > fingers.palmWidth * 0.5) {
         engine.calSamples.push(fingers.palmWidth);
       }
-      if (Date.now() - engine.calStartedAt > 2000 && engine.calSamples.length > 8) {
-        engine.calSamples.sort(function(a, b) { return a - b; });
-        engine.calibration.palmWidth = engine.calSamples[Math.floor(engine.calSamples.length / 2)];
-        engine.calibration.ready = true;
-        try {
-          localStorage.setItem('aurex_gesture_calibration', JSON.stringify(engine.calibration));
-        } catch (e) {}
-        hideCalOverlay();
-        engine.machineState = 'TRACKING';
-        if (typeof toast === 'function') { toast('Calibrated! Ready to control.', 'ok'); }
+      var need = 5;
+      var pct = Math.min(100, Math.round((engine.calSamples.length / need) * 100));
+      updateCalOverlayProgress(pct, 'Hold steady… ' + engine.calSamples.length + '/' + need);
+      if (engine.calSamples.length >= need && elapsed > 800) {
+        finishCalibration();
+      } else if (elapsed > 12000) {
+        skipCalibration();
       }
       engine.lastTrack = { x: cx, y: cy, z: cz, pinch: null, roll: rollNow, spread: null };
       return;
@@ -571,12 +574,14 @@ var GestureEngine = (function() {
 
     if (engine.machineState === 'TRACKING' || engine.machineState === 'IDLE') {
       if (dom.count >= LOCK_FRAMES) {
-        engine.lockedGesture = dom.name;
-        engine.machineState = 'LOCKED';
-        logGestureEvent('lock:' + dom.name);
-        var gMeta = GESTURES[dom.name];
-        if (gMeta && !gMeta.continuous) { fireOneShot(dom.name); }
-      } else {
+        if (!engine.lockedGesture) {
+          engine.lockedGesture = dom.name;
+          engine.machineState = 'LOCKED';
+          logGestureEvent('lock:' + dom.name);
+          var gMeta = GESTURES[dom.name];
+          if (gMeta && !gMeta.continuous) { fireOneShot(dom.name); }
+        }
+      } else if (!engine.lockedGesture) {
         engine.machineState = 'TRACKING';
       }
     }
@@ -602,19 +607,25 @@ var GestureEngine = (function() {
     var pinchNorm = pinchDistance(lm, fingers.palmWidth);
     var sens = sensScale();
 
-    if (active === 'ORBIT') {
+    /* Apply camera immediately while tracking (don't wait for full lock) */
+    var moveGesture = active;
+    if (engine.machineState === 'TRACKING' && dom.name) {
+      moveGesture = dom.name;
+    }
+
+    if (moveGesture === 'ORBIT' || active === 'ORBIT') {
       applyOrbit(dx, dy);
-    } else if (active === 'ZOOM') {
+    } else if (moveGesture === 'ZOOM' || active === 'ZOOM') {
       var dp = engine.lastTrack.pinch == null ? 0 : pinchNorm - engine.lastTrack.pinch;
       applyZoom(dp);
-    } else if (active === 'PAN') {
+    } else if (moveGesture === 'PAN' || active === 'PAN') {
       applyPan(dx, dy, dz);
-    } else if (active === 'ROLL_ORBIT') {
+    } else if (moveGesture === 'ROLL_ORBIT' || active === 'ROLL_ORBIT') {
       applyOrbit(dx * 0.35, dy * 0.35);
       applyRoll(rollDelta);
-    } else if (active === 'INSPECT') {
+    } else if (moveGesture === 'INSPECT' || active === 'INSPECT') {
       inspectAtLandmark(lm);
-    } else {
+    } else if (moveGesture !== 'ORBIT') {
       hideInspectTooltip();
     }
 
@@ -727,12 +738,16 @@ var GestureEngine = (function() {
 
     if (!res || !res.multiHandLandmarks || !res.multiHandLandmarks.length) {
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
-      if (engine.machineState !== 'RELEASING' && engine.machineState !== 'CALIBRATING') {
+      if (engine.machineState === 'CALIBRATING') {
+        var el = Date.now() - engine.calStartedAt;
+        updateCalOverlayProgress(0, el > 3000 ? 'Move hand closer to camera' : 'Show your open hand to the camera');
+        if (el > 15000) { skipCalibration(); }
+      } else if (engine.machineState !== 'RELEASING') {
         engine.machineState = engine.enabled ? 'TRACKING' : 'IDLE';
         engine.lockedGesture = null;
       }
       updateHud(null, 0);
-      updatePanelStatus(null, 0);
+      updatePanelStatus(engine.machineState === 'CALIBRATING' ? 'CALIBRATING' : null, 0);
       if (engine.ui.hud) {
         clearTimeout(engine.hudHideTimer);
         engine.hudHideTimer = setTimeout(function() {
@@ -809,8 +824,13 @@ var GestureEngine = (function() {
       '#ge-cal-overlay.hidden{display:none;}',
       '.ge-cal-icon{font-size:64px;animation:gePulse 1.2s ease infinite;}',
       '@keyframes gePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}',
-      '.ge-cal-txt{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--gold);letter-spacing:1px;}',
-      '#ge-preview-wrap{position:absolute;right:12px;bottom:12px;z-index:4;border-radius:12px;overflow:hidden;',
+      '.ge-cal-txt{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--gold);letter-spacing:1px;text-align:center;max-width:90%;}',
+      '.ge-cal-bar{width:200px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}',
+      '.ge-cal-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#f0c040);transition:width .15s;}',
+      '.ge-cal-skip{margin-top:8px;padding:6px 14px;font-size:10px;font-family:"JetBrains Mono",monospace;',
+      'background:transparent;border:1px solid rgba(255,215,0,.35);color:var(--gold);border-radius:6px;cursor:pointer;}',
+      '.ge-cal-skip:hover{background:rgba(255,215,0,.1);}',
+      '#ge-preview-wrap{position:absolute;right:12px;bottom:72px;z-index:10;border-radius:12px;overflow:hidden;',
       'border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;}',
       '#ge-preview-wrap.hidden{display:none;}',
       '#hand-video,#hand-skeleton-canvas{display:block;}',
@@ -843,8 +863,15 @@ var GestureEngine = (function() {
     var ov = document.createElement('div');
     ov.id = 'ge-cal-overlay';
     ov.className = 'hidden';
-    ov.innerHTML = '<div class="ge-cal-icon">✋</div><div class="ge-cal-txt">Show your open hand to the camera</div>';
+    ov.innerHTML =
+      '<div class="ge-cal-icon">✋</div>' +
+      '<div class="ge-cal-txt">Show your open hand to the camera</div>' +
+      '<div class="ge-cal-bar"><div class="ge-cal-bar-fill"></div></div>' +
+      '<button type="button" class="ge-cal-skip">Skip calibration</button>';
     host.appendChild(ov);
+    ov.querySelector('.ge-cal-skip').addEventListener('click', function() {
+      skipCalibration();
+    });
     engine.ui.calOverlay = ov;
   }
 
@@ -852,10 +879,45 @@ var GestureEngine = (function() {
     ensureCalOverlay();
     engine.calSamples = [];
     engine.calStartedAt = Date.now();
+    engine.machineState = 'CALIBRATING';
+    engine.calibration.ready = false;
     if (engine.ui.calOverlay) {
       engine.ui.calOverlay.classList.remove('hidden');
+      updateCalOverlayProgress(0, 'Show your open hand to the camera');
     }
-    engine.machineState = 'CALIBRATING';
+    updateCalDot();
+  }
+
+  function updateCalOverlayProgress(pct, msg) {
+    if (!engine.ui.calOverlay) { return; }
+    var bar = engine.ui.calOverlay.querySelector('.ge-cal-bar-fill');
+    var txt = engine.ui.calOverlay.querySelector('.ge-cal-txt');
+    if (bar) { bar.style.width = Math.min(100, Math.max(0, pct)) + '%'; }
+    if (txt && msg) { txt.textContent = msg; }
+  }
+
+  function finishCalibration() {
+    if (!engine.calSamples.length) { return false; }
+    engine.calSamples.sort(function(a, b) { return a - b; });
+    engine.calibration.palmWidth = engine.calSamples[Math.floor(engine.calSamples.length / 2)];
+    engine.calibration.ready = true;
+    try {
+      localStorage.setItem('aurex_gesture_calibration', JSON.stringify(engine.calibration));
+    } catch (e) {}
+    hideCalOverlay();
+    engine.machineState = 'TRACKING';
+    updateCalDot();
+    if (typeof toast === 'function') { toast('Calibrated! Move your hand to control.', 'ok'); }
+    return true;
+  }
+
+  function skipCalibration() {
+    engine.calibration.palmWidth = engine.calibration.palmWidth || 0.14;
+    engine.calibration.ready = true;
+    hideCalOverlay();
+    engine.machineState = 'TRACKING';
+    updateCalDot();
+    if (typeof toast === 'function') { toast('Hand control ready (default calibration)', 'ok'); }
   }
 
   function hideCalOverlay() {
@@ -927,6 +989,7 @@ var GestureEngine = (function() {
       engine.settings.adaptiveSpeed = !!e.target.checked;
     });
     p.querySelector('#ge-recalib').addEventListener('click', function() {
+      engine.calibration.ready = false;
       showCalOverlay();
     });
 
@@ -951,6 +1014,9 @@ var GestureEngine = (function() {
     v.playsInline = true;
     v.muted = true;
     v.autoplay = true;
+    v.setAttribute('playsinline', '');
+    v.style.transform = 'scaleX(-1)';
+    v.style.objectFit = 'cover';
     var c = document.createElement('canvas');
     c.id = 'hand-skeleton-canvas';
     wrap.appendChild(v);
@@ -984,6 +1050,7 @@ var GestureEngine = (function() {
       engine.skeletonCanvas.style.left = '0';
       engine.skeletonCanvas.style.top = '0';
       engine.skeletonCanvas.style.pointerEvents = 'none';
+      engine.skeletonCanvas.style.transform = 'scaleX(-1)';
     }
   }
 
@@ -1006,6 +1073,7 @@ var GestureEngine = (function() {
         showCalOverlay();
       } else {
         engine.machineState = 'TRACKING';
+        hideCalOverlay();
       }
 
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
@@ -1032,8 +1100,8 @@ var GestureEngine = (function() {
       engine.hands.setOptions({
         maxNumHands: 2,
         modelComplexity: 1,
-        minDetectionConfidence: 0.65,
-        minTrackingConfidence: 0.6
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
       });
       engine.hands.onResults(onResults);
 
@@ -1043,12 +1111,15 @@ var GestureEngine = (function() {
         return false;
       }
 
+      v.play && v.play().catch(function() {});
+
       if (engine.cam && engine.cam.stop) {
         try { engine.cam.stop(); } catch (eStop) {}
       }
       engine.cam = new MpCamera(v, {
         onFrame: async function() {
-          if (!engine.enabled || !engine.hands) { return; }
+          if (!engine.enabled || !engine.hands || !v) { return; }
+          if (v.readyState < 2 || !v.videoWidth) { return; }
           try {
             await engine.hands.send({ image: v });
           } catch (eSend) {}
@@ -1133,6 +1204,7 @@ var GestureEngine = (function() {
   engine.start = start;
   engine.stop = stop;
   engine.syncHandButton = syncHandButton;
+  engine.skipCalibration = skipCalibration;
 
   return engine;
 })();

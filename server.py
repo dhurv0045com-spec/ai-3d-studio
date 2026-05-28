@@ -4902,7 +4902,30 @@ def generate():
 @app.route("/status", methods=["GET"])
 def status():
     """Return current generation state."""
-    return jsonify(get_state())
+    st = get_state()
+    script_path = os.path.join(BASE_DIR, "_last_gemini_script.py")
+    if os.path.exists(script_path):
+        try:
+            with open(script_path, "r", encoding="utf-8", errors="replace") as f:
+                st["blender_script"] = f.read()
+        except Exception:
+            st["blender_script"] = ""
+    else:
+        st["blender_script"] = st.get("blender_script") or ""
+    return jsonify(st)
+
+
+@app.route("/api/blender_script", methods=["GET"])
+def api_blender_script():
+    """Return the latest generated Blender Python script for live preview."""
+    script_path = os.path.join(BASE_DIR, "_last_gemini_script.py")
+    if not os.path.exists(script_path):
+        return jsonify({"script": ""})
+    try:
+        with open(script_path, "r", encoding="utf-8", errors="replace") as f:
+            return jsonify({"script": f.read()})
+    except Exception as e:
+        return jsonify({"script": "", "error": str(e)})
 
 
 @app.route("/api/enhance_prompt", methods=["POST"])

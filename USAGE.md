@@ -13,51 +13,67 @@
 - **Pick a color**, **style**, and **complexity** (4–5 gives the best results).
 - Click **GENERATE MODEL**.
 - While it runs, watch:
-  - **Progress bar + pipeline**
+  - **Progress bar + pipeline** (with ETA during Blender stage)
+  - **Live Blender script** — expand **View Script** under the pipeline
   - **Live logs** (useful if a generation fails)
 
-When finished, the viewer loads the new model and you can:
-- **Rotate**: click-drag (or touch-drag)
-- **Zoom**: mouse wheel / trackpad / pinch
-- Use viewer buttons:
-  - **RESET**: reset camera
-  - **AUTO**: auto rotate
-  - **WIRE**: wireframe mode
-  - **HAND**: optional hand-gesture control (see below)
+When finished, the viewer loads the new model and a **Model Loaded** action strip offers Refine, Variants, Save, and Share.
 
-## Hand Gesture Control (Optional)
+## Hand Gesture Engine v2 (Jarvis-Class)
 
-- Click **HAND** to enable.
-- Allow camera permissions.
-- **1 hand (Jarvis-style controls)**:
-  - **Open hand** = cinematic rotate/orbit
-  - **Pinch (thumb + index)** = precision zoom
-  - **Fist** = pan/shift camera target (like pro 3D viewport)
-  - **Peace sign** = cycle through model parts (part focus mode)
-- **2 hands** (if enabled in hand panel):
-  - Move both hands (midpoint) = smooth pan
-  - Increase/decrease hand distance = cinematic zoom
-  - Twist hand pair angle = subtle orbit adjustment
-- **Part gestures toggle** in hand panel:
-  - ON: peace sign cycles and focuses parts
-  - OFF: disables part focus and returns full-model view
+Click **HAND** to enable. Allow camera permissions. On first use, show an **open palm** for ~2 seconds to calibrate (saved in your browser).
 
-Turn it off anytime by clicking **HAND** again (camera is released).
+### Gesture vocabulary (10 gestures)
+
+| Gesture | Hand pose | Action |
+|---------|-----------|--------|
+| **ORBIT** | Open palm (4+ fingers), move hand | Rotate/orbit the model with inertia |
+| **ZOOM** | Pinch thumb + index | Precision zoom (physics-smooth) |
+| **PAN** | Fist (0–1 fingers extended) | Pan camera target (shift focus point) |
+| **PART_CYCLE** | Peace sign (index + middle) | Cycle focused model part |
+| **INSPECT** | Point (index only) | Raycast highlight + mesh name tooltip |
+| **WIREFRAME** | Rock on (index + pinky) | Toggle wireframe |
+| **SAVE** | Thumbs up | Open save dialog |
+| **FIT** | Full spread (all 5 fingers wide) | Fit camera to full model |
+| **RESET** | Open palm + fast wave | Reset camera |
+| **ROLL** | Open palm + wrist roll | Subtle roll-orbit |
+
+### Two-hand mode
+
+- **Both open**: orbit + twist between hands
+- **Both pinch**: cinematic dolly zoom (+ subtle FOV)
+- **Both fist**: 3D pan (X/Y/Z from hand depth)
+- **Orbit + point**: one hand orbits, other inspects with crosshair tooltip
+
+### UI while HAND is on
+
+- **Gesture HUD** (bottom-left of viewport): emoji, gesture name, confidence bar
+- **Control panel**: cheat sheet, sensitivity, inertia, preview, two-hand, part gestures
+- **Camera preview** (bottom-right): skeleton overlay color-coded by gesture; click to expand
+- **Recalibrate** anytime from the panel
+
+Turn off with **HAND** again (camera released).
 
 ## Enhance Prompt
 
-Use **Enhance** when your prompt is short. It expands your prompt into a more “3D-ready” description before generation.
+Use **Enhance** when your prompt is short. Generation also auto-enriches with:
 
-The studio now also enriches generation input with:
-- selected style
-- complexity level
-- extra part-detail instructions (when prompt is too generic)
-
-This improves part separation, silhouette quality, and overall model realism.
+1. **Structural hints** (vehicle, creature, furniture, etc.)
+2. **Material hints** (from style + color)
+3. **Complexity calibration** (part count guidance)
+4. **Part naming directive** (minimum named Blender objects for part-focus)
 
 ## Generate from Image
 
 Use **Generate from Image** to upload a reference image. The app extracts a text description and then generates a model from it.
+
+## Variants
+
+Enable **variants** before generating. When ready:
+
+- Cards auto-rotate in mini-viewers
+- Press **1**, **2**, **3** or arrow keys to select
+- **Enter** confirms selection
 
 ## Save, History, and Folders
 
@@ -80,6 +96,5 @@ Use **Generate from Image** to upload a reference image. The app extracts a text
 - Add 5–10 concrete physical parts:
   - `wings, engines, cockpit canopy, landing gear, thrusters, panel seams`
 - Use **Complexity 4–5** for professional results.
-- For best part-level control, describe part relationships:
+- For part-level hand control, describe part relationships:
   - `robot arm with shoulder joint, elbow actuator, wrist gimbal, gripper fingers`
-

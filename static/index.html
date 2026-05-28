@@ -806,6 +806,37 @@ body:has(a:hover) #cursor-ring{
 .hp-row input[type="checkbox"]{transform:scale(1.05)}
 .hp-mini{font-size:10px;color:var(--tx-4);line-height:1.4;margin-top:6px}
 
+/* ---- Generation script preview + post-gen strip ---- */
+#script-preview-panel{margin-top:10px;border:1px solid var(--bd-2);border-radius:var(--r-sm);overflow:hidden;display:none}
+#script-preview-panel.visible{display:block}
+.script-prev-toggle{width:100%;padding:8px 12px;background:rgba(0,212,255,.06);border:none;color:var(--cyan);
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;text-align:left}
+.script-prev-body{max-height:180px;overflow:auto;display:none;background:#060810}
+.script-prev-body.open{display:block}
+.script-prev-pre{margin:0;padding:12px;font-size:10px;line-height:1.45;font-family:'JetBrains Mono',monospace;white-space:pre-wrap}
+.script-kw{color:#60a5fa}.script-str{color:#fbbf24}.script-cm{color:#4ade80}.script-num{color:#2dd4bf}
+.script-copy-btn{margin:8px;padding:4px 10px;font-size:9px;border:1px solid var(--bd-2);background:var(--bg-3);
+  color:var(--tx-2);border-radius:4px;cursor:pointer}
+.pipe-stage.active{animation:pipePulse .25s ease}
+.pipe-stage.done .pipe-icon::after{content:'✓';margin-left:4px;color:#4ade80;font-size:10px}
+@keyframes pipePulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+#pipe-eta{font-size:9px;color:var(--tx-4);margin-left:8px;font-family:'JetBrains Mono',monospace}
+.variant-card.selected{animation:varCardPulse 1.4s ease infinite}
+@keyframes varCardPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,192,64,.35)}50%{box-shadow:0 0 14px 2px rgba(240,192,64,.5)}}
+.variant-badge{position:absolute;top:6px;right:6px;font-size:8px;padding:2px 6px;border-radius:10px;background:rgba(0,0,0,.55)}
+.variant-svc{font-size:8px;padding:2px 6px;border-radius:8px;margin-top:4px;display:inline-block}
+#post-gen-strip{position:absolute;left:50%;bottom:16px;transform:translateX(-50%) translateY(120%);
+  z-index:8;width:min(520px,92%);background:rgba(10,14,23,.92);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,215,0,.2);border-radius:14px;padding:14px 16px;
+  transition:transform .35s cubic-bezier(.2,.9,.2,1);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+#post-gen-strip.visible{transform:translateX(-50%) translateY(0)}
+.pgs-title{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:8px}
+.pgs-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pgs-btn{padding:8px 12px;border-radius:8px;border:1px solid var(--bd-2);background:var(--bg-3);
+  color:var(--tx-1);font-size:10px;cursor:pointer;font-family:'JetBrains Mono',monospace}
+.pgs-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.pgs-quality{font-size:11px;color:var(--tx-2);margin-bottom:10px}
+
 /* ---- RIGHT PANEL ---- */
 #studio-right{
   width:var(--right-w);flex-shrink:0;
@@ -3078,6 +3109,14 @@ nav#nav { display: flex !important; }
               <div class="pipe-label">Done</div>
               <div class="pipe-status"></div>
             </div>
+            <span id="pipe-eta"></span>
+          </div>
+          <div id="script-preview-panel">
+            <button type="button" class="script-prev-toggle" id="script-prev-toggle" onclick="toggleScriptPreview()">View Script ▼</button>
+            <div class="script-prev-body" id="script-prev-body">
+              <button type="button" class="script-copy-btn" onclick="copyBlenderScript()">Copy Script</button>
+              <pre class="script-prev-pre" id="script-prev-pre"><code></code></pre>
+            </div>
           </div>
           <div class="log-box" id="log-box"></div>
           <div class="err-box" id="err-box"></div>
@@ -3220,6 +3259,7 @@ nav#nav { display: flex !important; }
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="static/gesture-engine.js"></script>
 <script>
 /* ============================================================
    APP STATE
@@ -3277,342 +3317,7 @@ var sph = {
 };
 var ms = { down: false, lx: 0, ly: 0, btn: 0 };
 
-/* ============================================================
-   HAND GESTURE CONTROL (optional)
-   Uses MediaPipe Hands, only runs when toggled ON.
-   Gestures:
-   - Move open hand: rotate model (yaw/pitch)
-   - Pinch (thumb+index): zoom in/out (distance = zoom)
-   ============================================================ */
-var HAND = {
-  enabled: false,
-  hands: null,
-  cam: null,
-  video: null,
-  last: { x: null, y: null, pinch: null, angle: null },
-  smooth: { dx: 0, dy: 0, dz: 0, panX: 0, panY: 0 },
-  settings: { sensitivity: 1.0, showPreview: false, twoHand: true, partControl: true },
-  ui: { panel: null },
-  gestureCooldownAt: 0
-};
-var PARTS = { meshes: [], index: -1 };
-
-function _partsClearVisuals() {
-  PARTS.meshes.forEach(function(mesh) {
-    if (!mesh || !mesh.material || !mesh.userData || !mesh.userData._baseMaterial) { return; }
-    mesh.material = mesh.userData._baseMaterial;
-  });
-}
-
-function _partsCollectMeshes() {
-  PARTS.meshes = [];
-  PARTS.index = -1;
-  if (!currentObject) { return; }
-  currentObject.traverse(function(node) {
-    if (!node || !node.isMesh || !node.material) { return; }
-    if (!node.userData._baseMaterial) { node.userData._baseMaterial = node.material; }
-    PARTS.meshes.push(node);
-  });
-}
-
-function _partsFocus(index) {
-  if (!PARTS.meshes.length) { return; }
-  PARTS.index = (index + PARTS.meshes.length) % PARTS.meshes.length;
-  PARTS.meshes.forEach(function(mesh, i) {
-    if (!mesh || !mesh.userData || !mesh.userData._baseMaterial) { return; }
-    var baseMat = mesh.userData._baseMaterial;
-    if (i === PARTS.index) {
-      var hi = baseMat.clone ? baseMat.clone() : baseMat;
-      if (hi.emissive && hi.emissive.clone) { hi.emissive = hi.emissive.clone().addScalar(0.12); }
-      hi.opacity = 1;
-      hi.transparent = !!(hi.opacity < 1);
-      mesh.material = hi;
-    } else {
-      var dim = baseMat.clone ? baseMat.clone() : baseMat;
-      dim.opacity = 0.18;
-      dim.transparent = true;
-      mesh.material = dim;
-    }
-  });
-  var active = PARTS.meshes[PARTS.index];
-  if (active) {
-    var box = new THREE.Box3().setFromObject(active);
-    var center = box.getCenter(new THREE.Vector3());
-    sph.tTargetX = center.x;
-    sph.tTargetY = center.y;
-    sph.tTargetZ = center.z;
-  }
-  toast('Part focus ' + (PARTS.index + 1) + '/' + PARTS.meshes.length, 'info');
-}
-
-function _partsCycleFocus() {
-  if (!HAND.settings.partControl) { return; }
-  if (!PARTS.meshes.length) { _partsCollectMeshes(); }
-  if (!PARTS.meshes.length) { return; }
-  _partsFocus(PARTS.index + 1);
-}
-
-function _partsClearFocus() {
-  _partsClearVisuals();
-  PARTS.index = -1;
-  sph.tTargetX = 0;
-  sph.tTargetY = 0;
-  sph.tTargetZ = 0;
-}
-
-function _handFingerCount(lm) {
-  if (!lm || lm.length < 21) { return 0; }
-  var count = 0;
-  if (lm[4].x > lm[3].x) { count += 1; } // thumb (mirrored webcam approximation)
-  if (lm[8].y < lm[6].y) { count += 1; }  // index
-  if (lm[12].y < lm[10].y) { count += 1; } // middle
-  if (lm[16].y < lm[14].y) { count += 1; } // ring
-  if (lm[20].y < lm[18].y) { count += 1; } // pinky
-  return count;
-}
-
-function _handEnsurePanel() {
-  if (HAND.ui.panel) { return HAND.ui.panel; }
-  var wrap = document.getElementById('studio-center') || document.body;
-  var p = document.createElement('div');
-  p.id = 'hand-panel';
-  p.innerHTML =
-    '<div class="hp-title"><span>HAND CONTROL</span><button class="ctrl-btn" style="padding:3px 8px;font-size:9px" onclick="toggleHandControl()">OFF</button></div>' +
-    '<div class="hp-row"><label>Sensitivity</label><input id="hp-sens" type="range" min="0.4" max="2.2" step="0.05" value="1.0"></div>' +
-    '<div class="hp-row"><label>Camera preview</label><input id="hp-prev" type="checkbox"></div>' +
-    '<div class="hp-row"><label>Two-hand zoom</label><input id="hp-two" type="checkbox" checked></div>' +
-    '<div class="hp-row"><label>Part gestures</label><input id="hp-parts" type="checkbox" checked></div>' +
-    '<div class="hp-mini">Open hand = rotate. Pinch = zoom. Fist = pan. Peace sign = next part focus.</div>';
-  wrap.appendChild(p);
-  HAND.ui.panel = p;
-
-  var sens = p.querySelector('#hp-sens');
-  var prev = p.querySelector('#hp-prev');
-  var two  = p.querySelector('#hp-two');
-  var parts = p.querySelector('#hp-parts');
-  if (sens) sens.addEventListener('input', function() { HAND.settings.sensitivity = parseFloat(sens.value || '1') || 1; });
-  if (prev) prev.addEventListener('change', function() { HAND.settings.showPreview = !!prev.checked; _handSyncPreview(); });
-  if (two)  two.addEventListener('change', function() { HAND.settings.twoHand = !!two.checked; });
-  if (parts)  parts.addEventListener('change', function() { HAND.settings.partControl = !!parts.checked; if (!parts.checked) { _partsClearFocus(); } });
-
-  return p;
-}
-
-function _handSyncPreview() {
-  if (!HAND.video) { return; }
-  HAND.video.style.opacity = HAND.settings.showPreview ? '0.85' : '0';
-}
-
-function _handEnsureVideo() {
-  if (HAND.video) { return HAND.video; }
-  var v = document.createElement('video');
-  v.id = 'hand-video';
-  v.playsInline = true;
-  v.muted = true;
-  v.autoplay = true;
-  v.style.cssText = 'position:fixed;right:12px;bottom:12px;width:160px;height:120px;opacity:0;pointer-events:none;z-index:2;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:#000;';
-  document.body.appendChild(v);
-  HAND.video = v;
-  _handSyncPreview();
-  return v;
-}
-
-function toggleHandControl() {
-  HAND.enabled = !HAND.enabled;
-  var btn = document.getElementById('btn-hand');
-  if (btn) {
-    btn.classList.toggle('active', HAND.enabled);
-    btn.classList.toggle('hand', HAND.enabled);
-  }
-  if (HAND.enabled) {
-    var panel = _handEnsurePanel();
-    if (panel) { panel.classList.add('shown'); }
-    toast('Hand control: ON (camera permission required)', 'info');
-    startHandControl();
-  } else {
-    stopHandControl();
-    if (HAND.ui.panel) { HAND.ui.panel.classList.remove('shown'); }
-    toast('Hand control: OFF', 'default');
-  }
-}
-
-function startHandControl() {
-  try {
-    var v = _handEnsureVideo();
-    var panel = _handEnsurePanel();
-    if (panel) { panel.classList.add('shown'); }
-    HAND.last = { x: null, y: null, pinch: null, angle: null };
-    HAND.smooth = { dx: 0, dy: 0, dz: 0, panX: 0, panY: 0 };
-
-    if (!window.Hands || !window.Camera) {
-      toast('Hand control unavailable (scripts not loaded)', 'err');
-      HAND.enabled = false;
-      var btn = document.getElementById('btn-hand');
-      if (btn) { btn.classList.remove('active', 'hand'); }
-      return;
-    }
-
-    HAND.hands = new Hands({
-      locateFile: function(file) {
-        return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/' + file;
-      }
-    });
-    HAND.hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.65,
-      minTrackingConfidence: 0.6
-    });
-
-    HAND.hands.onResults(function(res) {
-      if (!HAND.enabled) { return; }
-      if (!res || !res.multiHandLandmarks || !res.multiHandLandmarks.length) {
-        HAND.last.x = null; HAND.last.y = null; HAND.last.pinch = null; HAND.last.angle = null;
-        return;
-      }
-      var sens = HAND.settings.sensitivity || 1.0;
-
-      // Two-hand mode: cinematic zoom + pan from midpoint.
-      if (HAND.settings.twoHand && res.multiHandLandmarks.length >= 2) {
-        var a = res.multiHandLandmarks[0];
-        var b = res.multiHandLandmarks[1];
-        var aC = { x: (a[0].x + a[5].x) * 0.5, y: (a[0].y + a[5].y) * 0.5 };
-        var bC = { x: (b[0].x + b[5].x) * 0.5, y: (b[0].y + b[5].y) * 0.5 };
-        var midX = (aC.x + bC.x) * 0.5;
-        var midY = (aC.y + bC.y) * 0.5;
-        var dist = Math.hypot(aC.x - bC.x, aC.y - bC.y);
-        var angle = Math.atan2(bC.y - aC.y, bC.x - aC.x);
-
-        if (HAND.last.x == null) {
-          HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist; HAND.last.angle = angle;
-          return;
-        }
-
-        var dx2 = midX - HAND.last.x;
-        var dy2 = midY - HAND.last.y;
-        HAND.smooth.dx = HAND.smooth.dx * 0.78 + dx2 * 0.22;
-        HAND.smooth.dy = HAND.smooth.dy * 0.78 + dy2 * 0.22;
-
-        HAND.smooth.panX = HAND.smooth.panX * 0.78 + dx2 * 0.22;
-        HAND.smooth.panY = HAND.smooth.panY * 0.78 + dy2 * 0.22;
-        sph.tTargetX -= HAND.smooth.panX * 7.2 * sens;
-        sph.tTargetY += HAND.smooth.panY * 5.4 * sens;
-
-        var dd = dist - (HAND.last.pinch || dist);
-        HAND.smooth.dz = HAND.smooth.dz * 0.75 + dd * 0.25;
-        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 118 * sens));
-
-        if (HAND.last.angle != null) {
-          var dAng = angle - HAND.last.angle;
-          if (dAng > Math.PI) { dAng -= Math.PI * 2; }
-          if (dAng < -Math.PI) { dAng += Math.PI * 2; }
-          sph.tTheta -= dAng * 0.6 * sens;
-        }
-
-        HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist; HAND.last.angle = angle;
-        return;
-      }
-
-      // One-hand mode: rotate + pinch zoom
-      var lm = res.multiHandLandmarks[0];
-      var wrist = lm[0];
-      var ix = lm[8];   // index tip
-      var it = lm[5];   // index base
-      var tt = lm[4];   // thumb tip
-
-      var cx = (wrist.x + it.x) * 0.5;
-      var cy = (wrist.y + it.y) * 0.5;
-
-      var pinch = Math.hypot(ix.x - tt.x, ix.y - tt.y);
-      var isPinch = pinch < 0.055;
-      var fingers = _handFingerCount(lm);
-      var isFist = fingers <= 1;
-      var isOpen = fingers >= 4;
-      var isPeace = (lm[8].y < lm[6].y) && (lm[12].y < lm[10].y) && (lm[16].y > lm[14].y) && (lm[20].y > lm[18].y);
-
-      if (HAND.last.x == null) {
-        HAND.last.x = cx; HAND.last.y = cy; HAND.last.pinch = pinch;
-        return;
-      }
-
-      // Gesture trigger: peace sign cycles model parts.
-      if (isPeace && Date.now() - HAND.gestureCooldownAt > 900) {
-        HAND.gestureCooldownAt = Date.now();
-        _partsCycleFocus();
-      }
-
-      // Movement from hand motion
-      var dx = cx - HAND.last.x;
-      var dy = cy - HAND.last.y;
-
-      // Smooth to avoid jitter
-      HAND.smooth.dx = HAND.smooth.dx * 0.75 + dx * 0.25;
-      HAND.smooth.dy = HAND.smooth.dy * 0.75 + dy * 0.25;
-
-      if (isFist) {
-        // Fist = pan like professional viewport controls.
-        HAND.smooth.panX = HAND.smooth.panX * 0.78 + dx * 0.22;
-        HAND.smooth.panY = HAND.smooth.panY * 0.78 + dy * 0.22;
-        sph.tTargetX -= HAND.smooth.panX * 8.2 * sens;
-        sph.tTargetY += HAND.smooth.panY * 6.2 * sens;
-      } else if (isOpen || !isPinch) {
-        // Open hand = stable orbit.
-        var rotSpeed = 2.6 * sens;
-        sph.tTheta -= HAND.smooth.dx * rotSpeed;
-        sph.tPhi   -= HAND.smooth.dy * rotSpeed;
-        sph.tPhi    = Math.max(0.08, Math.min(Math.PI - 0.08, sph.tPhi));
-      }
-
-      // Zoom only while pinching
-      if (isPinch && HAND.last.pinch != null) {
-        var dp = pinch - HAND.last.pinch; // + means fingers separating
-        HAND.smooth.dz = HAND.smooth.dz * 0.7 + dp * 0.3;
-        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 88 * sens));
-      } else {
-        HAND.smooth.dz = HAND.smooth.dz * 0.7;
-      }
-
-      HAND.last.x = cx; HAND.last.y = cy; HAND.last.pinch = pinch; HAND.last.angle = null;
-    });
-
-    HAND.cam = new Camera(v, {
-      onFrame: async function() {
-        if (!HAND.enabled || !HAND.hands) { return; }
-        await HAND.hands.send({ image: v });
-      },
-      width: 640,
-      height: 480
-    });
-    HAND.cam.start();
-  } catch (e) {
-    toast('Hand control error: ' + (e.message || e), 'err');
-    HAND.enabled = false;
-    var btn = document.getElementById('btn-hand');
-    if (btn) { btn.classList.remove('active', 'hand'); }
-  }
-}
-
-function stopHandControl() {
-  try {
-    if (HAND.cam && HAND.cam.stop) { HAND.cam.stop(); }
-  } catch (e) {}
-  HAND.cam = null;
-  try {
-    if (HAND.hands && HAND.hands.close) { HAND.hands.close(); }
-  } catch (e2) {}
-  HAND.hands = null;
-  HAND.last = { x: null, y: null, pinch: null, angle: null };
-  if (HAND.ui.panel) { HAND.ui.panel.classList.remove('shown'); }
-
-  // Stop webcam tracks if any
-  try {
-    if (HAND.video && HAND.video.srcObject) {
-      var tracks = HAND.video.srcObject.getTracks ? HAND.video.srcObject.getTracks() : [];
-      tracks.forEach(function(t) { try { t.stop(); } catch (e3) {} });
-      HAND.video.srcObject = null;
-    }
-  } catch (e4) {}
-}
+/* Hand gesture control: see /static/gesture-engine.js (GestureEngine v2) */
 
 /* ============================================================
    AMBIENT BACKGROUND PARTICLES
@@ -4558,6 +4263,24 @@ function updatePipelineViz(step, progress) {
     setTimeout(function() { viz.style.display = 'none'; }, 2000);
   }
 
+  if (step && step !== _genLastStep && _genStageStartedAt) {
+    recordStageTime(_genLastStep, Date.now() - _genStageStartedAt);
+    _genStageStartedAt = Date.now();
+    _genLastStep = step;
+  }
+
+  var etaEl = document.getElementById('pipe-eta');
+  if (etaEl && step === 'stage_b_gemini_blender') {
+    var sec = estimateRemaining(step, progress);
+    etaEl.textContent = sec ? ('~' + sec + 's remaining') : '';
+  } else if (etaEl) {
+    etaEl.textContent = '';
+  }
+
+  if (step === 'stage_b_gemini_blender' || step === 'interpreting') {
+    fetchBlenderScript();
+  }
+
   var activeId = PIPE_STAGE_MAP[step];
   if (!activeId) { return; }
 
@@ -4565,9 +4288,17 @@ function updatePipelineViz(step, progress) {
   PIPE_ORDER.forEach(function(id, i) {
     var el = document.getElementById(id);
     if (!el) { return; }
+    var wasActive = el.classList.contains('active');
     el.classList.remove('active', 'done');
     if (i < activeIdx) { el.classList.add('done'); }
-    else if (i === activeIdx) { el.classList.add('active'); }
+    else if (i === activeIdx) {
+      el.classList.add('active');
+      if (!wasActive) {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+      }
+    }
   });
 }
 
@@ -4735,6 +4466,8 @@ function doPoll() {
       updatePipelineDots(d.progress);
       updatePipelineViz(d.step, d.progress);
       appendNewLogLines(d.log, 'log-box', 'logLineCount');
+      if (d.blender_script) { updateScriptPreview(d.blender_script); }
+      else if (d.step === 'stage_b_gemini_blender' || d.step === 'interpreting') { fetchBlenderScript(); }
 
       if (d.status === 'done') {
         stopPoll();
@@ -4757,11 +4490,13 @@ function doPoll() {
         if (eSvc) { eSvc.textContent = APP.lastService; }
         if (sSvc) { sSvc.textContent = APP.lastService || 'preset'; }
 
+        var qualityTxt = glbQualityLabel(d.glb_size);
         loadGLB('/rocket.glb?t=' + Date.now(), function() {
           var _es = document.getElementById('empty-state'); if(_es) _es.style.display='none';
           showModelBar(APP.lastPrompt, APP.lastService);
           refreshHistory();
           updateModelCounter();
+          showPostGenStrip('Quality: ' + qualityTxt + (d.service ? ' · ' + d.service : ''));
         }, function() {
           refreshHistory();
           updateModelCounter();
@@ -4770,7 +4505,7 @@ function doPoll() {
         toast('Ready in ' + timerStr + ' via ' + (APP.lastService || ''), 'ok');
 
         setStatusBadge('done', 'DONE');
-        celebrateGeneration();
+        celebrateGeneration(qualityTxt);
 
       } else if (d.status === 'error') {
         stopPoll();
@@ -4784,7 +4519,7 @@ function doPoll() {
     .catch(function() {});
 }
 
-function celebrateGeneration() {
+function celebrateGeneration(qualityTxt) {
   var viewer = document.getElementById('viewer-wrap') || document.querySelector('.viewer-wrap');
   if (viewer) {
     viewer.style.transition = 'box-shadow 0.3s';
@@ -4794,10 +4529,9 @@ function celebrateGeneration() {
     }, 1500);
   }
   var state = window._lastGenerationState;
+  if (qualityTxt) { return; }
   if (state && state.quality_score) {
     toast('Model generated — Quality ' + state.quality_score + '/100', 'ok');
-  } else {
-    toast('Model generated successfully', 'ok');
   }
 }
 
@@ -4870,19 +4604,248 @@ function checkIfGenerating() {
 /* ============================================================
    GENERATE - The Tarantino moment
    ============================================================ */
-function buildGenerationPrompt(prompt, style, complexity) {
+var GEN_STRUCTURAL_CATEGORIES = [
+  { keys: ['spaceship', 'rocket', 'fighter', 'jet', 'aircraft', 'drone'], cat: 'vehicle',
+    hint: 'fuselage/hull, cockpit canopy, wings or nacelles, engines, exhaust, landing gear, panel seams' },
+  { keys: ['car', 'truck', 'vehicle', 'bike', 'motorcycle', 'tank'], cat: 'vehicle',
+    hint: 'body shell, wheels, windows, doors, lights, grille, mirrors, chassis' },
+  { keys: ['robot', 'mech', 'android', 'cyborg'], cat: 'mechanical',
+    hint: 'torso core, head sensor, shoulder joints, arms, actuators, legs, gripper/hands' },
+  { keys: ['dragon', 'creature', 'monster', 'animal', 'beast'], cat: 'creature',
+    hint: 'head, neck, torso, limbs, tail, claws, surface texture, silhouette rhythm' },
+  { keys: ['chair', 'table', 'desk', 'sofa', 'bed', 'furniture'], cat: 'furniture',
+    hint: 'frame, legs, seat/back surfaces, joints, cushions, edge bevels' },
+  { keys: ['sword', 'gun', 'weapon', 'blade', 'rifle'], cat: 'weapon',
+    hint: 'handle/grip, guard, blade/barrel, trigger, magazine, functional proportions' },
+  { keys: ['house', 'building', 'castle', 'tower', 'temple'], cat: 'architectural',
+    hint: 'foundation, walls, roof, windows, doors, structural columns, trim' },
+  { keys: ['phone', 'laptop', 'camera', 'console', 'device'], cat: 'electronic',
+    hint: 'main body, screen, ports, buttons, bezels, hinges, branding zones' },
+  { keys: ['tree', 'flower', 'plant', 'organic'], cat: 'organic',
+    hint: 'trunk/stem, branches, foliage clusters, roots/base, natural asymmetry' },
+  { keys: ['helmet', 'armor', 'suit', 'gear'], cat: 'wearable',
+    hint: 'shell plates, visor, straps, padding volumes, joint clearance' },
+  { keys: ['ship', 'boat', 'submarine'], cat: 'vehicle',
+    hint: 'hull, deck, cabin, propulsion, railings, anchor points' },
+  { keys: ['character', 'human', 'person', 'figure'], cat: 'character',
+    hint: 'head, torso, arms, hands, legs, feet, clothing folds, proportions' },
+  { keys: ['watch', 'ring', 'jewelry'], cat: 'product',
+    hint: 'band/chain, body housing, face/gem, clasps, micro-detail' },
+  { keys: ['cup', 'bottle', 'mug', 'bowl'], cat: 'product',
+    hint: 'body volume, handle/spout, rim thickness, base, material transitions' },
+  { keys: ['abstract', 'sculpture', 'art'], cat: 'abstract',
+    hint: 'primary mass, negative space, sweeping curves, balanced composition' }
+];
+
+var GEN_MATERIAL_HINTS = {
+  realistic: 'Use PBR materials with metallic/roughness. Main color as base albedo. Subtle specular variation across surfaces.',
+  lowpoly: 'Flat shading, no subdivision, clean geometric forms, bold silhouette, faceted surfaces.',
+  cartoon: 'Bold colors, simplified forms, clean edges, stylized proportions, minimal micro-detail.',
+  scifi: 'Hard-surface panels, emissive accents, tech seams, metallic trim, futuristic proportions.',
+  fantasy: 'Ornate forms, carved details, magical accents, layered materials, dramatic silhouette.',
+  mechanical: 'Exposed joints, pistons, bolts, panel lines, industrial materials, functional design language.',
+  organic: 'Smooth transitions, natural curvature, subsurface-style surfaces, asymmetric detail.'
+};
+
+function detectStructuralCategory(prompt) {
+  var lower = (prompt || '').toLowerCase();
+  for (var i = 0; i < GEN_STRUCTURAL_CATEGORIES.length; i++) {
+    var row = GEN_STRUCTURAL_CATEGORIES[i];
+    for (var k = 0; k < row.keys.length; k++) {
+      if (lower.indexOf(row.keys[k]) !== -1) { return row; }
+    }
+  }
+  return { cat: 'general', hint: 'primary body, secondary attachments, functional details, clean part separation' };
+}
+
+function buildGenerationPrompt(prompt, style, complexity, color) {
   var clean = (prompt || '').trim();
   if (!clean) { return clean; }
   var styleLabel = style || 'realistic';
   var comp = Math.max(1, Math.min(5, parseInt(complexity, 10) || 3));
-  var partHints = '';
-  if (!/[,\-]/.test(clean) || clean.split(',').length < 3) {
-    partHints = ' Include key physical parts, joints, panels, and functional details.';
+  var catRow = detectStructuralCategory(clean);
+
+  var stage1 = '[STRUCTURAL HINT: ' + catRow.cat + ' — emphasize silhouette clarity, part separation at complexity ' +
+    comp + '/5. Key geometric primitives likely involved: ' + catRow.hint +
+    '. Ensure each logical part is a separate Blender object for part-focus support.]';
+
+  var matHint = GEN_MATERIAL_HINTS[styleLabel] || GEN_MATERIAL_HINTS.realistic;
+  var stage2 = '[MATERIAL HINT: ' + matHint + ' Primary color: ' + (color || '#00d4ff') + '.]';
+
+  var stage3;
+  if (comp <= 2) {
+    stage3 = '[COMPLEXITY: Simple forms, 3–5 parts, no micro-detail geometry.]';
+  } else if (comp === 3) {
+    stage3 = '[COMPLEXITY: Medium detail, 6–10 distinct parts, clean topology.]';
+  } else {
+    stage3 = '[COMPLEXITY: High detail, 10–20 distinct parts, secondary detail (bolts, panels, seams, trim), proportional realism. Each part named in Blender.]';
   }
-  var quality = comp >= 4
-    ? ' High fidelity geometry with clean topology and distinct separable parts.'
-    : ' Clean geometry with clear silhouette and recognizable components.';
-  return clean + '. Style: ' + styleLabel + '. Complexity: ' + comp + '/5.' + partHints + quality;
+
+  var minParts = comp * 2;
+  var stage4 = '[IMPORTANT: Create at minimum ' + minParts + ' named mesh objects in the Blender scene so part-focus cycling works correctly. Label each with a descriptive name.]';
+
+  return clean + ' ' + stage1 + ' ' + stage2 + ' ' + stage3 + ' ' + stage4;
+}
+
+function highlightBlenderScript(code) {
+  if (!code) { return ''; }
+  var esc = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return esc
+    .replace(/(#.*)$/gm, '<span class="script-cm">$1</span>')
+    .replace(/("(?:[^"\\]|\\.)*")/g, '<span class="script-str">$1</span>')
+    .replace(/\b(import|from|def|class|return|if|else|elif|for|while|True|False|None|as|with|in)\b/g, '<span class="script-kw">$1</span>')
+    .replace(/\b(\d+\.?\d*)\b/g, '<span class="script-num">$1</span>');
+}
+
+function toggleScriptPreview() {
+  var body = document.getElementById('script-prev-body');
+  var btn = document.getElementById('script-prev-toggle');
+  if (!body || !btn) { return; }
+  body.classList.toggle('open');
+  btn.textContent = body.classList.contains('open') ? 'View Script ▲' : 'View Script ▼';
+}
+
+function updateScriptPreview(script) {
+  var panel = document.getElementById('script-preview-panel');
+  var pre = document.getElementById('script-prev-pre');
+  if (!panel || !pre || !script) { return; }
+  panel.classList.add('visible');
+  pre.innerHTML = '<code>' + highlightBlenderScript(script) + '</code>';
+  APP.lastBlenderScript = script;
+}
+
+function copyBlenderScript() {
+  var text = APP.lastBlenderScript || '';
+  if (!text) { toast('No script available yet', 'warn'); return; }
+  navigator.clipboard.writeText(text).then(function() {
+    toast('Script copied', 'ok');
+  }).catch(function() {
+    toast('Copy failed', 'err');
+  });
+}
+
+function fetchBlenderScript() {
+  fetch('/api/blender_script')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.script && d.script.length > 20) { updateScriptPreview(d.script); }
+    })
+    .catch(function() {});
+}
+
+function getStageTimes() {
+  try {
+    return JSON.parse(localStorage.getItem('aurex_stage_times') || '{}') || {};
+  } catch (e) { return {}; }
+}
+
+function recordStageTime(step, ms) {
+  var times = getStageTimes();
+  if (!times[step]) { times[step] = []; }
+  times[step].push(ms);
+  if (times[step].length > 3) { times[step].shift(); }
+  try { localStorage.setItem('aurex_stage_times', JSON.stringify(times)); } catch (e) {}
+}
+
+function estimateRemaining(step, progress) {
+  var times = getStageTimes();
+  var order = ['interpreting', 'stage_b_gemini_blender', 'uploading_cloudinary', 'saving_supabase'];
+  var idx = order.indexOf(step);
+  if (idx < 0) { return null; }
+  var total = 0;
+  for (var i = idx; i < order.length; i++) {
+    var arr = times[order[i]];
+    if (arr && arr.length) {
+      var sum = 0;
+      arr.forEach(function(v) { sum += v; });
+      total += sum / arr.length;
+    }
+  }
+  if (!total) { return null; }
+  var frac = Math.max(0, (100 - (progress || 0)) / 100);
+  return Math.round((total * frac) / 1000);
+}
+
+function glbQualityLabel(bytes) {
+  if (!bytes || bytes < 50000) { return '⚠️ Simple (low detail)'; }
+  if (bytes < 200000) { return '✓ Good'; }
+  if (bytes < 500000) { return '★ Detailed'; }
+  return '★★ Complex';
+}
+
+var variantAnimFrames = [];
+var _genStageStartedAt = 0;
+var _genLastStep = '';
+
+function stopVariantAnims() {
+  variantAnimFrames.forEach(function(id) { cancelAnimationFrame(id); });
+  variantAnimFrames = [];
+}
+
+function showPostGenStrip(qualityText) {
+  var host = document.getElementById('studio-center');
+  if (!host) { return; }
+  var strip = document.getElementById('post-gen-strip');
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.id = 'post-gen-strip';
+    strip.innerHTML =
+      '<div class="pgs-title">MODEL LOADED</div>' +
+      '<div class="pgs-quality" id="pgs-quality"></div>' +
+      '<div class="pgs-actions">' +
+        '<button type="button" class="pgs-btn" data-act="refine">Refine</button>' +
+        '<button type="button" class="pgs-btn" data-act="variants">Variants</button>' +
+        '<button type="button" class="pgs-btn" data-act="save">Save</button>' +
+        '<button type="button" class="pgs-btn" data-act="share">Share</button>' +
+      '</div>';
+    host.appendChild(strip);
+    strip.querySelectorAll('.pgs-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var act = btn.getAttribute('data-act');
+        hidePostGenStrip();
+        if (act === 'refine') { goRTab('refine'); }
+        if (act === 'variants') {
+          var chk = document.getElementById('chk-variants');
+          if (chk) { chk.checked = true; }
+          generate();
+        }
+        if (act === 'save' && typeof showSaveModal === 'function') { showSaveModal(); }
+        if (act === 'share') {
+          var btnShare = document.getElementById('live-share-btn');
+          if (btnShare) { btnShare.click(); }
+          else if (APP.lastShareUrl) {
+            navigator.clipboard.writeText(APP.lastShareUrl);
+            toast('Share link copied', 'ok');
+          }
+        }
+      });
+    });
+    var touchStartY = 0;
+    strip.addEventListener('touchstart', function(e) {
+      touchStartY = e.touches[0].clientY;
+    });
+    strip.addEventListener('touchend', function(e) {
+      if (e.changedTouches[0].clientY - touchStartY > 40) { hidePostGenStrip(); }
+    });
+  }
+  var qEl = document.getElementById('pgs-quality');
+  if (qEl) { qEl.textContent = qualityText || 'Model ready in viewer'; }
+  strip.classList.add('visible');
+  clearTimeout(strip._dismissTimer);
+  strip._dismissTimer = setTimeout(hidePostGenStrip, 6000);
+  document.addEventListener('keydown', _postGenEscOnce);
+}
+
+function _postGenEscOnce(e) {
+  if (e.key === 'Escape') {
+    hidePostGenStrip();
+    document.removeEventListener('keydown', _postGenEscOnce);
+  }
+}
+
+function hidePostGenStrip() {
+  var strip = document.getElementById('post-gen-strip');
+  if (strip) { strip.classList.remove('visible'); }
 }
 
 function generate() {
@@ -4919,7 +4882,12 @@ function generate() {
   var cpEl     = document.getElementById('color-picker');
   if (cpEl) { APP.selectedColor = cpEl.value; }
 
-  var enrichedPrompt = buildGenerationPrompt(prompt, APP.selectedStyle, APP.complexity);
+  var enrichedPrompt = buildGenerationPrompt(prompt, APP.selectedStyle, APP.complexity, APP.selectedColor);
+  _genStageStartedAt = Date.now();
+  _genLastStep = 'interpreting';
+  APP.lastBlenderScript = '';
+  var scriptPanel = document.getElementById('script-preview-panel');
+  if (scriptPanel) { scriptPanel.classList.remove('visible'); }
   var body = {
     prompt:       enrichedPrompt,
     original_prompt: displayPrompt,
@@ -5022,9 +4990,14 @@ function pollVariants(jobId) {
   }, 3000);
 }
 
+var _variantCards = [];
+var _variantSelectedIdx = 0;
+
 function renderVariants(results) {
   var panel = document.getElementById('variants-panel');
   if (!panel) { return; }
+  stopVariantAnims();
+  _variantCards = [];
   var okResults = (results || []).filter(function(r) { return r.ok && (r.cloud_url || r.local_url); });
   if (!okResults.length) {
     panel.classList.add('visible');
@@ -5032,34 +5005,50 @@ function renderVariants(results) {
     return;
   }
   panel.classList.add('visible');
-  panel.innerHTML = '';
-  okResults.forEach(function(item) {
+  panel.innerHTML = '<div style="font-size:9px;color:var(--tx-4);margin-bottom:8px">Keys 1-3 select · Enter confirm</div>';
+  okResults.forEach(function(item, idx) {
     var url = item.cloud_url || item.local_url;
     var card = document.createElement('div');
     card.className = 'variant-card';
+    card.style.position = 'relative';
     var canvas = document.createElement('canvas');
     var label = document.createElement('div');
     label.className = 'variant-label';
     label.textContent = 'Variant ' + (Number(item.index) + 1) + ': ' + (item.prompt || '').slice(0, 46);
+    var badge = document.createElement('div');
+    badge.className = 'variant-badge';
+    badge.textContent = item.quality_score ? ('Q' + item.quality_score) : '★';
+    var svc = document.createElement('div');
+    svc.className = 'variant-svc';
+    svc.style.background = 'rgba(0,212,255,.15)';
+    svc.style.color = 'var(--cyan)';
+    svc.textContent = (item.service || 'AI').toUpperCase();
     var btn = document.createElement('button');
     btn.className = 'btn-use-variant';
     btn.textContent = 'Use This';
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
+    function selectCard() {
       document.querySelectorAll('.variant-card').forEach(function(c) { c.classList.remove('selected'); });
       card.classList.add('selected');
+      _variantSelectedIdx = idx;
       loadModelUrl(url, item.prompt || item.enhanced || 'Variant');
+    }
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      selectCard();
     });
-    card.addEventListener('click', function() { btn.click(); });
+    card.addEventListener('click', function() { selectCard(); });
     card.appendChild(canvas);
+    card.appendChild(badge);
     card.appendChild(label);
+    card.appendChild(svc);
     card.appendChild(btn);
     panel.appendChild(card);
-    renderVariantPreview(canvas, url);
+    _variantCards.push(card);
+    renderVariantPreview(canvas, url, item);
   });
 }
 
-function renderVariantPreview(canvas, url) {
+function renderVariantPreview(canvas, url, meta) {
   if (!canvas || !window.THREE || !THREE.GLTFLoader) { return; }
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   var size = Math.max(120, canvas.clientWidth || 140);
@@ -5069,6 +5058,7 @@ function renderVariantPreview(canvas, url) {
   cam.position.set(2.5, 1.8, 3.2);
   sceneMini.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.4));
   var loader = new THREE.GLTFLoader();
+  var running = true;
   loader.load(url, function(gltf) {
     var model = gltf.scene;
     var box = new THREE.Box3().setFromObject(model);
@@ -5079,11 +5069,40 @@ function renderVariantPreview(canvas, url) {
     center.multiplyScalar(model.scale.x);
     model.position.sub(center);
     sceneMini.add(model);
-    renderer.render(sceneMini, cam);
+    function loop() {
+      if (!running) { return; }
+      model.rotation.y += 0.012;
+      renderer.render(sceneMini, cam);
+      var id = requestAnimationFrame(loop);
+      variantAnimFrames.push(id);
+    }
+    loop();
   }, undefined, function() {
     renderer.render(sceneMini, cam);
   });
+  canvas._stopVariantAnim = function() { running = false; };
 }
+
+document.addEventListener('keydown', function(e) {
+  var panel = document.getElementById('variants-panel');
+  if (!panel || !panel.classList.contains('visible')) { return; }
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { return; }
+  var n = parseInt(e.key, 10);
+  if (n >= 1 && n <= 3 && _variantCards[n - 1]) {
+    _variantCards[n - 1].click();
+    e.preventDefault();
+  }
+  if (e.key === 'ArrowRight' && _variantCards.length) {
+    _variantSelectedIdx = (_variantSelectedIdx + 1) % _variantCards.length;
+    _variantCards[_variantSelectedIdx].click();
+    e.preventDefault();
+  }
+  if (e.key === 'ArrowLeft' && _variantCards.length) {
+    _variantSelectedIdx = (_variantSelectedIdx - 1 + _variantCards.length) % _variantCards.length;
+    _variantCards[_variantSelectedIdx].click();
+    e.preventDefault();
+  }
+});
 
 /* ============================================================
    APPLY EDIT - Ridley Scott transformation

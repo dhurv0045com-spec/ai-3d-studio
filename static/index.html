@@ -714,6 +714,13 @@ body:has(a:hover) #cursor-ring{
   position:absolute;bottom:6px;right:10px;
   font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-4);
 }
+@keyframes voicePulse {
+  0%,100% { color: var(--tx-3); transform: scale(1); }
+  50% { color: #ff4444; transform: scale(1.2); }
+}
+#btn-voice.listening {
+  animation: voicePulse 0.8s infinite;
+}
 .pr-link{
   position:absolute;top:6px;right:8px;
   font-size:9px;color:var(--tx-3);background:none;border:none;
@@ -1175,6 +1182,7 @@ body:has(a:hover) #cursor-ring{
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .toast.default{background:rgba(26,34,54,.9);border-color:var(--bd-2);color:var(--tx-2)}
 .toast.ok{background:rgba(0,204,136,.1);border-color:rgba(0,204,136,.3);color:var(--green)}
+.toast.info{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.25);color:var(--cyan)}
 .toast.warn{background:rgba(255,165,0,.08);border-color:rgba(255,165,0,.25);color:var(--amber)}
 .toast.err{background:rgba(255,68,68,.08);border-color:rgba(255,68,68,.25);color:var(--red)}
 
@@ -1871,6 +1879,24 @@ nav#nav { display: flex !important; }
   0%,100% { box-shadow: 0 0 6px rgba(0,212,255,0.2); }
   50% { box-shadow: 0 0 14px rgba(0,212,255,0.5); }
 }
+.pipe-node {
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 10px;border-radius:8px;border:1px solid var(--bd-1);
+  background:var(--bg-2);font-size:14px;min-width:60px;text-align:center;
+  opacity:0.35;transition:all 0.4s;
+}
+.pipe-node span { font-size:9px;color:var(--tx-4);white-space:nowrap; }
+.pipe-node.active {
+  opacity:1;border-color:var(--cyan);
+  box-shadow:0 0 12px rgba(0,212,255,0.25);
+  animation:pnPulse 1s ease-in-out infinite;
+}
+.pipe-node.done { opacity:1;border-color:#22c55e; }
+.pipe-arr { color:var(--tx-4);font-size:16px;opacity:0.4; }
+@keyframes pnPulse {
+  0%,100%{box-shadow:0 0 8px rgba(0,212,255,0.2)}
+  50%{box-shadow:0 0 16px rgba(0,212,255,0.5)}
+}
 
 /* ---- HELP PAGE (HTML uses .help-key, .help-desc) ---- */
 .help-key {
@@ -2300,6 +2326,11 @@ nav#nav { display: flex !important; }
 
     <div style="flex: 1;"></div>
 
+    <a href="/api/docs" target="_blank" class="nav-item" title="API Docs" style="margin-top:auto">
+      <span style="font-size:14px">⟨/⟩</span>
+      <span class="nav-tip">API Docs</span>
+    </a>
+
     <div class="nav-item" data-page="settings" onclick="goPage('settings')" style="margin-bottom: 20px;">
       <div class="nav-icon-gear"></div>
       <span class="nav-tip">Settings</span>
@@ -2464,6 +2495,7 @@ nav#nav { display: flex !important; }
           <button class="r-tab" data-rtab="history" onclick="goRTab('history')">HISTORY</button>
           <button class="r-tab" data-rtab="edit"    onclick="goRTab('edit')">EDIT</button>
           <button class="r-tab" data-rtab="export"  onclick="goRTab('export')">EXPORT</button>
+          <button class="r-tab" data-rtab="refine"  onclick="goRTab('refine')">REFINE</button>
         </div>
 
         <!-- ===== CREATE TAB - Tarantino Zone ===== -->
@@ -2483,12 +2515,22 @@ nav#nav { display: flex !important; }
               <div id="img-preview-card" class="img-preview-card" style="display:none">
                 <img id="img-preview-thumb" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px">
                 <div id="img-detected-prompt" class="img-detected-prompt"></div>
+                <button onclick="removeUploadedImage()" style="
+                  background:transparent;border:1px solid #ff4444;color:#ff4444;
+                  border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;margin-left:auto
+                ">✕ Remove</button>
               </div>
               <div class="prompt-wrap">
                 <textarea id="prompt"
                   placeholder="a massive crimson dragon with spread wings and molten eyes, perched on a volcano at sunset..."
                   maxlength="500"></textarea>
                 <span class="prompt-hint">Ctrl+Enter to generate</span>
+                <button id="btn-voice" title="Speak your prompt" onclick="startVoiceInput()" style="
+                  position:absolute;right:36px;bottom:8px;
+                  background:transparent;border:none;cursor:pointer;
+                  color:var(--tx-3);font-size:16px;padding:4px;
+                  border-radius:4px;transition:color 0.2s;
+                " aria-label="Voice input">🎙️</button>
                 <button class="pr-link" onclick="togglePrDrop()">Recent</button>
                 <span class="prompt-counter" id="prompt-counter">0 / 500</span>
               </div>
@@ -2622,6 +2664,11 @@ nav#nav { display: flex !important; }
               <input type="checkbox" id="chk-variants"> Generate 3 Variants
             </label>
             <button id="gen-btn" onclick="generate()">GENERATE MODEL</button>
+            <button id="new-model-btn" onclick="startNewModel()" style="
+              margin-top:8px;width:100%;padding:8px;background:transparent;
+              border:1px solid var(--bd-2);color:var(--tx-2);border-radius:6px;
+              font-size:11px;cursor:pointer;font-weight:500;letter-spacing:1px
+            ">NEW MODEL</button>
             <div id="variants-panel" class="variants-panel"></div>
 
           </div>
@@ -2734,6 +2781,28 @@ nav#nav { display: flex !important; }
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <!-- ===== REFINE TAB ===== -->
+        <div class="r-tab-content" id="rtc-refine">
+          <div id="tab-refine" style="padding:12px">
+            <div style="font-size:11px;color:var(--tx-3);margin-bottom:8px">
+              Refine the current model with a modification instruction
+            </div>
+            <div id="refine-history" style="margin-bottom:10px"></div>
+            <textarea id="refine-input"
+              placeholder='e.g. "add wings", "make it metallic", "add a base pedestal"'
+              style="
+                width:100%;height:60px;background:var(--bg-2);border:1px solid var(--bd-2);
+                border-radius:6px;padding:8px;color:var(--tx-1);font-size:12px;
+                resize:none;font-family:inherit
+              " maxlength="200"></textarea>
+            <button onclick="refineModel()" style="
+              margin-top:8px;width:100%;padding:8px;background:var(--gold-faint);
+              border:1px solid var(--gold-dim);color:var(--gold);border-radius:6px;
+              font-size:12px;cursor:pointer;font-weight:500
+            ">⟳ Refine Model</button>
           </div>
         </div>
 
@@ -2949,6 +3018,7 @@ var APP = {
   genTimerInt:      null,
   pwaPrompt:        null,
   lastCloudUrl:     '',
+  lastShareUrl:     '',
   device:           { mobile: false, tablet: false, desktop: true, touch: false, width: 1200 },
   offlineLoop:      null,
   isOffline:        false,
@@ -3149,7 +3219,7 @@ function resizeRenderer() {
 /* ============================================================
    GLB LOADING
    ============================================================ */
-function loadGLB(url, onDone) {
+function loadGLB(url, onDone, onError) {
   if (currentObject) { scene.remove(currentObject); currentObject = null; }
   var loader = new THREE.GLTFLoader();
   loader.load(url, function(gltf) {
@@ -3176,7 +3246,10 @@ function loadGLB(url, onDone) {
     var es = document.getElementById('empty-state');
     if (es) { es.classList.add('gone'); }
     if (onDone) { onDone(); }
-  }, undefined, function() { toast('Failed to load model', 'err'); });
+  }, undefined, function(err) {
+    toast('Failed to load model', 'err');
+    if (onError) { onError(err); }
+  });
 }
 
 function showModelBar(promptText, service) {
@@ -3326,13 +3399,120 @@ if (imgInput) {
         APP.enhanceOriginalPrompt = data.prompt || '';
         APP.enhanceEnhancedPrompt = data.enhanced_prompt || data.enhanced || data.prompt || '';
         var nameEl = document.getElementById('img-upload-name');
-        if (nameEl) { nameEl.textContent = file.name; }
+        if (nameEl) {
+          nameEl.style.display = '';
+          nameEl.textContent = file.name;
+        }
         if (detected) { detected.textContent = 'Detected: ' + (data.prompt || 'object'); }
       })
       .catch(function(err) {
         if (detected) { detected.textContent = 'Error: ' + err.message; }
       });
   });
+}
+
+function removeUploadedImage() {
+  ['img-file-input','img-preview-thumb'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      if (el.tagName === 'INPUT') { el.value = ''; }
+      else { el.src = ''; }
+    }
+  });
+  ['img-preview-card','img-detected-prompt','img-upload-name'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.style.display = 'none';
+      el.textContent = '';
+    }
+  });
+  var p = document.getElementById('prompt');
+  if (p) {
+    p.value = '';
+    updateCounter();
+  }
+  APP.enhanceOriginalPrompt = '';
+  APP.enhanceEnhancedPrompt = '';
+}
+
+function startNewModel() {
+  if (APP.isGenerating) {
+    toast('Wait for the current generation to finish first', 'warn');
+    return;
+  }
+  removeUploadedImage();
+  var promptEl = document.getElementById('prompt');
+  if (promptEl) {
+    promptEl.value = '';
+    updateCounter();
+    setTimeout(function() { promptEl.focus(); }, 60);
+  }
+  var enhancePreview = document.getElementById('enhance-preview');
+  if (enhancePreview) {
+    enhancePreview.textContent = '';
+    enhancePreview.style.display = 'none';
+  }
+  hideError('err-box');
+  hideProgress();
+  resetPipelineDots();
+  resetPipelineViz();
+  removeLiveShareButton();
+  APP.lastPrompt = '';
+  APP.lastShareUrl = '';
+  APP.enhanceOriginalPrompt = '';
+  APP.enhanceEnhancedPrompt = '';
+  goRTab('create');
+  setStatusBadge('idle', 'IDLE');
+  toast('Ready for a new model', 'ok');
+}
+
+var _voiceRecognition = null;
+
+function startVoiceInput() {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('Voice input not supported in this browser. Use Chrome.', 'warn');
+    return;
+  }
+  var btn = document.getElementById('btn-voice');
+  if (_voiceRecognition) {
+    _voiceRecognition.stop();
+    _voiceRecognition = null;
+    if (btn) { btn.classList.remove('listening'); }
+    return;
+  }
+  _voiceRecognition = new SpeechRecognition();
+  _voiceRecognition.continuous = false;
+  _voiceRecognition.interimResults = true;
+  _voiceRecognition.lang = 'en-US';
+
+  if (btn) { btn.classList.add('listening'); }
+
+  _voiceRecognition.onresult = function(e) {
+    var transcript = Array.from(e.results).map(function(r) {
+      return r[0].transcript;
+    }).join('');
+    var promptEl = document.getElementById('prompt');
+    if (promptEl) {
+      promptEl.value = transcript;
+      updateCounter();
+    }
+  };
+  _voiceRecognition.onend = function() {
+    _voiceRecognition = null;
+    if (btn) { btn.classList.remove('listening'); }
+    var promptEl = document.getElementById('prompt');
+    if (promptEl && promptEl.value.trim().length > 2) {
+      showToast('Voice captured. Click Generate or enhance your prompt.', 'info');
+    }
+  };
+  _voiceRecognition.onerror = function(e) {
+    _voiceRecognition = null;
+    if (btn) { btn.classList.remove('listening'); }
+    showToast('Voice error: ' + e.error, 'err');
+  };
+  _voiceRecognition.start();
+  showToast('Listening... speak your prompt', 'info');
 }
 
 /* ============================================================
@@ -3567,6 +3747,10 @@ function toast(msg, type) {
   }, 3500);
 }
 
+function showToast(msg, type) {
+  toast(msg, type);
+}
+
 /* ============================================================
    LOG COLORS - HAL 9000 data stream
    ============================================================ */
@@ -3723,6 +3907,90 @@ function resetPipelineViz() {
   if (viz) { viz.style.display = 'none'; }
 }
 
+function removeLiveShareButton() {
+  var existing = document.getElementById('live-share-btn');
+  if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); }
+}
+
+function showLiveShareButton(shareUrl) {
+  if (!shareUrl) { return; }
+  APP.lastShareUrl = location.origin + shareUrl;
+  var existing = document.getElementById('live-share-btn');
+  if (existing) { return; }
+  var shareBtn = document.createElement('button');
+  shareBtn.id = 'live-share-btn';
+  shareBtn.innerHTML = '🔗 Share Model';
+  shareBtn.style.cssText = [
+    'position:absolute',
+    'top:10px',
+    'right:10px',
+    'z-index:100',
+    'background:#0f0f1acc',
+    'border:1px solid #ffd70044',
+    'color:#ffd700',
+    'padding:6px 12px',
+    'border-radius:6px',
+    'font-size:11px',
+    'cursor:pointer',
+    'backdrop-filter:blur(8px)'
+  ].join(';');
+  shareBtn.onclick = function() {
+    navigator.clipboard.writeText(APP.lastShareUrl).then(function() {
+      shareBtn.innerHTML = '✓ Copied!';
+      setTimeout(function() { shareBtn.innerHTML = '🔗 Share Model'; }, 2000);
+    });
+  };
+  var host = document.getElementById('studio-center') ||
+    (document.querySelector('.viewer-wrap, #three-canvas') || {}).parentElement;
+  if (host) { host.appendChild(shareBtn); }
+}
+
+var _refineHistory = [];
+
+function renderRefineHistory() {
+  var histEl = document.getElementById('refine-history');
+  if (!histEl) { return; }
+  histEl.innerHTML = _refineHistory.map(function(h, i) {
+    return '<div style="font-size:10px;color:var(--tx-4);padding:4px 0;border-bottom:1px solid var(--bd-1)">' +
+      '<span style="color:var(--gold-dim)">v' + (i + 2) + '</span> + "' +
+      h.instruction.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '"</div>';
+  }).join('');
+}
+
+function refineModel() {
+  var input = document.getElementById('refine-input');
+  var refineText = input && input.value ? input.value.trim() : '';
+  if (!refineText) {
+    showToast('Enter a refinement instruction', 'warn');
+    return;
+  }
+
+  var currentPrompt = document.getElementById('mbar-prompt') ?
+    document.getElementById('mbar-prompt').textContent : '';
+  if (!currentPrompt || currentPrompt === '-') {
+    currentPrompt = (document.getElementById('prompt') || {}).value || '';
+  }
+  if (!currentPrompt || currentPrompt === '-') {
+    showToast('Generate a model first, then refine it', 'warn');
+    return;
+  }
+
+  var refinedPrompt = currentPrompt + ', ' + refineText;
+  _refineHistory.push({ instruction: refineText, from: currentPrompt });
+  renderRefineHistory();
+
+  var promptEl = document.getElementById('prompt');
+  if (promptEl) {
+    promptEl.value = refinedPrompt;
+    updateCounter();
+  }
+  if (input) { input.value = ''; }
+
+  showToast('Refining model...', 'info');
+  var genBtn = document.getElementById('gen-btn');
+  if (genBtn) { genBtn.click(); }
+}
+
 /* Error box */
 function showError(msg, boxId) {
   var box = document.getElementById(boxId || 'err-box');
@@ -3797,6 +4065,15 @@ function doPoll() {
       if (d.status === 'done') {
         stopPoll();
         APP.lastService = d.service || d.pipeline || '';
+        APP.lastCloudUrl = d.cloud_url || APP.lastCloudUrl || '';
+        APP.lastShareUrl = d.share_url ? location.origin + d.share_url : APP.lastShareUrl;
+        var timerStr = stopGenTimer();
+        setGenerating(false);
+        updatePipelineDots(100);
+        updatePipelineViz('done', 100);
+        showLiveShareButton(d.share_url || '');
+        setTimeout(hideProgress, 3600);
+        if (d.quality_score !== undefined) { setQualityBadge(d.quality_score); }
 
         /* Update export info + stat service */
         var eTs  = document.getElementById('efi-ts');
@@ -3811,15 +4088,12 @@ function doPoll() {
           showModelBar(APP.lastPrompt, APP.lastService);
           refreshHistory();
           updateModelCounter();
-          setGenerating(false);
-          updatePipelineDots(100);
-          updatePipelineViz('done', 100);
-          setTimeout(hideProgress, 3600);
-          if (d.quality_score !== undefined) { setQualityBadge(d.quality_score); }
-        var timerStr = stopGenTimer();
+        }, function() {
+          refreshHistory();
+          updateModelCounter();
+        });
         setConnectionBar('live');
         toast('Ready in ' + timerStr + ' via ' + (APP.lastService || ''), 'ok');
-        });
 
         setStatusBadge('done', 'DONE');
 
@@ -3845,13 +4119,20 @@ function doEditPoll() {
 
       if (d.status === 'done') {
         stopEditPoll();
+        APP.lastCloudUrl = d.cloud_url || APP.lastCloudUrl || '';
+        APP.lastShareUrl = d.share_url ? location.origin + d.share_url : APP.lastShareUrl;
+        setGenerating(false);
+        updatePipelineViz('done', 100);
+        showLiveShareButton(d.share_url || '');
+        setTimeout(hideProgress, 3000);
         loadGLB('/rocket.glb?t=' + Date.now(), function() {
           showModelBar(APP.selectedModel ? APP.selectedModel.prompt : '', d.service || 'Edit');
           refreshHistory();
           toast('Edit applied: ' + (d.service || 'done'), 'ok');
+        }, function() {
+          refreshHistory();
+          toast('Edit finished, but the viewer could not reload the model', 'warn');
         });
-        setGenerating(false);
-        setTimeout(hideProgress, 3000);
 
       } else if (d.status === 'error') {
         stopEditPoll();
@@ -3879,8 +4160,11 @@ function checkIfGenerating() {
         startPoll();
         toast('Resuming generation...', 'warn');
       } else if (d.status === 'done' && d.glb_exists) {
+        APP.lastCloudUrl = d.cloud_url || APP.lastCloudUrl || '';
+        APP.lastShareUrl = d.share_url ? location.origin + d.share_url : APP.lastShareUrl;
         loadGLB('/rocket.glb?t=' + Date.now(), function() {
           showModelBar(d.prompt || '', d.service || '');
+          showLiveShareButton(d.share_url || '');
         });
       }
       updateModelCounter();
@@ -3913,6 +4197,8 @@ function generate() {
   APP.lastPrompt   = displayPrompt;
   APP.genTs        = Date.now();
   APP.logLineCount = 0;
+  APP.lastShareUrl = '';
+  removeLiveShareButton();
   addToPromptHistory(displayPrompt);
 
   clearLogBox('log-box');
@@ -5450,7 +5736,7 @@ function initStyleTooltips() {
    V7 SHARE BUTTON
    ============================================================ */
 function shareModel() {
-  var url = APP.lastCloudUrl || window.location.href;
+  var url = APP.lastShareUrl || APP.lastCloudUrl || window.location.href;
   if (navigator.share) {
     navigator.share({ title: 'AI 3D Studio Model', text: APP.lastPrompt || '3D model', url: url })
       .then(function() { toast('Link shared', 'ok'); })

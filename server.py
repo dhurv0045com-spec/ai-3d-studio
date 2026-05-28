@@ -136,7 +136,7 @@ from collections import defaultdict as _defaultdict
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"]  = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, X-API-Key"
     return response
 
 
@@ -173,6 +173,20 @@ def options_handler(_path):
 _rate_limits    = _defaultdict(list)
 RATE_LIMIT_MAX  = 10
 RATE_LIMIT_WIND = 60
+_api_keys = {}  # key_string -> {created, usage_count, label}
+
+
+def validate_api_key(key: str) -> bool:
+    """Check if an API key is valid."""
+    return key in _api_keys
+
+
+def generate_api_key(label: str = "default") -> str:
+    """Generate a new demo API key."""
+    import secrets
+    key = "aurex_" + secrets.token_urlsafe(24)
+    _api_keys[key] = {"created": time.time(), "usage_count": 0, "label": label}
+    return key
 
 
 def check_rate_limit(ip):
@@ -1183,7 +1197,7 @@ def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=
         h = load_history(user_id=sub_id)
         h.insert(0, data)
         save_history(h[:MAX_HISTORY], user_id=sub_id)
-        return True
+        return data["id"]
     except Exception as e:
         log_error("[SUPABASE] save_to_supabase exception: " + str(e))
         return False
@@ -1255,6 +1269,7 @@ IDLE_STATE = {
     "glb_size":      0,
     "quality_score": 0,
     "cloud_url":     "",
+    "share_url":     "",
     "style":         "",
     "complexity":    3,
 }
@@ -4301,11 +4316,12 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 set_state(progress=80, step="uploading_cloudinary")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
                 set_state(progress=95, step="saving_supabase")
-                save_to_supabase(original_prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Cache", cached=True, glb_size=sz,
                           last_model=ROCKET_GLB,
                           cloud_url=_cloud or "",
+                          share_url=f"/share/{saved_id}" if saved_id else "",
                           quality_score=score_glb_quality(ROCKET_GLB)[0])
                 return
         set_state(progress=15, step="cache_miss")
@@ -4362,11 +4378,12 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                         set_state(progress=80, step="uploading_cloudinary")
                         _cloud = upload_to_cloudinary(ROCKET_GLB)
                         set_state(progress=95, step="saving_supabase")
-                        save_to_supabase(original_prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                        saved_id = save_to_supabase(original_prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                         set_state(status="done", progress=100, step="done",
                                   service="Library", cached=False, glb_size=sz,
                                   last_model=ROCKET_GLB,
-                                  cloud_url=_cloud or "")
+                                  cloud_url=_cloud or "",
+                                  share_url=f"/share/{saved_id}" if saved_id else "")
                         return
             log_gen("[LIBRARY] library search failed, continuing")
 
@@ -4385,10 +4402,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 set_state(progress=80, step="uploading_cloudinary")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
                 set_state(progress=95, step="saving_supabase")
-                save_to_supabase(original_prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Shap-E", glb_size=sz, last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "")
+                          cloud_url=_cloud or "",
+                          share_url=f"/share/{saved_id}" if saved_id else "")
                 return
             log_gen("[SHAPEE] Shap-E failed, falling through")
         else:
@@ -4409,10 +4427,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                 set_state(progress=80, step="uploading_cloudinary")
                 _cloud = upload_to_cloudinary(ROCKET_GLB)
                 set_state(progress=95, step="saving_supabase")
-                save_to_supabase(original_prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                 set_state(status="done", progress=100, step="done",
                           service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "")
+                          cloud_url=_cloud or "",
+                          share_url=f"/share/{saved_id}" if saved_id else "")
                 return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through to preset")
 
@@ -4429,10 +4448,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             set_state(progress=80, step="uploading_cloudinary")
             _cloud = upload_to_cloudinary(ROCKET_GLB)
             set_state(progress=95, step="saving_supabase")
-            save_to_supabase(original_prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+            saved_id = save_to_supabase(original_prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
             set_state(status="done", progress=100, step="done",
                       service="Preset", glb_size=sz, last_model=ROCKET_GLB,
                       cloud_url=_cloud or "",
+                      share_url=f"/share/{saved_id}" if saved_id else "",
                       quality_score=score_glb_quality(ROCKET_GLB)[0])
             return
 
@@ -4454,11 +4474,12 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     set_state(progress=80, step="uploading_cloudinary")
                     _cloud = upload_to_cloudinary(ROCKET_GLB)
                     set_state(progress=95, step="saving_supabase")
-                    save_to_supabase(original_prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                    saved_id = save_to_supabase(original_prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
                     set_state(status="done", progress=100, step="done",
                               service="Fallback-Shaped", glb_size=sz,
                               last_model=ROCKET_GLB,
                               cloud_url=_cloud or "",
+                              share_url=f"/share/{saved_id}" if saved_id else "",
                               quality_score=score_glb_quality(ROCKET_GLB)[0])
                     return
         except Exception as e:
@@ -4474,10 +4495,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         set_state(progress=80, step="uploading_cloudinary")
         _cloud = upload_to_cloudinary(ROCKET_GLB)
         set_state(progress=95, step="saving_supabase")
-        save_to_supabase(original_prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+        saved_id = save_to_supabase(original_prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
         set_state(status="done", progress=100, step="done",
                   service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
                   cloud_url=_cloud or "",
+                  share_url=f"/share/{saved_id}" if saved_id else "",
                   quality_score=score_glb_quality(ROCKET_GLB)[0],
                   error="Could not generate the requested 3D model. Showing placeholder shape.")
 
@@ -4705,58 +4727,365 @@ def api_enhance_prompt():
 
 @app.route("/api/image_to_prompt", methods=["POST"])
 def image_to_prompt():
-    """
-    Accept an image upload and convert it into a 3D modeling prompt.
-    Returns {prompt, enhanced_prompt} for the client to use.
-    """
     if "image" not in request.files:
-        return jsonify({"error": "no image"}), 400
-
+        return jsonify({"error": "No image uploaded"}), 400
     f = request.files["image"]
-    mime = f.content_type or "image/jpeg"
-    if mime not in ("image/jpeg", "image/png", "image/webp"):
-        return jsonify({"error": "unsupported image type"}), 400
-
+    raw_bytes = f.read()
+    if len(raw_bytes) > 5 * 1024 * 1024:
+        return jsonify({"error": "Image too large (max 5MB)"}), 400
     import base64
-    img_bytes = f.read()
-    if len(img_bytes) > 5 * 1024 * 1024:
-        return jsonify({"error": "image too large (max 5MB)"}), 400
-    b64 = base64.b64encode(img_bytes).decode("ascii")
-
-    body = {
-        "model": "openai/gpt-4o-mini",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{mime};base64,{b64}"}
-                    },
-                    {
-                        "type": "text",
-                        "text": (
-                            "Describe the main object in this image as a 3D modeling prompt. "
-                            "Focus on: shape, geometry, surface texture, proportions, distinctive features. "
-                            "Output ONE sentence, max 50 words. No preamble. Start with the object name."
-                        )
-                    }
-                ]
-            }
-        ],
-        "max_tokens": 100
+    b64_data = base64.b64encode(raw_bytes).decode("utf-8")
+    mime_type = f.content_type or "image/jpeg"
+    if mime_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+        mime_type = "image/jpeg"
+    payload = {
+        "contents": [{
+            "parts": [
+                {"inline_data": {"mime_type": mime_type, "data": b64_data}},
+                {"text": (
+                    "Describe the main object in this image for 3D modeling. "
+                    "ONE sentence, max 40 words. Shape, geometry, proportions, surface details. "
+                    "Start with the object name. No preamble. No quotes."
+                )}
+            ]
+        }],
+        "generationConfig": {"maxOutputTokens": 120, "temperature": 0.4}
     }
+    base_url = ("https://generativelanguage.googleapis.com"
+                "/v1beta/models/gemini-2.0-flash:generateContent")
+    for attempt in range(min(len(GEMINI_KEYS), 5)):
+        key_str = get_gemini_key()
+        if not key_str:
+            break
+        try:
+            resp = requests.post(base_url + "?key=" + key_str,
+                                 json=payload, timeout=30, verify=False)
+            if resp.status_code == 200:
+                parts = (resp.json().get("candidates", [{}])[0]
+                         .get("content", {}).get("parts", []))
+                text = "".join(p.get("text", "") for p in parts).strip()
+                if text:
+                    mark_key_success(key_str)
+                    enhanced = enhance_prompt(text)
+                    return jsonify({"prompt": text, "enhanced": enhanced, "enhanced_prompt": enhanced})
+                rotate_gemini_key()
+            elif resp.status_code in (401, 403):
+                mark_key_dead(key_str)
+            else:
+                rotate_gemini_key()
+        except Exception as e:
+            rotate_gemini_key()
+            log_error(f"[vision] {e}")
+    return jsonify({"error": "Vision failed - all Gemini keys exhausted"}), 500
 
+
+@app.route("/share/<model_id>", methods=["GET"])
+def share_model(model_id):
+    """Public no-auth viewer for a single generated model."""
+    import html
+    model_id = model_id.strip()[:64]
+    row = None
     try:
-        result = call_llm(body)
-        if not result:
-            return jsonify({"error": "vision LLM returned empty"}), 500
-        result = result.strip()
-        enhanced = enhance_prompt(result)
-        return jsonify({"prompt": result, "enhanced": enhanced, "enhanced_prompt": enhanced})
+        params = {
+            "select": "id,prompt,color,cloud_url,created,quality_score,service",
+            "id": f"eq.{model_id}",
+            "limit": "1"
+        }
+        rows = supabase_request("GET", "models", params=params)
+        if rows:
+            row = rows[0]
     except Exception as e:
-        log_error(f"[image_to_prompt] error: {e}")
-        return jsonify({"error": str(e)}), 500
+        log_error(f"[share] supabase error: {e}")
+
+    if not row:
+        try:
+            import glob
+            history_files = glob.glob(os.path.join(BASE_DIR, "history_*.json"))
+            if os.path.exists(HISTORY_FILE):
+                history_files.append(HISTORY_FILE)
+            for hist_path in history_files:
+                try:
+                    with open(hist_path, "r", encoding="utf-8") as f:
+                        entries = json.load(f)
+                    for item in entries if isinstance(entries, list) else []:
+                        if str(item.get("id", "")) == str(model_id):
+                            row = item
+                            break
+                    if row:
+                        break
+                except Exception:
+                    continue
+        except Exception as e:
+            log_error(f"[share] local history error: {e}")
+
+    if not row or not row.get("cloud_url"):
+        return """<!DOCTYPE html>
+<html><head><title>Model Not Found - Aurex 3D</title><meta charset="utf-8">
+<style>body{background:#0a0a0f;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.msg{text-align:center}.msg h2{color:#ff4444}.back{color:#00d4ff;text-decoration:none;font-size:13px}</style>
+</head><body><div class="msg"><h2>Model Not Found</h2><p style="color:#888;font-size:13px">This model may have been deleted or the link is invalid.</p><a class="back" href="/">Back to Aurex 3D</a></div></body></html>""", 404
+
+    prompt_text = str(row.get("prompt") or "Untitled")
+    cloud_url = str(row.get("cloud_url") or "")
+    created = (str(row.get("created") or "")[:10])
+    service = str(row.get("service") or "")
+    prompt_html = html.escape(prompt_text)
+    prompt_short = html.escape(prompt_text[:80] + ("..." if len(prompt_text) > 80 else ""))
+    title_html = html.escape(prompt_text[:60])
+    model_js = json.dumps(cloud_url)
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title_html} - Aurex 3D</title>
+<meta property="og:title" content="{title_html} - Aurex 3D">
+<meta property="og:description" content="AI-generated 3D model created with Aurex AI 3D Studio">
+<meta property="og:type" content="website">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{background:#0a0a0f;color:#e8e8e8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}}
+.share-header{{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#0f0f1a;border-bottom:1px solid #1e1e2e;flex-shrink:0;gap:12px}}
+.share-logo{{font-size:14px;font-weight:700;color:#ffd700;letter-spacing:1px}}
+.share-prompt{{flex:1;font-size:13px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.share-actions{{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}}
+.share-btn{{padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid;font-weight:500;text-decoration:none;display:inline-block;background:transparent}}
+.btn-dl{{background:#00d4ff18;border-color:#00d4ff44;color:#00d4ff}}
+.btn-dl:hover{{background:#00d4ff28}}
+.btn-open{{background:#ffd70018;border-color:#ffd70044;color:#ffd700}}
+.btn-open:hover{{background:#ffd70028}}
+.viewer-wrap{{flex:1;position:relative;overflow:hidden}}
+canvas{{display:block;width:100%;height:100%}}
+.share-meta{{position:absolute;bottom:16px;left:16px;max-width:min(460px,calc(100% - 32px));background:#0f0f1acc;border:1px solid #1e1e2e;border-radius:8px;padding:10px 14px;font-size:11px;color:#777;backdrop-filter:blur(8px)}}
+.share-meta strong{{color:#aaa;display:block;margin-bottom:2px}}
+.copy-toast{{position:fixed;bottom:20px;right:20px;background:#1e1e2e;border:1px solid #00d4ff44;color:#00d4ff;padding:8px 16px;border-radius:6px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none}}
+.copy-toast.show{{opacity:1}}
+@media(max-width:640px){{.share-header{{align-items:flex-start;flex-direction:column}}.share-actions{{width:100%}}.share-btn{{flex:1;text-align:center}}}}
+</style>
+</head>
+<body>
+<div class="share-header">
+  <span class="share-logo">AUREX 3D</span>
+  <span class="share-prompt" title="{prompt_html}">{prompt_html}</span>
+  <div class="share-actions">
+    <a class="share-btn btn-dl" href="/download?t={html.escape(model_id)}" download>Download GLB</a>
+    <a class="share-btn btn-open" href="/">Open Studio</a>
+    <button class="share-btn btn-dl" onclick="copyLink()">Copy Link</button>
+  </div>
+</div>
+<div class="viewer-wrap">
+  <canvas id="share-canvas"></canvas>
+  <div class="share-meta"><strong>Prompt</strong>{prompt_short}{'<br><strong>Created</strong>' + html.escape(created) if created else ''}{'<br><strong>Engine</strong>' + html.escape(service) if service else ''}</div>
+</div>
+<div class="copy-toast" id="copy-toast">Link copied!</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+const MODEL_URL = {model_js};
+const canvas = document.getElementById('share-canvas');
+const renderer = new THREE.WebGLRenderer({{canvas, antialias:true, alpha:true}});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x0a0a0f,1);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
+camera.position.set(0, 1.5, 3);
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dl = new THREE.DirectionalLight(0xffffff, 1.2);
+dl.position.set(5,10,7); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x8888ff, 0.4);
+dl2.position.set(-5,-5,-5); scene.add(dl2);
+function resize() {{
+  const w = canvas.parentElement.offsetWidth;
+  const h = canvas.parentElement.offsetHeight;
+  renderer.setSize(w,h);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}}
+resize();
+window.addEventListener('resize', resize);
+let mesh = null, autoRotate = true;
+const loader = new THREE.GLTFLoader();
+loader.load(MODEL_URL, (gltf) => {{
+  mesh = gltf.scene;
+  const box = new THREE.Box3().setFromObject(mesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x,size.y,size.z) || 1;
+  const scale = 2 / maxDim;
+  mesh.scale.setScalar(scale);
+  mesh.position.sub(center.multiplyScalar(scale));
+  scene.add(mesh);
+}}, undefined, (err) => console.warn('Load error:', err));
+let isDragging=false, prevMouse={{x:0,y:0}}, rotY=0, rotX=0;
+canvas.addEventListener('mousedown', e=>{{ isDragging=true; prevMouse={{x:e.clientX,y:e.clientY}}; autoRotate=false; }});
+window.addEventListener('mousemove', e=>{{
+  if(!isDragging||!mesh) return;
+  rotY += (e.clientX-prevMouse.x)*0.01;
+  rotX += (e.clientY-prevMouse.y)*0.01;
+  rotX = Math.max(-1.2,Math.min(1.2,rotX));
+  mesh.rotation.y=rotY; mesh.rotation.x=rotX;
+  prevMouse={{x:e.clientX,y:e.clientY}};
+}});
+window.addEventListener('mouseup', ()=>isDragging=false);
+canvas.addEventListener('touchstart', e=>{{ autoRotate=false; prevMouse={{x:e.touches[0].clientX,y:e.touches[0].clientY}}; }}, {{passive:true}});
+canvas.addEventListener('touchmove', e=>{{
+  if(!mesh) return;
+  rotY += (e.touches[0].clientX-prevMouse.x)*0.01;
+  rotX += (e.touches[0].clientY-prevMouse.y)*0.01;
+  rotX = Math.max(-1.2,Math.min(1.2,rotX));
+  mesh.rotation.y=rotY; mesh.rotation.x=rotX;
+  prevMouse={{x:e.touches[0].clientX,y:e.touches[0].clientY}};
+}}, {{passive:true}});
+function animate() {{
+  requestAnimationFrame(animate);
+  if(mesh && autoRotate) mesh.rotation.y += 0.008;
+  renderer.render(scene,camera);
+}}
+animate();
+function copyLink() {{
+  navigator.clipboard.writeText(location.href).then(()=>{{
+    const t=document.getElementById('copy-toast');
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2000);
+  }});
+}}
+</script>
+</body>
+</html>"""
+
+
+@app.route("/api/v1/generate", methods=["POST"])
+def api_v1_generate():
+    """Public REST API for 3D model generation."""
+    global _generating
+    api_key = request.headers.get("X-API-Key", "")
+    if not api_key or not validate_api_key(api_key):
+        return jsonify({"error": "Invalid or missing API key. Get one at /api/docs"}), 401
+
+    data = request.get_json(force=True, silent=True) or {}
+    prompt = str(data.get("prompt", "")).strip()
+    if not prompt:
+        return jsonify({"error": "prompt is required"}), 400
+    if len(prompt) > 500:
+        return jsonify({"error": "prompt too long (max 500 chars)"}), 400
+
+    color = str(data.get("color", "#888888"))
+    if not re.match(r"^#[0-9a-fA-F]{6}$", color):
+        color = "#888888"
+    style = str(data.get("style", "realistic"))
+    if style not in STYLE_DIRECTIVES:
+        style = "realistic"
+    try:
+        complexity = int(data.get("complexity", 3))
+    except Exception:
+        complexity = 3
+    complexity = max(1, min(5, complexity))
+
+    with _gen_lock:
+        if _generating:
+            return jsonify({"error": "Server busy - try again in a moment"}), 429
+        _generating = True
+
+    _api_keys[api_key]["usage_count"] += 1
+
+    import uuid
+    job_id = str(uuid.uuid4())[:8]
+    t = threading.Thread(
+        target=run_generation,
+        args=(prompt, color, "default", [], [], False, style, complexity, f"api_{job_id}"),
+        daemon=True
+    )
+    t.start()
+    return jsonify({
+        "job_id": job_id,
+        "status": "started",
+        "poll_url": "/api/v1/status",
+        "message": "Poll /api/v1/status every 2 seconds until status is done"
+    })
+
+
+@app.route("/api/v1/status", methods=["GET"])
+def api_v1_status():
+    """Poll generation status for API clients."""
+    state = get_state()
+    progress = state.get("progress", 0)
+    step = state.get("step", "idle")
+    cloud_url = state.get("cloud_url", "")
+    share_url = state.get("share_url", "")
+
+    if progress == 100 and cloud_url:
+        return jsonify({
+            "status": "done",
+            "progress": 100,
+            "model_url": cloud_url,
+            "share_url": share_url,
+            "view_url": request.host_url.rstrip("/") + share_url if share_url else ""
+        })
+    if state.get("status") == "error" or step == "error":
+        return jsonify({"status": "error", "progress": progress, "step": step, "error": state.get("error", "")})
+    if progress == 0:
+        return jsonify({"status": "idle", "progress": 0})
+    return jsonify({"status": "generating", "progress": progress, "step": step})
+
+
+@app.route("/api/v1/key", methods=["POST"])
+def api_v1_create_key():
+    """Create a new demo API key."""
+    data = request.get_json(force=True, silent=True) or {}
+    label = str(data.get("label", "default"))[:50]
+    key = generate_api_key(label)
+    return jsonify({
+        "key": key,
+        "label": label,
+        "message": "Store this key safely - it won't be shown again"
+    })
+
+
+@app.route("/api/docs", methods=["GET"])
+def api_docs():
+    """API documentation page."""
+    host = request.host_url.rstrip("/")
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aurex 3D - API Docs</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}body{{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6}}
+.hero{{background:linear-gradient(135deg,#0f0f1a,#0a0a1a);border-bottom:1px solid #1e1e2e;padding:40px 20px;text-align:center}}
+.hero h1{{font-size:28px;color:#ffd700;letter-spacing:2px;margin-bottom:8px}}.hero p{{color:#888;font-size:14px}}
+.badge{{display:inline-block;background:#ffd70018;border:1px solid #ffd70044;color:#ffd700;border-radius:4px;padding:2px 8px;font-size:11px;font-family:monospace;margin:4px}}
+.container{{max-width:860px;margin:0 auto;padding:40px 20px}}.section{{margin-bottom:40px}}
+h2{{font-size:16px;color:#ffd700;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #1e1e2e;letter-spacing:1px}}h3{{font-size:13px;color:#00d4ff;margin:18px 0 8px}}
+.endpoint,.key-box{{background:#0f0f1a;border:1px solid #1e1e2e;border-radius:8px;padding:20px;margin-bottom:16px}}
+.method{{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;font-family:monospace;margin-right:8px}}.POST{{background:#00d4ff22;color:#00d4ff;border:1px solid #00d4ff44}}.GET{{background:#22c55e22;color:#22c55e;border:1px solid #22c55e44}}
+.path,code{{font-family:'Courier New',monospace;color:#00d4ff}}.desc{{font-size:12px;color:#888;margin-top:6px}}
+pre{{background:#070710;border:1px solid #1e1e2e;border-radius:8px;padding:16px;overflow-x:auto;font-size:12px;line-height:1.6;margin-top:10px}}
+.key-box{{text-align:center}}.key-input{{background:#070710;border:1px solid #1e1e2e;color:#e0e0e0;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;width:min(60%,420px);margin-right:8px}}
+.key-btn{{background:#ffd70018;border:1px solid #ffd70044;color:#ffd700;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:12px}}.key-result{{font-family:monospace;color:#ffd700;font-size:12px;margin-top:12px;word-break:break-all;display:none}}
+.back{{color:#00d4ff;text-decoration:none;font-size:13px;display:inline-block;margin-bottom:20px}}td{{border-bottom:1px solid #1e1e2e}}
+@media(max-width:640px){{.key-input{{width:100%;margin:0 0 8px}}}}
+</style></head><body>
+<div class="hero"><h1>AUREX 3D API</h1><p>Generate 3D models programmatically via HTTP</p><div style="margin-top:12px"><span class="badge">REST API</span><span class="badge">JSON</span><span class="badge">GLB Output</span></div></div>
+<div class="container"><a class="back" href="/">Back to Studio</a>
+<div class="section"><h2>GET AN API KEY</h2><div class="key-box"><p style="font-size:13px;color:#888;margin-bottom:14px">Enter a label for your project to get a free demo API key instantly.</p><input class="key-input" id="key-label" placeholder="my-project" maxlength="50"><button class="key-btn" onclick="getKey()">Generate Key</button><div class="key-result" id="key-result"></div></div></div>
+<div class="section"><h2>ENDPOINTS</h2>
+<div class="endpoint"><span class="method POST">POST</span><span class="path">/api/v1/generate</span><div class="desc">Start a 3D model generation. Returns immediately; poll /api/v1/status for progress.</div><h3>Request</h3><pre><code>curl -X POST {host}/api/v1/generate \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: YOUR_KEY" \\
+  -d '{{"prompt":"a red dragon","color":"#cc2200","style":"realistic","complexity":3}}'</code></pre><h3>Response</h3><pre><code>{{"job_id":"a1b2c3d4","status":"started","poll_url":"/api/v1/status"}}</code></pre></div>
+<div class="endpoint"><span class="method GET">GET</span><span class="path">/api/v1/status</span><div class="desc">Poll generation progress. When complete, model_url contains the GLB URL.</div><h3>Done</h3><pre><code>{{"status":"done","progress":100,"model_url":"https://...","share_url":"/share/123","view_url":"{host}/share/123"}}</code></pre></div>
+<div class="endpoint"><span class="method POST">POST</span><span class="path">/api/v1/key</span><div class="desc">Create a new in-memory demo API key.</div><pre><code>curl -X POST {host}/api/v1/key -H "Content-Type: application/json" -d '{{"label":"my-app"}}'</code></pre></div>
+</div>
+<div class="section"><h2>PARAMETERS</h2><div class="endpoint"><table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="color:#888"><td style="padding:6px 0">Field</td><td>Type</td><td>Required</td><td>Description</td></tr><tr><td style="padding:6px 0;color:#00d4ff;font-family:monospace">prompt</td><td>string</td><td>Yes</td><td>What to generate, max 500 chars</td></tr><tr><td style="padding:6px 0;color:#00d4ff;font-family:monospace">color</td><td>hex</td><td>No</td><td>Base color hint</td></tr><tr><td style="padding:6px 0;color:#00d4ff;font-family:monospace">style</td><td>string</td><td>No</td><td>realistic, cartoon, scifi, fantasy, lowpoly</td></tr><tr><td style="padding:6px 0;color:#00d4ff;font-family:monospace">complexity</td><td>integer</td><td>No</td><td>1 simple to 5 detailed</td></tr></table></div></div>
+</div><script>
+async function getKey() {{
+  const label = document.getElementById('key-label').value.trim() || 'default';
+  const res = await fetch('/api/v1/key', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{label}})}});
+  const data = await res.json();
+  const el = document.getElementById('key-result');
+  el.style.display = 'block';
+  el.innerHTML = data.key ? 'Your key: <strong>' + data.key + '</strong><br><span style="color:#888;font-size:11px">Copy and store it safely</span>' : 'Error: ' + (data.error || 'unknown');
+}}
+</script></body></html>"""
 
 
 @app.route("/api/community", methods=["GET"])
@@ -5298,6 +5627,9 @@ def quick_shape(name):
 @app.route("/reset", methods=["POST"])
 def reset():
     """Reset state to idle."""
+    global _generating
+    with _gen_lock:
+        _generating = False
     reset_state()
     log_srv("[reset] state reset to idle")
     return jsonify({"ok": True})

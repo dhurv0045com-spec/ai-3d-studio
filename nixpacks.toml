@@ -37,4 +37,4 @@ BLENDER_PATH = "/app/blender/blender"
 APP_BASE_DIR = "/app"
 
 [start]
-cmd = "gunicorn --bind 0.0.0.0:$PORT --timeout 300 --workers 2 wsgi:app"
+cmd = "sh -c 'gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 300 --workers ${WEB_CONCURRENCY:-2} wsgi:app'"

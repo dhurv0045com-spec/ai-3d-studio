@@ -256,8 +256,9 @@ def supabase_request(method, endpoint, params=None, json_data=None):
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json",
-        "Prefer": "return=representation"
     }
+    if method == "POST":
+        headers["Prefer"] = "return=representation"
     try:
         if method == "GET":
             r = requests.get(url, headers=headers, params=params, timeout=10)
@@ -1188,10 +1189,20 @@ def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=
                 del db_data["created"]
 
             res = supabase_request("POST", "models", json_data=db_data)
+            saved_id = ""
             if res is not None:
+                try:
+                    if isinstance(res, list) and len(res) > 0 and isinstance(res[0], dict):
+                        saved_id = str(res[0].get("id", "") or "")
+                    elif isinstance(res, dict):
+                        saved_id = str(res.get("id", "") or "")
+                except Exception:
+                    saved_id = ""
                 log_srv(f"[SUPABASE] save_to_supabase SUCCESS for {sub_id}")
             else:
                 log_error("[SUPABASE] save_to_supabase failed - saving to local fallback only")
+            if saved_id:
+                data["id"] = saved_id
 
         # Always write local per-user fallback
         h = load_history(user_id=sub_id)
@@ -2261,40 +2272,72 @@ def run_blender_script(script_text, output_path):
 # ---------------------------------------------------------------------------
 #  BLENDER SYSTEM PROMPT V2 + PROMPT BUILDERS
 # ---------------------------------------------------------------------------
-BLENDER_SYSTEM = (
-    "You write Blender 4.2 Python scripts for Linux. "
-    "OUTPUT RAW PYTHON ONLY. NO markdown. NO backticks. "
-    "STRUCTURE: "
-    "import bpy "
-    "import math "
-    "bpy.ops.object.select_all(action='SELECT') "
-    "bpy.ops.object.delete(use_global=False) "
-    "[build objects here] "
-    "bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB') "
-    "RULES: "
-    "1. NEVER use align= parameter "
-    "2. ALL primitive args must be keyword args "
-    "3. Every ( closes on SAME line "
-    "4. No f-strings. No try/except. No functions. No classes. "
-    "5. OUTPUT_PATH is already defined - NEVER redefine it "
-    "6. After every primitive add: "
-    "obj = bpy.context.active_object "
-    "obj.location = (x, y, z) "
-    "obj.scale = (sx, sy, sz) "
-    "7. For materials, ALWAYS use: bsdf.inputs['Base Color'].default_value = (R,G,B,1.0) "
-    "NEVER use enter_editmode parameter. NEVER use align= parameter. "
-    "NEVER use segments= in sphere. NEVER use ring_count= parameter. "
-    "CORRECT examples: "
-    "bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0)) "
-    "bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0,0,0)) "
-    "bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=1.0, location=(0,0,0)) "
-    "bpy.ops.mesh.primitive_cone_add(radius1=0.5, radius2=0.0, depth=1.0, location=(0,0,0)) "
-    "bpy.ops.mesh.primitive_torus_add(major_radius=1.0, minor_radius=0.3, location=(0,0,0)) "
-    "WRONG - never use these: "
-    "bpy.ops.mesh.primitive_uv_sphere_add(0.7, enter_editmode=False, align='WORLD') "
-    "MINIMUM 15 objects. LAST LINE MUST BE: "
-    "bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')"
-)
+BLENDER_SYSTEM = """You are an expert Blender 4.2 Python scripter on Linux.
+Your job: write a complete Python script that builds a detailed, recognizable 3D model.
+
+OUTPUT FORMAT:
+- Raw Python ONLY. Zero markdown. Zero backticks. Zero comments.
+- First line: import bpy
+- Second line: import math
+- Third line: bpy.ops.object.select_all(action='SELECT')
+- Fourth line: bpy.ops.object.delete(use_global=False)
+- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')
+
+STRICT SYNTAX RULES (violation = broken script):
+1. NEVER use align= parameter in any primitive
+2. NEVER use enter_editmode= parameter
+3. NEVER use segments= in uv_sphere (use default)
+4. NEVER use ring_count= parameter
+5. ALL primitive arguments must be keyword arguments
+6. Every opening ( closes on the SAME line — no line continuation
+7. No f-strings. No try/except. No def functions. No classes.
+8. OUTPUT_PATH is pre-defined — NEVER redefine it
+9. After EVERY primitive: obj=bpy.context.active_object then set obj.location and obj.scale
+
+CORRECT PRIMITIVE SYNTAX:
+bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
+bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(0, 0, 0))
+bpy.ops.mesh.primitive_cylinder_add(radius=0.3, depth=1.0, location=(0, 0, 0))
+bpy.ops.mesh.primitive_cone_add(radius1=0.5, radius2=0.0, depth=1.0, location=(0, 0, 0))
+bpy.ops.mesh.primitive_torus_add(major_radius=1.0, minor_radius=0.25, location=(0, 0, 0))
+bpy.ops.mesh.primitive_plane_add(size=1.0, location=(0, 0, 0))
+bpy.ops.mesh.primitive_circle_add(radius=0.5, location=(0, 0, 0))
+
+MATERIAL CREATION (use for EVERY object):
+mat = bpy.data.materials.new(name="M1")
+mat.use_nodes = True
+bsdf = mat.node_tree.nodes.get("Principled BSDF")
+bsdf.inputs['Base Color'].default_value = (R, G, B, 1.0)
+bsdf.inputs['Roughness'].default_value = 0.4
+bsdf.inputs['Metallic'].default_value = 0.0
+obj.data.materials.clear()
+obj.data.materials.append(mat)
+
+SHAPE CONSTRUCTION PHILOSOPHY:
+- Build from the LARGEST structural element first, then add details
+- Use scale (obj.scale) to distort primitives into recognizable shapes
+  Example: a laptop screen = cube scaled to (1.4, 0.05, 1.0)
+  Example: a laptop base = cube scaled to (1.4, 0.9, 0.05)
+  Example: a tire = torus with large major_radius, small minor_radius
+- Compose complex shapes from many primitives — a face needs: 1 sphere head,
+  2 smaller spheres for eyes, 1 flattened sphere for nose, 1 thin torus for mouth
+- Use EXACT proportions. Real objects have real ratios:
+  A car body is ~4x longer than tall. A human is ~7.5x head-height.
+- Offset parts with precise location values to create real spatial relationships
+- Color different parts with different materials for visual clarity
+
+REALISM REQUIREMENTS:
+- Every generated model MUST be immediately recognizable as the requested object
+- If asked for a laptop: it must have a keyboard base, a screen panel, a hinge,
+  visible keys (array of small cubes), screen bezel, touchpad
+- If asked for a car: it must have a body, 4 wheels in correct positions, windshield,
+  roof, hood, trunk, headlights, doors
+- If asked for a chair: seat, 4 legs, backrest, optional armrests
+- MINIMUM 25 primitives. Complex objects need 50+.
+- Use varied colors: main color for body, grey/dark for details, metallic for hardware
+
+SCALE REFERENCE: Model should fit in a 4x4x4 unit bounding box centered at origin.
+"""
 
 STYLE_DIRECTIVES = {
     "low-poly":   "Coarse geometry. Low sphere segments (8). Prefer cubes. Hard angular edges.",
@@ -2349,11 +2392,178 @@ def get_parts_hint(obj_name, parts_override=None):
             "crenellated battlements on all walls, "
             "tall inner keep, arrow-slit windows, banner flags on towers"
         ),
+        "laptop": (
+            "flat rectangular base chassis, slightly raised keyboard deck, "
+            "grid of 60 small square keys in 4 rows, rectangular touchpad below keys, "
+            "thin screen panel same width as base, screen bezel frame, "
+            "glowing screen rectangle inside bezel, thin hinge bar connecting base to screen, "
+            "USB port slots on left side, power indicator light, "
+            "speaker grille holes on bottom, manufacturer logo on lid"
+        ),
+        "phone": (
+            "thin rectangular slab body, large screen taking up front face, "
+            "slim bezels on all sides, home bar at bottom, "
+            "camera bump on back with 3 camera circles, "
+            "camera flash dot, side button on right edge, "
+            "volume buttons on left edge, USB-C port slot at bottom, "
+            "speaker grille at bottom, SIM tray slot on side"
+        ),
+        "tree": (
+            "thick tapered trunk cylinder, major branches extending up and outward, "
+            "medium branches splitting from major branches, "
+            "small branch twigs at tips, "
+            "large irregular canopy mass of overlapping sphere clusters, "
+            "surface root bumps at trunk base, bark texture implied by scale variations"
+        ),
+        "gun": (
+            "rectangular slide body, grip handle angled below slide, "
+            "trigger guard loop, trigger inside guard, "
+            "barrel cylinder extending from front, sight post on top, "
+            "rear sight notch, magazine base at bottom of grip, "
+            "safety lever on side, ejection port slot on slide"
+        ),
+        "table": (
+            "flat wide rectangular tabletop slab, "
+            "4 cylindrical or square legs at corners, "
+            "optional drawer box with handle, apron rails connecting legs under top, "
+            "leg leveler discs at bottom of each leg"
+        ),
+        "lamp": (
+            "circular heavy base disc, slim vertical pole, "
+            "adjustable arm joint sphere, "
+            "wide conical shade flared at bottom, "
+            "bulb sphere visible inside shade, "
+            "shade rim ring at bottom, power cord implied cylinder"
+        ),
+        "bottle": (
+            "wide cylindrical body, shoulder taper narrowing to neck, "
+            "thin cylindrical neck, small lip rim at top, "
+            "flat circular base, optional label rectangle on body"
+        ),
+        "shoe": (
+            "thick curved sole slab with toe upturn, heel wedge raise, "
+            "upper body wrapped around foot shape, "
+            "tongue flap at front, lace holes pairs up the tongue, "
+            "heel counter cup at back, toe cap reinforcement, "
+            "outsole tread pattern bumps"
+        ),
+        "helmet": (
+            "large rounded dome skull cap, "
+            "brow ridge bar at front, "
+            "visor shield panel flipped up, "
+            "cheek guard panels on sides, "
+            "chin strap attachment points, "
+            "crest ridge on top, neck guard flare at bottom, "
+            "ventilation slots"
+        ),
+        "trophy": (
+            "wide circular base disc, stepped pedestal layers, "
+            "thin central stem column, large cup bowl on stem, "
+            "two curved handles on cup sides, "
+            "star or figure topper, engraving plate rectangle on pedestal"
+        ),
+        "microscope": (
+            "heavy horseshoe base, vertical arm pillar, "
+            "stage platform disc with clips, "
+            "coarse and fine focus knob cylinders on arm, "
+            "nosepiece disc with 3 objective lens cylinders, "
+            "eyepiece tube at top, ocular lens cylinder, "
+            "condenser lens below stage, light source at base"
+        ),
+        "piano": (
+            "large rectangular cabinet body, "
+            "88 white key rectangles in a row, "
+            "black key groups between white keys (narrower, raised), "
+            "fallboard cover panel above keys, "
+            "music stand panel, 3 pedal cylinders at base, "
+            "lid prop stick, curved lid panel for grand style"
+        ),
+        "bicycle": (
+            "diamond frame: top tube, down tube, seat tube, chain stays, seat stays, "
+            "front fork two blades, 2 wheel hoops with spokes, "
+            "front and rear tires (torus), handlebars T-bar, stem, "
+            "saddle seat teardrop shape, pedals and cranks, chain ring disc, "
+            "derailleur cage, rear cassette disc"
+        ),
+        "guitar": (
+            "hourglass body lower bout, upper bout, waist narrowing, "
+            "sound hole circle cutout, "
+            "long slim neck rectangle, headstock paddle with 6 tuning peg cylinders, "
+            "6 thin string lines from bridge to headstock, "
+            "bridge saddle bar, nut bar at headstock, fret lines across neck, "
+            "strap button at heel and tail"
+        ),
+        "camera": (
+            "rectangular body box, large circular lens barrel protruding from front, "
+            "lens elements circles inside barrel, "
+            "viewfinder bump on top, shutter button on top right, "
+            "mode dial disc, hot shoe slot, "
+            "grip bulge on right side, strap lug loops on sides, "
+            "rear LCD screen rectangle, control buttons cluster"
+        ),
+        "tank": (
+            "wide flat hull box body, angled glacis plate front, "
+            "large rounded turret dome on top, long gun barrel cylinder extending forward, "
+            "commander hatch circle, loader hatch circle, "
+            "6 road wheel pairs on each side, upper track run torus-like strip, "
+            "drive sprocket at rear, idler wheel at front, "
+            "exhaust pipes, side skirt panels"
+        ),
         "spaceship": (
-            "main hull body, cockpit dome, 2 swept main wings, "
-            "2 engine pods on wings, engine exhaust nozzles, "
-            "top weapon turret, retracted landing struts, "
-            "hull panel lines, navigation light spheres, forward antenna array"
+            "elongated main hull fuselage, cockpit bubble dome at front, "
+            "2 swept delta wings, engine pods on wings, "
+            "thruster nozzle bells at rear, top turret dome, "
+            "landing strut tripod folded, antenna array spike cluster, "
+            "hull panel seam lines, viewport portholes, heat shield tiles"
+        ),
+        "crown": (
+            "circular base ring band, 5 pointed spires rising from band, "
+            "gem stone spheres set into base, "
+            "cross motif on front spire, decorative arches between spires, "
+            "inner velvet cap dome implied by dark sphere inside"
+        ),
+        "diamond": (
+            "flat octagonal table facet on top, "
+            "8 bezel facets sloping down from table, "
+            "girdle thin equatorial ring, "
+            "8 pavilion facets sloping down to culet, "
+            "tiny culet point at bottom, facets all slightly different angles"
+        ),
+        "skull": (
+            "large ovoid cranium dome, "
+            "2 deep eye socket cavities, "
+            "nasal aperture inverted heart, "
+            "cheekbone arches, temporal ridge lines, "
+            "mandible lower jaw with 16 teeth cubes top and bottom, "
+            "occipital bump at rear, foramen magnum hole at base"
+        ),
+        "ship": (
+            "long hull hull V-shaped cross section, "
+            "bow pointed prow, stern transom, "
+            "main deck flat surface, bridge superstructure amidships, "
+            "2 funnels or masts, anchor chain hawse pipes, "
+            "lifeboats on davit cranes, railing stanchion row, "
+            "propeller shaft, rudder blade at stern, portholes row"
+        ),
+        "mushroom": (
+            "thick cylindrical stalk, wider at base, "
+            "large dome cap wider than stalk, "
+            "underside gills radiating lines of flat planes, "
+            "ring skirt around upper stalk, "
+            "cap surface slight bumps, spot dots on cap top"
+        ),
+        "book": (
+            "rectangular cover front board, back board, "
+            "spine binding strip connecting front and back, "
+            "visible pages block between covers, "
+            "slight page curve suggesting stack, bookmark ribbon"
+        ),
+        "torch": (
+            "cylindrical handle tube, textured grip rings, "
+            "flared head wider cylinder, "
+            "glass lens circle, reflector disc behind lens, "
+            "pocket clip plate, tail cap end disc, "
+            "on/off button cylinder"
         ),
         "rocket": (
             "main cylindrical body, pointed nose cone, "
@@ -2371,11 +2581,6 @@ def get_parts_hint(obj_name, parts_override=None):
             "tail rotor disc, tail fin, main rotor mast, 4 main rotor blades, "
             "2 skid landing gear bars, engine intake on top, cargo door outline"
         ),
-        "ship": (
-            "wide hull body, bow curve, stern, main deck flat, "
-            "bridge superstructure block, 2 wide funnels, "
-            "anchor hawse pipe, deck railings, round portholes, radar mast, 2 lifeboats"
-        ),
         "plane": (
             "long fuselage, pointed nose cone, 2 long main wings, "
             "2 turbofan engines under wings, vertical tail fin, "
@@ -2383,9 +2588,11 @@ def get_parts_hint(obj_name, parts_override=None):
             "retracted nose gear, 2 main landing gear pods, wing flap sections"
         ),
         "sword": (
-            "long flat blade body, blade fuller groove, tapered blade tip, "
-            "wide crossguard bar, cylindrical grip handle, grip wrapping bands, "
-            "round or lobed pommel"
+            "long flat rectangular blade, central fuller groove along blade, "
+            "sharp pointed tip cone, cross-guard bar perpendicular to blade, "
+            "cylindrical grip handle with wrapping pattern, "
+            "round pommel sphere at handle end, "
+            "small guard quillons extending from crossguard"
         ),
         "motorcycle": (
             "main tubular frame, engine block cylinder, engine head, "
@@ -2399,22 +2606,10 @@ def get_parts_hint(obj_name, parts_override=None):
             "2 horizontal dive planes, vertical rudder, propeller disc, "
             "torpedo tube openings at front, ballast tank bulges at sides"
         ),
-        "tank": (
-            "lower hull box, sloped upper hull, rounded turret body, "
-            "long main gun barrel, commanders hatch cylinder, "
-            "left track plate assembly, right track assembly, "
-            "6 road wheels per side, drive sprocket, idler wheel, return rollers"
-        ),
         "horse": (
             "large oval body, arched neck, elongated head, flared nostrils, "
             "2 pointed ears, 4 long legs with knee joints, 4 hooves, "
             "flowing tail, mane ridge along neck"
-        ),
-        "tree": (
-            "thick trunk base, tapering trunk upper, "
-            "3 main branch clusters angled outward, "
-            "5 leaf sphere clusters at crown, "
-            "smaller leaf spheres on branches, raised root base bumps"
         ),
         "tower": (
             "wide square base foundation, lower cylindrical section, "
@@ -2433,52 +2628,44 @@ def get_parts_hint(obj_name, parts_override=None):
     )
 
 
-def build_blender_user_prompt(interp, color_hex, style, complexity):
-    """Build a highly specific Blender user prompt from parsed interpretation."""
-    obj        = interp.get("object", "object")
-    features   = interp.get("features", [])
-    material   = interp.get("material", "standard") or "standard"
-    notes      = interp.get("notes", "")
-    color_name = interp.get("color", "blue")
-    parts_list = interp.get("parts", [])
-    r, g, b    = hex_to_rgb_float(color_hex)
+def build_blender_user_prompt(interp, color_hex, style="realistic", complexity=3):
+    # Parse color
+    try:
+        r = int(color_hex[1:3], 16) / 255.0
+        g = int(color_hex[3:5], 16) / 255.0
+        b = int(color_hex[5:7], 16) / 255.0
+    except Exception:
+        r, g, b = 0.6, 0.6, 0.6
 
-    complexity_detail = {
-        1: "10-15 objects, basic shapes only",
-        2: "15-20 objects, simple details",
-        3: "20-25 objects, good detail",
-        4: "25-35 objects, high detail, every part modeled",
-        5: "35-50 objects, extreme detail, realistic proportions, every sub-part separate",
-    }.get(int(complexity), "20-25 objects")
+    prompt_text = interp if isinstance(interp, str) else str(interp.get("notes") or interp.get("description") or interp.get("object") or "object")
+    style_dir = STYLE_DIRECTIVES.get(style, STYLE_DIRECTIVES["realistic"])
+    complexity_dir = COMPLEXITY_DIRECTIVES.get(complexity, COMPLEXITY_DIRECTIVES[3])
 
-    feature_str = ", ".join(features) if features else "standard features"
-    style_dir   = STYLE_DIRECTIVES.get(style, STYLE_DIRECTIVES["realistic"])
-    complex_dir = COMPLEXITY_DIRECTIVES.get(int(complexity), COMPLEXITY_DIRECTIVES[3])
-    parts_hint  = get_parts_hint(obj, parts_list if parts_list else None)
+    # Get object-specific parts hint
+    obj_name = prompt_text.lower().split()[0] if prompt_text else "object"
+    parts = get_parts_hint(obj_name)
 
-    return (
-        "Create a Blender 5.0 bpy script for: "
-        + style + " style " + obj + ". "
-        "Color: " + color_name
-        + " RGB=(" + str(round(r, 3)) + ","
-        + str(round(g, 3)) + ","
-        + str(round(b, 3)) + "). "
-        "Apply this EXACT color to ALL objects. "
-        "Required features: " + feature_str + ". "
-        "Material feel: " + material + ". "
-        "Detail level: " + complexity_detail + ". "
-        "STYLE DIRECTIVE: " + style_dir + ". "
-        "COMPLEXITY DIRECTIVE: " + complex_dir + ". "
-        "Object parts to model: " + parts_hint + ". "
-        "Additional notes: " + (notes if notes else obj) + ". "
-        "REMINDERS: OUTPUT_PATH is already defined as a variable. "
-        "Use obj.location obj.scale obj.rotation_euler ONLY. "
-        "NEVER use bpy.ops.transform functions. "
-        "Call obj = bpy.context.active_object after EVERY primitive. "
-        "Apply color material to EVERY object. "
-        "Start with: import bpy "
-        "End with: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB')"
+    user_msg = (
+        f"BUILD: {prompt_text}\n"
+        f"PRIMARY COLOR: RGB({r:.3f}, {g:.3f}, {b:.3f}) — use for main body\n"
+        f"STYLE: {style_dir}\n"
+        f"DETAIL LEVEL: {complexity_dir}\n"
+        f"\nCRITICAL REQUIREMENT: The finished model MUST be IMMEDIATELY RECOGNIZABLE "
+        f"as '{obj_name}' to any viewer. If someone sees this without a label, "
+        f"they must know what it is.\n"
+        f"\nREQUIRED PARTS TO BUILD:\n{parts if parts else 'Identify all physical components of ' + prompt_text + ' and build each one.'}\n"
+        f"\nBUILDING STRATEGY:\n"
+        f"1. Start with the largest structural element (main body)\n"
+        f"2. Add major sub-components positioned correctly relative to body\n"
+        f"3. Add medium details (panels, openings, joints)\n"
+        f"4. Add fine details (buttons, screws, decorations)\n"
+        f"5. Apply materials — use primary color for main body, "
+        f"dark grey (0.15,0.15,0.15) for shadows/vents, "
+        f"light grey (0.8,0.8,0.8) for secondary panels, "
+        f"white (1,1,1) for highlights, black (0.02,0.02,0.02) for gaps\n"
+        f"\nWrite the complete Blender Python script now. Raw Python only."
     )
+    return user_msg
 
 
 def build_blender_prompt(interp, color_hex, raw_prompt="", style="realistic", complexity=3):
@@ -2496,7 +2683,7 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
             + " complexity=" + str(complexity) + ")")
 
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
-    script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=4000, temperature=0.2)
+    script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=8000, temperature=0.35)
     if not script_raw:
         log_gen("[MODEL_B] Gemini returned no script")
         return False
@@ -4779,179 +4966,115 @@ def image_to_prompt():
     return jsonify({"error": "Vision failed - all Gemini keys exhausted"}), 500
 
 
-@app.route("/share/<model_id>", methods=["GET"])
+@app.route("/share/<model_id>")
 def share_model(model_id):
-    """Public no-auth viewer for a single generated model."""
-    import html
-    model_id = model_id.strip()[:64]
+    model_id = str(model_id).strip()[:64]
     row = None
     try:
-        params = {
+        rows = supabase_request("GET", "models", params={
             "select": "id,prompt,color,cloud_url,created,quality_score,service",
-            "id": f"eq.{model_id}",
-            "limit": "1"
-        }
-        rows = supabase_request("GET", "models", params=params)
-        if rows:
-            row = rows[0]
+            "id": f"eq.{model_id}", "limit": "1"
+        })
+        if rows: row = rows[0]
     except Exception as e:
-        log_error(f"[share] supabase error: {e}")
-
-    if not row:
-        try:
-            import glob
-            history_files = glob.glob(os.path.join(BASE_DIR, "history_*.json"))
-            if os.path.exists(HISTORY_FILE):
-                history_files.append(HISTORY_FILE)
-            for hist_path in history_files:
-                try:
-                    with open(hist_path, "r", encoding="utf-8") as f:
-                        entries = json.load(f)
-                    for item in entries if isinstance(entries, list) else []:
-                        if str(item.get("id", "")) == str(model_id):
-                            row = item
-                            break
-                    if row:
-                        break
-                except Exception:
-                    continue
-        except Exception as e:
-            log_error(f"[share] local history error: {e}")
+        log_error(f"[share] {e}")
 
     if not row or not row.get("cloud_url"):
-        return """<!DOCTYPE html>
-<html><head><title>Model Not Found - Aurex 3D</title><meta charset="utf-8">
-<style>body{background:#0a0a0f;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.msg{text-align:center}.msg h2{color:#ff4444}.back{color:#00d4ff;text-decoration:none;font-size:13px}</style>
-</head><body><div class="msg"><h2>Model Not Found</h2><p style="color:#888;font-size:13px">This model may have been deleted or the link is invalid.</p><a class="back" href="/">Back to Aurex 3D</a></div></body></html>""", 404
+        return "<html><body style='background:#050508;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'><div style='text-align:center'><h2 style='color:#ff4444'>Model not found</h2><a href='/' style='color:#00d4ff'>← Open Aurex 3D</a></div></body></html>", 404
 
-    prompt_text = str(row.get("prompt") or "Untitled")
-    cloud_url = str(row.get("cloud_url") or "")
-    created = (str(row.get("created") or "")[:10])
-    service = str(row.get("service") or "")
-    prompt_html = html.escape(prompt_text)
-    prompt_short = html.escape(prompt_text[:80] + ("..." if len(prompt_text) > 80 else ""))
-    title_html = html.escape(prompt_text[:60])
-    model_js = json.dumps(cloud_url)
+    prompt_safe = row.get("prompt","Untitled")[:80].replace('\"',"'")
+    cloud_url = row.get("cloud_url","")
+    created = row.get("created","")[:10]
 
     return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title_html} - Aurex 3D</title>
-<meta property="og:title" content="{title_html} - Aurex 3D">
-<meta property="og:description" content="AI-generated 3D model created with Aurex AI 3D Studio">
-<meta property="og:type" content="website">
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{prompt_safe} — Aurex 3D</title>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:#0a0a0f;color:#e8e8e8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}}
-.share-header{{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#0f0f1a;border-bottom:1px solid #1e1e2e;flex-shrink:0;gap:12px}}
-.share-logo{{font-size:14px;font-weight:700;color:#ffd700;letter-spacing:1px}}
-.share-prompt{{flex:1;font-size:13px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-.share-actions{{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}}
-.share-btn{{padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid;font-weight:500;text-decoration:none;display:inline-block;background:transparent}}
-.btn-dl{{background:#00d4ff18;border-color:#00d4ff44;color:#00d4ff}}
-.btn-dl:hover{{background:#00d4ff28}}
-.btn-open{{background:#ffd70018;border-color:#ffd70044;color:#ffd700}}
-.btn-open:hover{{background:#ffd70028}}
-.viewer-wrap{{flex:1;position:relative;overflow:hidden}}
+body{{background:#050508;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}}
+.hdr{{display:flex;align-items:center;gap:12px;padding:12px 20px;background:#08080f;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0}}
+.logo{{font-size:13px;font-weight:800;color:#f0c040;letter-spacing:2px}}
+.title{{flex:1;font-size:12px;color:#a0a0b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.btn{{padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid;font-weight:600;text-decoration:none;display:inline-block;transition:all 0.2s}}
+.btn-dl{{background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.3);color:#00d4ff}}
+.btn-dl:hover{{background:rgba(0,212,255,0.15)}}
+.btn-gold{{background:rgba(240,192,64,0.1);border-color:rgba(240,192,64,0.3);color:#f0c040}}
+.btn-gold:hover{{background:rgba(240,192,64,0.18)}}
+.wrap{{flex:1;position:relative}}
 canvas{{display:block;width:100%;height:100%}}
-.share-meta{{position:absolute;bottom:16px;left:16px;max-width:min(460px,calc(100% - 32px));background:#0f0f1acc;border:1px solid #1e1e2e;border-radius:8px;padding:10px 14px;font-size:11px;color:#777;backdrop-filter:blur(8px)}}
-.share-meta strong{{color:#aaa;display:block;margin-bottom:2px}}
-.copy-toast{{position:fixed;bottom:20px;right:20px;background:#1e1e2e;border:1px solid #00d4ff44;color:#00d4ff;padding:8px 16px;border-radius:6px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none}}
-.copy-toast.show{{opacity:1}}
-@media(max-width:640px){{.share-header{{align-items:flex-start;flex-direction:column}}.share-actions{{width:100%}}.share-btn{{flex:1;text-align:center}}}}
-</style>
-</head>
+.meta{{position:absolute;bottom:16px;left:16px;background:rgba(5,5,8,0.85);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px;font-size:11px;color:#606078;backdrop-filter:blur(12px);max-width:280px}}
+.meta strong{{color:#888;display:block;margin-bottom:2px;font-size:10px;letter-spacing:1px;text-transform:uppercase}}
+.toast{{position:fixed;bottom:20px;right:20px;background:#10101f;border:1px solid rgba(0,212,255,0.3);color:#00d4ff;padding:8px 16px;border-radius:8px;font-size:12px;opacity:0;transition:opacity 0.3s;pointer-events:none}}
+.toast.show{{opacity:1}}
+.branding{{position:absolute;bottom:16px;right:16px;font-size:10px;color:#303048;letter-spacing:1px}}
+.branding a{{color:#404060;text-decoration:none}}
+.branding a:hover{{color:#f0c040}}
+</style></head>
 <body>
-<div class="share-header">
-  <span class="share-logo">AUREX 3D</span>
-  <span class="share-prompt" title="{prompt_html}">{prompt_html}</span>
-  <div class="share-actions">
-    <a class="share-btn btn-dl" href="/download?t={html.escape(model_id)}" download>Download GLB</a>
-    <a class="share-btn btn-open" href="/">Open Studio</a>
-    <button class="share-btn btn-dl" onclick="copyLink()">Copy Link</button>
+<div class="hdr">
+  <span class="logo">⬡ AUREX 3D</span>
+  <span class="title">{prompt_safe}</span>
+  <div style="display:flex;gap:6px;flex-shrink:0">
+    <a class="btn btn-dl" href="/download" download>⬇ GLB</a>
+    <button class="btn btn-dl" onclick="copyLink()">🔗 Share</button>
+    <a class="btn btn-gold" href="/">Create Yours →</a>
   </div>
 </div>
-<div class="viewer-wrap">
-  <canvas id="share-canvas"></canvas>
-  <div class="share-meta"><strong>Prompt</strong>{prompt_short}{'<br><strong>Created</strong>' + html.escape(created) if created else ''}{'<br><strong>Engine</strong>' + html.escape(service) if service else ''}</div>
+<div class="wrap">
+  <canvas id="sc"></canvas>
+  <div class="meta">
+    <strong>Prompt</strong>{prompt_safe}
+    {"<br><strong>Date</strong>" + created if created else ""}
+  </div>
+  <div class="branding"><a href="/">Made with Aurex 3D</a></div>
 </div>
-<div class="copy-toast" id="copy-toast">Link copied!</div>
+<div class="toast" id="toast">Copied!</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
-const MODEL_URL = {model_js};
-const canvas = document.getElementById('share-canvas');
-const renderer = new THREE.WebGLRenderer({{canvas, antialias:true, alpha:true}});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setClearColor(0x0a0a0f,1);
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
-camera.position.set(0, 1.5, 3);
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const dl = new THREE.DirectionalLight(0xffffff, 1.2);
-dl.position.set(5,10,7); scene.add(dl);
-const dl2 = new THREE.DirectionalLight(0x8888ff, 0.4);
-dl2.position.set(-5,-5,-5); scene.add(dl2);
-function resize() {{
-  const w = canvas.parentElement.offsetWidth;
-  const h = canvas.parentElement.offsetHeight;
-  renderer.setSize(w,h);
-  camera.aspect = w/h;
-  camera.updateProjectionMatrix();
+const canvas=document.getElementById('sc');
+const renderer=new THREE.WebGLRenderer({{canvas,antialias:true,alpha:true}});
+renderer.setClearColor(0x050508,1);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.2;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,0.01,1000);
+camera.position.set(0,1.5,3.5);
+scene.add(new THREE.AmbientLight(0x111122,0.8));
+const keyLight = new THREE.DirectionalLight(0xfff8e8, 1.8);
+keyLight.position.set(4, 8, 5);
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0x8899ff, 0.5);
+fillLight.position.set(-6, 2, -4);
+scene.add(fillLight);
+const rimLight = new THREE.DirectionalLight(0xffcc44, 0.4);
+rimLight.position.set(0, -4, -8);
+scene.add(rimLight);
+function resize(){{
+  const w=canvas.parentElement.offsetWidth,h=canvas.parentElement.offsetHeight;
+  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
 }}
-resize();
-window.addEventListener('resize', resize);
-let mesh = null, autoRotate = true;
-const loader = new THREE.GLTFLoader();
-loader.load(MODEL_URL, (gltf) => {{
-  mesh = gltf.scene;
-  const box = new THREE.Box3().setFromObject(mesh);
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x,size.y,size.z) || 1;
-  const scale = 2 / maxDim;
-  mesh.scale.setScalar(scale);
-  mesh.position.sub(center.multiplyScalar(scale));
+resize();window.addEventListener('resize',resize);
+let mesh=null,autoRot=true,dragging=false,prev={{x:0,y:0}},ry=0,rx=0;
+new THREE.GLTFLoader().load("{cloud_url}",gltf=>{{
+  mesh=gltf.scene;
+  const box=new THREE.Box3().setFromObject(mesh);
+  const sz=box.getSize(new THREE.Vector3());
+  const s=2/Math.max(sz.x,sz.y,sz.z);
+  mesh.scale.setScalar(s);
+  const c=box.getCenter(new THREE.Vector3());
+  mesh.position.sub(c.multiplyScalar(s));
   scene.add(mesh);
-}}, undefined, (err) => console.warn('Load error:', err));
-let isDragging=false, prevMouse={{x:0,y:0}}, rotY=0, rotX=0;
-canvas.addEventListener('mousedown', e=>{{ isDragging=true; prevMouse={{x:e.clientX,y:e.clientY}}; autoRotate=false; }});
-window.addEventListener('mousemove', e=>{{
-  if(!isDragging||!mesh) return;
-  rotY += (e.clientX-prevMouse.x)*0.01;
-  rotX += (e.clientY-prevMouse.y)*0.01;
-  rotX = Math.max(-1.2,Math.min(1.2,rotX));
-  mesh.rotation.y=rotY; mesh.rotation.x=rotX;
-  prevMouse={{x:e.clientX,y:e.clientY}};
 }});
-window.addEventListener('mouseup', ()=>isDragging=false);
-canvas.addEventListener('touchstart', e=>{{ autoRotate=false; prevMouse={{x:e.touches[0].clientX,y:e.touches[0].clientY}}; }}, {{passive:true}});
-canvas.addEventListener('touchmove', e=>{{
-  if(!mesh) return;
-  rotY += (e.touches[0].clientX-prevMouse.x)*0.01;
-  rotX += (e.touches[0].clientY-prevMouse.y)*0.01;
-  rotX = Math.max(-1.2,Math.min(1.2,rotX));
-  mesh.rotation.y=rotY; mesh.rotation.x=rotX;
-  prevMouse={{x:e.touches[0].clientX,y:e.touches[0].clientY}};
-}}, {{passive:true}});
-function animate() {{
-  requestAnimationFrame(animate);
-  if(mesh && autoRotate) mesh.rotation.y += 0.008;
-  renderer.render(scene,camera);
-}}
-animate();
-function copyLink() {{
-  navigator.clipboard.writeText(location.href).then(()=>{{
-    const t=document.getElementById('copy-toast');
-    t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'),2000);
-  }});
-}}
-</script>
-</body>
-</html>"""
+canvas.addEventListener('mousedown',e=>{{dragging=true;prev={{x:e.clientX,y:e.clientY}};autoRot=false;}});
+canvas.addEventListener('mousemove',e=>{{if(!dragging||!mesh)return;ry+=(e.clientX-prev.x)*0.01;rx+=(e.clientY-prev.y)*0.01;rx=Math.max(-1.2,Math.min(1.2,rx));mesh.rotation.y=ry;mesh.rotation.x=rx;prev={{x:e.clientX,y:e.clientY}};}});
+canvas.addEventListener('mouseup',()=>dragging=false);
+canvas.addEventListener('touchstart',e=>{{autoRot=false;prev={{x:e.touches[0].clientX,y:e.touches[0].clientY}};}},{{passive:true}});
+canvas.addEventListener('touchmove',e=>{{if(!mesh)return;ry+=(e.touches[0].clientX-prev.x)*0.01;rx+=(e.touches[0].clientY-prev.y)*0.01;rx=Math.max(-1.2,Math.min(1.2,rx));mesh.rotation.y=ry;mesh.rotation.x=rx;prev={{x:e.touches[0].clientX,y:e.touches[0].clientY}};}},{{passive:true}});
+(function animate(){{requestAnimationFrame(animate);if(mesh&&autoRot)mesh.rotation.y+=0.006;renderer.render(scene,camera);}})();
+function copyLink(){{navigator.clipboard.writeText(location.href).then(()=>{{const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}});}}
+</script></body></html>"""
 
 
 @app.route("/api/v1/generate", methods=["POST"])

@@ -32,36 +32,39 @@
 html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif}
 
 /* ---- TOKENS ---- */
-:root{
-  /* Backgrounds */
-  --bg-0:#0a0e17;
-  --bg-1:#0d1220;
-  --bg-2:#111827;
-  --bg-3:#1a2236;
-  --bg-4:#1f2a40;
-  --bg-5:#243049;
+ :root{
+  /* NEW PREMIUM COLOR PALETTE */
+  --bg-0:#050508;
+  --bg-1:#08080f;
+  --bg-2:#0c0c18;
+  --bg-3:#10101f;
+  --bg-4:#141428;
 
-  /* Borders */
-  --bd-1:rgba(255,255,255,0.06);
-  --bd-2:rgba(255,255,255,0.10);
-  --bd-3:rgba(255,255,255,0.14);
+  --gold:#f0c040;
+  --gold-bright:#ffd700;
+  --gold-dim:rgba(240,192,64,0.7);
+  --gold-faint:rgba(240,192,64,0.08);
+  --gold-glow:rgba(240,192,64,0.25);
 
-  /* Text */
-  --tx-1:#f0f4ff;
-  --tx-2:#a8b4cc;
-  --tx-3:#6b7a99;
-  --tx-4:#3d4d6a;
-
-  /* Accent */
-  --gold:#FFD700;
-  --gold-dim:rgba(255,215,0,0.7);
-  --gold-faint:rgba(255,215,0,0.12);
-  --cyan:#00D4FF;
-  --cyan-dim:rgba(0,212,255,0.6);
+  --cyan:#00d4ff;
   --cyan-faint:rgba(0,212,255,0.08);
-  --amber:#FFA500;
-  --red:#FF4444;
-  --green:#00CC88;
+  --cyan-glow:rgba(0,212,255,0.2);
+
+  --purple:#8b5cf6;
+  --purple-faint:rgba(139,92,246,0.08);
+
+  --tx-1:#f0f0f0;
+  --tx-2:#a0a0b8;
+  --tx-3:#606078;
+  --tx-4:#404058;
+
+  --bd-1:rgba(255,255,255,0.04);
+  --bd-2:rgba(255,255,255,0.08);
+  --bd-3:rgba(255,255,255,0.12);
+
+  --amber:#ff8c00;
+  --red:#ff4444;
+  --green:#00cc88;
 
   /* Radius */
   --r-sm:4px;
@@ -78,23 +81,23 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif}
   --nolan-ice:#a8d8ff;
   --nolan-soft:rgba(0,212,255,0.15);
   --tara-amber:#FFA500;
-  --tara-black:#0a0e17;
+  --tara-black:#050508;
   --kuro-ochre:#c9a84c;
   --kube-white:#f0f4ff;
   --kube-red:#FF4444;
   --success:#00CC88;
-  --bg-void:#0a0e17;
-  --bg-deep:#0d1220;
-  --bg-panel:#111827;
-  --bg-card:#1a2236;
-  --bg-input:#1f2a40;
-  --bg-hover:#243049;
-  --bg-active:#2a3655;
-  --bg-select:#304070;
-  --br-1:#1a2236;
-  --br-2:rgba(255,255,255,0.06);
-  --br-3:rgba(255,255,255,0.10);
-  --br-focus:rgba(0,212,255,0.5);
+  --bg-void:#050508;
+  --bg-deep:#08080f;
+  --bg-panel:#0c0c18;
+  --bg-card:#10101f;
+  --bg-input:#141428;
+  --bg-hover:#141428;
+  --bg-active:#141428;
+  --bg-select:#141428;
+  --br-1:#10101f;
+  --br-2:rgba(255,255,255,0.04);
+  --br-3:rgba(255,255,255,0.08);
+  --br-focus:rgba(240,192,64,0.5);
   --text-1:#f0f4ff;
   --text-2:#a8b4cc;
   --text-3:#6b7a99;
@@ -103,9 +106,22 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif}
 
 /* ---- BASE ---- */
 body{background:var(--bg-0);color:var(--tx-1);cursor:none}
+
+/* Keep UI above ambient background */
+#nav,#topbar,#content,#loading-screen{position:relative;z-index:1}
+#ambient-bg{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.35}
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;border:none;background:none;font-family:inherit}
 input,textarea,select{font-family:inherit;color:var(--tx-1)}
+textarea:focus, input[type="text"]:focus, select:focus{
+  border-color:rgba(240,192,64,0.5) !important;
+  box-shadow:0 0 0 2px rgba(240,192,64,0.1) !important;
+  outline:none;
+}
+#prompt:focus{
+  border-color:rgba(0,212,255,0.5) !important;
+  box-shadow:0 0 0 2px rgba(0,212,255,0.08) !important;
+}
 ::selection{background:var(--nolan-soft);color:var(--cyan)}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -289,8 +305,10 @@ body:has(a:hover) #cursor-ring{
 /* ---- NAVBAR (left side) ---- */
 #nav{
   position:fixed;top:0;left:0;bottom:0;
-  width:48px;background:var(--bg-1);
+  width:48px;background:rgba(8,8,15,0.9);
   border-right:1px solid var(--bd-1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display:flex;flex-direction:column;
   align-items:center;padding:12px 0;gap:2px;
   z-index:100;
@@ -344,7 +362,9 @@ body:has(a:hover) #cursor-ring{
 /* ---- TOPBAR ---- */
 #topbar{
   position:fixed;top:0;left:48px;right:0;height:var(--topbar-h);
-  background:var(--bg-1);border-bottom:1px solid var(--bd-1);
+  background:rgba(8,8,15,0.9);border-bottom:1px solid rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display:flex;align-items:center;padding:0 16px;gap:12px;
   z-index:99;
 }
@@ -895,6 +915,40 @@ body:has(a:hover) #cursor-ring{
 
 /* ---- GENERATE BUTTON ---- */
 #gen-btn{
+  width:100%;
+  padding:14px;
+  background:linear-gradient(135deg,#f0c040 0%,#ff8c00 100%);
+  border:none;
+  border-radius:10px;
+  color:#0a0a0f;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+  transition:transform .15s,box-shadow .3s;
+  box-shadow:0 4px 20px rgba(240,192,64,0.3);
+}
+#gen-btn::before{
+  content:'';
+  position:absolute;
+  top:0;left:-100%;
+  width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+  transition:left .5s;
+}
+#gen-btn:hover::before{left:100%}
+#gen-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(240,192,64,0.5)}
+#gen-btn:active{transform:translateY(1px)}
+#gen-btn:disabled{
+  background:linear-gradient(135deg,#333,#222);
+  color:#555;
+  box-shadow:none;
+  transform:none;
+}
+#gen-btn{
   width:100%;padding:13px;margin-top:12px;
   border-radius:var(--r-sm);
   background:linear-gradient(135deg,var(--amber),var(--gold));
@@ -1185,6 +1239,16 @@ body:has(a:hover) #cursor-ring{
 .toast.info{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.25);color:var(--cyan)}
 .toast.warn{background:rgba(255,165,0,.08);border-color:rgba(255,165,0,.25);color:var(--amber)}
 .toast.err{background:rgba(255,68,68,.08);border-color:rgba(255,68,68,.25);color:var(--red)}
+
+/* ---- PREMIUM HOVER CARDS ---- */
+.gallery-card, .hc-card, .preset-card{
+  transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.gallery-card:hover, .hc-card:hover, .preset-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--gold-dim);
+  box-shadow:0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(240,192,64,0.1);
+}
 
 /* ---- SAVE MODAL ---- */
 .modal-backdrop{
@@ -3035,6 +3099,55 @@ var sph = { theta: 0.5, phi: 1.1, radius: 5.5,
 var ms = { down: false, lx: 0, ly: 0, btn: 0 };
 
 /* ============================================================
+   AMBIENT BACKGROUND PARTICLES
+   ============================================================ */
+function initAmbientBg() {
+  if (document.getElementById('ambient-bg')) { return; }
+  var canvas = document.createElement('canvas');
+  canvas.id = 'ambient-bg';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.35;';
+  document.body.insertBefore(canvas, document.body.firstChild);
+  var ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  var particles = Array.from({ length: 60 }, function() {
+    return {
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.3,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      opacity: Math.random() * 0.4 + 0.1,
+      color: Math.random() > 0.7 ? '#f0c040' : '#00d4ff'
+    };
+  });
+
+  function drawBg() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(function(p) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.opacity;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawBg);
+  }
+  drawBg();
+  window.addEventListener('resize', function() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+}
+document.addEventListener('DOMContentLoaded', initAmbientBg);
+
+/* ============================================================
    THREE.JS INIT - Villeneuve Cosmos
    ============================================================ */
 function initThreeJS() {
@@ -3057,43 +3170,43 @@ function initThreeJS() {
   camera = new THREE.PerspectiveCamera(45, wrap.offsetWidth / wrap.offsetHeight, 0.01, 500);
   updateCam();
 
-  /* ---- Villeneuve 5-light setup ---- */
-  /* Ambient - deep space base */
-  scene.add(new THREE.AmbientLight(0x1A2840, 0.6));
+  /* ---- Premium cinematic lighting ---- */
+  scene.add(new THREE.AmbientLight(0x111122, 0.8));
 
-  /* Key - cold cyan, the sun of Arrakis */
-  var dl1 = new THREE.DirectionalLight(0x00C8FF, 2.2);
-  dl1.position.set(6, 10, 6);
-  dl1.castShadow              = true;
-  dl1.shadow.mapSize.width    = 2048;
-  dl1.shadow.mapSize.height   = 2048;
-  dl1.shadow.camera.near      = 0.1;
-  dl1.shadow.camera.far       = 60;
-  dl1.shadow.camera.left      = -12;
-  dl1.shadow.camera.right     = 12;
-  dl1.shadow.camera.top       = 12;
-  dl1.shadow.camera.bottom    = -12;
-  scene.add(dl1);
+  var keyLight = new THREE.DirectionalLight(0xfff8e8, 1.8);
+  keyLight.position.set(4, 8, 5);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
+  keyLight.shadow.camera.near = 0.1;
+  keyLight.shadow.camera.far = 60;
+  keyLight.shadow.camera.left = -12;
+  keyLight.shadow.camera.right = 12;
+  keyLight.shadow.camera.top = 12;
+  keyLight.shadow.camera.bottom = -12;
+  scene.add(keyLight);
 
-  /* Fill - purple, gaseous giant scatter */
-  var dl2 = new THREE.DirectionalLight(0x6B3FA0, 1.0);
-  dl2.position.set(-6, 2, -6);
-  scene.add(dl2);
+  var fillLight = new THREE.DirectionalLight(0x8899ff, 0.5);
+  fillLight.position.set(-6, 2, -4);
+  scene.add(fillLight);
 
-  /* Rim - teal edge, Blade Runner neon */
-  var pl1 = new THREE.PointLight(0x00E5CC, 0.5, 20);
-  pl1.position.set(0, 6, 0);
-  scene.add(pl1);
+  var rimLight = new THREE.DirectionalLight(0xffcc44, 0.4);
+  rimLight.position.set(0, -4, -8);
+  scene.add(rimLight);
 
-  /* Ground bounce - warm orange, Dune sand */
-  var pl2 = new THREE.PointLight(0xFF6622, 0.25, 12);
-  pl2.position.set(0, -2, 3);
-  scene.add(pl2);
-
-  /* Grid - barely visible like Arrival landing field */
-  var grid = new THREE.GridHelper(24, 48, 0x0C1830, 0x060F20);
-  grid.position.y = -1.8;
-  scene.add(grid);
+  var groundGeo = new THREE.PlaneGeometry(20, 20);
+  var groundMat = new THREE.MeshStandardMaterial({
+    color: 0x0a0a18,
+    roughness: 0.8,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.6
+  });
+  var ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -1.5;
+  ground.receiveShadow = true;
+  scene.add(ground);
 
   initOrbit(canvas);
   animate();
@@ -4057,6 +4170,7 @@ function doPoll() {
   fetch('/status')
     .then(function(r) { return r.json(); })
     .then(function(d) {
+      window._lastGenerationState = d;
       updateProgressUI(d);
       updatePipelineDots(d.progress);
       updatePipelineViz(d.step, d.progress);
@@ -4096,6 +4210,7 @@ function doPoll() {
         toast('Ready in ' + timerStr + ' via ' + (APP.lastService || ''), 'ok');
 
         setStatusBadge('done', 'DONE');
+        celebrateGeneration();
 
       } else if (d.status === 'error') {
         stopPoll();
@@ -4107,6 +4222,23 @@ function doPoll() {
       }
     })
     .catch(function() {});
+}
+
+function celebrateGeneration() {
+  var viewer = document.getElementById('viewer-wrap') || document.querySelector('.viewer-wrap');
+  if (viewer) {
+    viewer.style.transition = 'box-shadow 0.3s';
+    viewer.style.boxShadow = '0 0 40px rgba(240,192,64,0.6), inset 0 0 20px rgba(240,192,64,0.1)';
+    setTimeout(function() {
+      viewer.style.boxShadow = '0 0 0px rgba(240,192,64,0)';
+    }, 1500);
+  }
+  var state = window._lastGenerationState;
+  if (state && state.quality_score) {
+    toast('Model generated — Quality ' + state.quality_score + '/100', 'ok');
+  } else {
+    toast('Model generated successfully', 'ok');
+  }
 }
 
 function doEditPoll() {

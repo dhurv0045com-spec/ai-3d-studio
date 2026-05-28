@@ -3259,7 +3259,7 @@ nav#nav { display: flex !important; }
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-<script src="static/gesture-engine.js"></script>
+<script src="/static/gesture-engine.js"></script>
 <script>
 /* ============================================================
    APP STATE
@@ -3318,6 +3318,28 @@ var sph = {
 var ms = { down: false, lx: 0, ly: 0, btn: 0 };
 
 /* Hand gesture control: see /static/gesture-engine.js (GestureEngine v2) */
+
+function initHandControlButton() {
+  var btn = document.getElementById('btn-hand');
+  if (!btn) { return; }
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof toggleHandControl === 'function') {
+      toggleHandControl();
+    } else if (typeof toast === 'function') {
+      toast('Hand control still loading — wait a moment and try again', 'warn');
+    }
+  });
+  if (typeof GestureEngine === 'undefined' || typeof GestureEngine.toggle !== 'function') {
+    var retry = document.createElement('script');
+    retry.src = '/static/gesture-engine.js';
+    retry.onload = function() {
+      if (typeof toast === 'function') { toast('Hand control ready', 'ok'); }
+    };
+    document.head.appendChild(retry);
+  }
+}
 
 /* ============================================================
    AMBIENT BACKGROUND PARTICLES
@@ -6714,6 +6736,7 @@ document.addEventListener('DOMContentLoaded', function() {
   goPage('studio');
   goRTab('create');
   setConnectionBar('live');
+  initHandControlButton();
 
   /* Server health check on load - with welcoming toast */
   setTimeout(function() {

@@ -56,7 +56,8 @@ function _partsFocus(index) {
 }
 
 function _partsCycleFocus() {
-  if (!GestureEngine.settings.partControl) { return; }
+  var ge = window.GestureEngine || window.HAND;
+  if (!ge || !ge.settings || !ge.settings.partControl) { return; }
   if (!PARTS.meshes.length) { _partsCollectMeshes(); }
   if (!PARTS.meshes.length) { return; }
   _partsFocus(PARTS.index + 1);
@@ -500,9 +501,20 @@ var GestureEngine = (function() {
     var h = engine.skeletonCanvas.height;
     ctx.clearRect(0, 0, w, h);
     var col = (GESTURES[gesture] && GESTURES[gesture].color) || '#00d4ff';
-    if (window.drawConnectors && window.HAND_CONNECTIONS) {
-      drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: col, lineWidth: 3 });
-      drawLandmarks(ctx, lm, { color: '#ffffff', lineWidth: 1, radius: 3 });
+    try {
+      var conns = window.HAND_CONNECTIONS;
+      if (typeof drawConnectors === 'function' && conns) {
+        drawConnectors(ctx, lm, conns, { color: col, lineWidth: 3 });
+      }
+      if (typeof drawLandmarks === 'function') {
+        drawLandmarks(ctx, lm, { color: '#ffffff', lineWidth: 1, radius: 3 });
+      }
+    } catch (eDraw) {}
+    var pill = document.getElementById('ge-preview-pill');
+    if (pill && gesture) {
+      var meta = GESTURES[gesture];
+      pill.textContent = meta ? meta.label : gesture;
+      pill.style.color = meta ? meta.color : '#f0c040';
     }
   }
 
@@ -1000,13 +1012,19 @@ var GestureEngine = (function() {
       engine.frameBuffer = [];
       zeroVel();
 
-      if (!window.Hands || !window.Camera) {
-        if (typeof toast === 'function') { toast('Hand control unavailable (scripts not loaded)', 'err'); }
-        engine.enabled = false;
-        return;
+      var HandsCtor = window.Hands;
+      var MpCamera = window.Camera;
+      if (!HandsCtor || !MpCamera) {
+        if (typeof toast === 'function') {
+          toast('Hand control unavailable — reload the page (MediaPipe not loaded)', 'err');
+        }
+        return false;
       }
 
-      engine.hands = new Hands({
+      if (engine.hands && engine.hands.close) {
+        try { engine.hands.close(); } catch (eClose) {}
+      }
+      engine.hands = new HandsCtor({
         locateFile: function(file) {
           return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/' + file;
         }
@@ -1020,21 +1038,44 @@ var GestureEngine = (function() {
       engine.hands.onResults(onResults);
 
       var v = engine.video;
-      engine.cam = new Camera(v, {
+      if (!v) {
+        if (typeof toast === 'function') { toast('Hand preview failed to initialize', 'err'); }
+        return false;
+      }
+
+      if (engine.cam && engine.cam.stop) {
+        try { engine.cam.stop(); } catch (eStop) {}
+      }
+      engine.cam = new MpCamera(v, {
         onFrame: async function() {
           if (!engine.enabled || !engine.hands) { return; }
-          await engine.hands.send({ image: v });
+          try {
+            await engine.hands.send({ image: v });
+          } catch (eSend) {}
         },
         width: 640,
         height: 480
       });
-      engine.cam.start();
+
+      var started = engine.cam.start();
+      if (started && typeof started.then === 'function') {
+        started.catch(function(err) {
+          if (typeof toast === 'function') {
+            toast('Camera blocked: ' + (err.message || 'permission denied'), 'err');
+          }
+          engine.enabled = false;
+          stop();
+          syncHandButton();
+        });
+      }
 
       if (engine.inertiaRaf) { cancelAnimationFrame(engine.inertiaRaf); }
       engine.inertiaRaf = requestAnimationFrame(tickInertia);
+      syncPreviewVisibility();
+      return true;
     } catch (e) {
       if (typeof toast === 'function') { toast('Hand control error: ' + (e.message || e), 'err'); }
-      engine.enabled = false;
+      return false;
     }
   }
 
@@ -1065,27 +1106,63 @@ var GestureEngine = (function() {
     } catch (e4) {}
   }
 
-  function toggle() {
-    engine.enabled = !engine.enabled;
+  function syncHandButton() {
     var btn = document.getElementById('btn-hand');
     if (btn) {
       btn.classList.toggle('active', engine.enabled);
       btn.classList.toggle('hand', engine.enabled);
     }
+  }
+
+  function toggle() {
+    engine.enabled = !engine.enabled;
+    syncHandButton();
     if (engine.enabled) {
-      if (typeof toast === 'function') { toast('Hand control: ON', 'info'); }
-      start();
+      if (typeof toast === 'function') { toast('Hand control: ON — allow camera access', 'info'); }
+      if (!start()) {
+        engine.enabled = false;
+        syncHandButton();
+      }
     } else {
       stop();
       if (typeof toast === 'function') { toast('Hand control: OFF', 'default'); }
     }
   }
 
+  engine.toggle = toggle;
+  engine.start = start;
+  engine.stop = stop;
+  engine.syncHandButton = syncHandButton;
+
   return engine;
 })();
 
 var HAND = GestureEngine;
+window.GestureEngine = GestureEngine;
+window.HAND = HAND;
 
-function toggleHandControl() { GestureEngine.toggle(); }
-function startHandControl() { if (!GestureEngine.enabled) { GestureEngine.enabled = true; GestureEngine.start(); } }
-function stopHandControl() { if (GestureEngine.enabled) { GestureEngine.enabled = false; GestureEngine.stop(); } }
+function toggleHandControl() {
+  if (!window.GestureEngine || typeof GestureEngine.toggle !== 'function') {
+    if (typeof toast === 'function') {
+      toast('Hand control failed to load — refresh the page', 'err');
+    }
+    return;
+  }
+  GestureEngine.toggle();
+}
+function startHandControl() {
+  if (!GestureEngine || typeof GestureEngine.start !== 'function') { return; }
+  if (!GestureEngine.enabled) {
+    GestureEngine.enabled = true;
+    if (!GestureEngine.start()) { GestureEngine.enabled = false; }
+    if (GestureEngine.syncHandButton) { GestureEngine.syncHandButton(); }
+  }
+}
+function stopHandControl() {
+  if (!GestureEngine || typeof GestureEngine.stop !== 'function') { return; }
+  if (GestureEngine.enabled) {
+    GestureEngine.enabled = false;
+    GestureEngine.stop();
+    if (GestureEngine.syncHandButton) { GestureEngine.syncHandButton(); }
+  }
+}

@@ -6018,10 +6018,8 @@ def too_many_requests(e):
     }), 429
 
 
-# ---------------------------------------------------------------------------
-#  MAIN ENTRY POINT
-# ---------------------------------------------------------------------------
-if __name__ == "__main__":
+def run_local_server():
+    """Start the development server after all routes have been registered."""
     print("=" * 60)
     print("  AI 3D STUDIO v" + VERSION)
     print("  Production-ready Flask backend")
@@ -6401,3 +6399,10 @@ _orig_build_preset_for_keyword = build_preset_for_keyword
 #
 # ISSUES: None - all 4 bugs fixed, pipeline should now reach Gemini+Blender
 # ---
+
+
+# ---------------------------------------------------------------------------
+#  MAIN ENTRY POINT
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    run_local_server()

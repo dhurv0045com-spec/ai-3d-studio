@@ -14,7 +14,7 @@
 
 ---
 
-## ✨ Features
+## Features
 
 - 🧠 **Multi-API Intelligence**: Powered primarily by OpenRouter, with robust failovers to **Google Gemini (20 Keys Auto-Rotation)** and Groq.
 - 🎨 **Hybrid Pipeline**: LLM generates optimized Python scripts which are seamlessly executed by a headless Blender instance.
@@ -23,6 +23,15 @@
 - ⚡ **Production Ready**: Configured for Railway deployment via Gunicorn.
 
 ---
+
+## How to Use (End Users)
+
+See `USAGE.md` for a product-style walkthrough:
+
+- Prompting tips for best results
+- Viewer controls (mouse/touch)
+- Hand gesture control (toggleable)
+- History, folders, sharing, export
 
 ## What's New in V8
 
@@ -57,7 +66,7 @@ graph TD
 
 ---
 
-## 🚀 Quick Start (Local Setup)
+## Quick Start (Local Setup)
 
 ### 1. Prerequisites
 - **Python 3.10+** installed.
@@ -114,7 +123,7 @@ The repo root is kept focused on deployable source: `server.py`, `wsgi.py`, `sta
 
 ---
 
-## ☁️ Deployment (Render or Railway)
+## Deployment (Render or Railway)
 
 Do not deploy this app to Vercel. Flask and Blender require a long-running Docker web service.
 

@@ -2641,8 +2641,12 @@ def build_blender_user_prompt(interp, color_hex, style="realistic", complexity=3
     style_dir = STYLE_DIRECTIVES.get(style, STYLE_DIRECTIVES["realistic"])
     complexity_dir = COMPLEXITY_DIRECTIVES.get(complexity, COMPLEXITY_DIRECTIVES[3])
 
-    # Get object-specific parts hint
-    obj_name = prompt_text.lower().split()[0] if prompt_text else "object"
+    # Get object-specific parts hint (avoid picking adjectives like "futuristic")
+    if isinstance(interp, dict) and interp.get("object"):
+        obj_name = str(interp.get("object") or "").strip().lower()
+    else:
+        obj_name = (prompt_text or "").strip().lower()
+        obj_name = obj_name.split()[-1] if obj_name else "object"
     parts = get_parts_hint(obj_name)
 
     user_msg = (

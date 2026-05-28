@@ -574,6 +574,11 @@ body:has(a:hover) #cursor-ring{
   position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:12px;
   pointer-events:none;
+  transition:opacity .45s ease, transform .45s ease;
+}
+#empty-state.gone{
+  opacity:0;
+  transform:translateY(8px) scale(0.99);
 }
 .es-cube-wrap{position:relative;margin-bottom:8px}
 .es-cube{
@@ -591,6 +596,109 @@ body:has(a:hover) #cursor-ring{
   letter-spacing:4px;color:var(--tx-2);text-transform:uppercase;
 }
 .es-sub{font-size:12px;color:var(--tx-4);letter-spacing:1px}
+.es-hero{
+  width:min(860px, calc(100% - 32px));
+  background:rgba(8,8,15,0.70);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:18px;
+  padding:18px 18px 16px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:0 18px 60px rgba(0,0,0,0.6);
+  position:relative;
+  overflow:hidden;
+}
+.es-hero::before{
+  content:'';
+  position:absolute;inset:-40%;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(0,212,255,0.08), transparent 55%),
+    radial-gradient(circle at 78% 65%, rgba(240,192,64,0.08), transparent 55%),
+    radial-gradient(circle at 45% 85%, rgba(139,92,246,0.06), transparent 55%);
+  animation:esGlow 16s ease-in-out infinite alternate;
+}
+@keyframes esGlow{from{transform:translate(0,0) scale(1)}to{transform:translate(1.8%,1.2%) scale(1.03)}}
+.es-grid{
+  position:relative;
+  display:grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap:14px;
+  align-items:stretch;
+}
+.es-left{padding:2px 2px 0}
+.es-right{
+  border-left:1px solid rgba(255,255,255,0.06);
+  padding-left:14px;
+}
+.es-kicker{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:rgba(240,192,64,0.9);
+  margin-bottom:8px;
+}
+.es-title2{
+  font-family:'Orbitron',sans-serif;
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:5px;
+  text-transform:uppercase;
+  background:linear-gradient(135deg,var(--tx-1),rgba(240,192,64,0.95),rgba(0,212,255,0.9));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:6px;
+}
+.es-desc{
+  font-size:12px;
+  color:var(--tx-2);
+  line-height:1.65;
+  margin-bottom:12px;
+}
+.es-feats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.es-feat{
+  display:flex;gap:8px;align-items:flex-start;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.05);
+  background:rgba(16,16,31,0.55);
+}
+.es-dot2{width:8px;height:8px;border-radius:50%;margin-top:4px;box-shadow:0 0 14px rgba(0,212,255,0.25)}
+.es-dot2.c{background:rgba(0,212,255,0.9)}
+.es-dot2.g{background:rgba(240,192,64,0.9);box-shadow:0 0 14px rgba(240,192,64,0.22)}
+.es-ftxt{font-size:11px;color:var(--tx-2);line-height:1.45}
+.es-ftxt b{color:var(--tx-1);font-weight:700}
+.es-tips{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:rgba(160,160,184,0.95);
+  line-height:1.55;
+}
+.es-tips kbd{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  padding:2px 6px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(20,20,40,0.6);
+  color:rgba(240,240,240,0.9);
+}
+.es-bottom{
+  margin-top:12px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+.es-chip{pointer-events:all}
+@media(max-width:820px){
+  .es-grid{grid-template-columns:1fr}
+  .es-right{border-left:none;border-top:1px solid rgba(255,255,255,0.06);padding-left:0;padding-top:12px}
+  .es-feats{grid-template-columns:1fr}
+}
 .es-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px;pointer-events:all}
 .es-chip{
   padding:5px 12px;border-radius:20px;
@@ -658,9 +766,45 @@ body:has(a:hover) #cursor-ring{
 .ctrl-btn:hover{background:var(--bg-3);border-color:var(--bd-3);color:var(--tx-1)}
 .ctrl-btn.active{background:var(--cyan-faint);border-color:rgba(0,212,255,.3);color:var(--cyan)}
 .ctrl-btn.wire.active{background:rgba(255,165,0,.08);border-color:rgba(255,165,0,.25);color:var(--amber)}
+.ctrl-btn.hand.active{background:rgba(240,192,64,0.10);border-color:rgba(240,192,64,0.35);color:var(--gold)}
 .save-btn{border-color:rgba(255,215,0,.25);color:var(--gold-dim)}
 .save-btn:hover{background:rgba(255,215,0,.08);border-color:rgba(255,215,0,.4);color:var(--gold)}
 .ctrl-sep{flex:1}
+
+/* ---- Hand control panel ---- */
+#hand-panel{
+  position:absolute;
+  left:12px;
+  bottom:56px;
+  width:260px;
+  background:rgba(8,8,15,0.92);
+  border:1px solid rgba(255,255,255,0.06);
+  border-top:2px solid rgba(240,192,64,0.35);
+  border-radius:12px;
+  padding:10px 12px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:0 10px 30px rgba(0,0,0,0.55);
+  display:none;
+  z-index:3;
+}
+#hand-panel.shown{display:block}
+.hp-title{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  color:rgba(240,192,64,0.85);
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.hp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.hp-row label{font-size:11px;color:var(--tx-2)}
+.hp-row input[type="range"]{width:140px}
+.hp-row input[type="checkbox"]{transform:scale(1.05)}
+.hp-mini{font-size:10px;color:var(--tx-4);line-height:1.4;margin-top:6px}
 
 /* ---- RIGHT PANEL ---- */
 #studio-right{
@@ -2506,18 +2650,44 @@ nav#nav { display: flex !important; }
 
         <!-- Tarkovsky empty state -->
         <div id="empty-state">
-          <div class="es-cube-wrap">
-            <div class="es-cube"></div>
-            <div class="es-cube-glow"></div>
-          </div>
-          <div class="es-title">DESCRIBE ANYTHING</div>
-          <div class="es-sub">Type a prompt - generate a 3D model</div>
-          <div class="es-chips">
-            <span class="es-chip" onclick="chipFill('red dragon with spread wings')">dragon</span>
-            <span class="es-chip" onclick="chipFill('futuristic spaceship')">spaceship</span>
-            <span class="es-chip" onclick="chipFill('medieval castle')">castle</span>
-            <span class="es-chip" onclick="chipFill('battle robot')">robot</span>
-            <span class="es-chip" onclick="chipFill('crystal sword')">sword</span>
+          <div class="es-hero">
+            <div class="es-grid">
+              <div class="es-left">
+                <div class="es-kicker">AUREX AI 3D STUDIO</div>
+                <div class="es-title2">Design to 3D</div>
+                <div class="es-desc">
+                  Describe an object. Aurex builds a <b>recognizable</b> 3D model, exports GLB,
+                  and gives you a clean, cinematic viewer for engineering and design review.
+                </div>
+
+                <div class="es-feats">
+                  <div class="es-feat"><div class="es-dot2 c"></div><div class="es-ftxt"><b>High-detail builds</b><br>Parts-aware generation for real objects.</div></div>
+                  <div class="es-feat"><div class="es-dot2 g"></div><div class="es-ftxt"><b>Instant sharing</b><br>Public share page per model.</div></div>
+                  <div class="es-feat"><div class="es-dot2 c"></div><div class="es-ftxt"><b>Pro viewer</b><br>Reset, auto-rotate, wireframe, export.</div></div>
+                  <div class="es-feat"><div class="es-dot2 g"></div><div class="es-ftxt"><b>Gesture mode</b><br>Toggle <b>HAND</b> to control by camera.</div></div>
+                </div>
+              </div>
+
+              <div class="es-right">
+                <div class="es-kicker">Quick start</div>
+                <div class="es-tips">
+                  - Type a prompt, then click <kbd>Generate</kbd><br>
+                  - Use <kbd>Complexity 4–5</kbd> for best detail<br>
+                  - Drag to rotate, wheel/pinch to zoom<br>
+                  - Toggle <kbd>HAND</kbd> for gestures
+                </div>
+              </div>
+            </div>
+
+            <div class="es-bottom">
+              <div class="es-chips">
+                <span class="es-chip" onclick="chipFill('red dragon with spread wings')">dragon</span>
+                <span class="es-chip" onclick="chipFill('futuristic spaceship with cockpit canopy and twin thrusters')">spaceship</span>
+                <span class="es-chip" onclick="chipFill('laptop with keyboard, touchpad, bezel, hinge')">laptop</span>
+                <span class="es-chip" onclick="chipFill('camera with lens barrel, buttons, rear screen, grip')">camera</span>
+                <span class="es-chip" onclick="chipFill('microscope with base, stage, objective lenses, eyepiece')">microscope</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2543,6 +2713,7 @@ nav#nav { display: flex !important; }
           <button class="ctrl-btn" id="btn-reset" onclick="resetCamera()" aria-label="Reset camera">RESET</button>
           <button class="ctrl-btn" id="btn-auto"  onclick="toggleAutoRotate()" aria-label="Toggle auto rotate">AUTO</button>
           <button class="ctrl-btn" id="btn-wire"  onclick="toggleWireframe()" aria-label="Toggle wireframe">WIRE</button>
+          <button class="ctrl-btn" id="btn-hand" onclick="toggleHandControl()" aria-label="Toggle hand control">HAND</button>
           <div class="ctrl-sep"></div>
           <button class="ctrl-btn" id="btn-del-active" onclick="if(APP.selectedModel){deleteHistModel(APP.selectedModel);}else{toast('No saved model loaded.','warn');}" style="color:var(--red, #ff4444);" aria-label="Delete model">DEL</button>
           <button class="ctrl-btn save-btn" onclick="showSaveModal()" aria-label="Save model">SAVE</button>
@@ -3046,6 +3217,9 @@ nav#nav { display: flex !important; }
 <div id="toasts" aria-live="polite" role="status"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 <script>
 /* ============================================================
    APP STATE
@@ -3093,10 +3267,243 @@ var APP = {
    THREE.JS GLOBALS
    ============================================================ */
 var scene, camera, renderer, currentObject;
+var placeholderObject = null;
 var pollTimer = null, editPollTimer = null;
 var sph = { theta: 0.5, phi: 1.1, radius: 5.5,
             tTheta: 0.5, tPhi: 1.1, tRadius: 5.5 };
 var ms = { down: false, lx: 0, ly: 0, btn: 0 };
+
+/* ============================================================
+   HAND GESTURE CONTROL (optional)
+   Uses MediaPipe Hands, only runs when toggled ON.
+   Gestures:
+   - Move open hand: rotate model (yaw/pitch)
+   - Pinch (thumb+index): zoom in/out (distance = zoom)
+   ============================================================ */
+var HAND = {
+  enabled: false,
+  hands: null,
+  cam: null,
+  video: null,
+  last: { x: null, y: null, pinch: null },
+  smooth: { dx: 0, dy: 0, dz: 0 },
+  settings: { sensitivity: 1.0, showPreview: false, twoHand: true },
+  ui: { panel: null }
+};
+
+function _handEnsurePanel() {
+  if (HAND.ui.panel) { return HAND.ui.panel; }
+  var wrap = document.getElementById('studio-center') || document.body;
+  var p = document.createElement('div');
+  p.id = 'hand-panel';
+  p.innerHTML =
+    '<div class="hp-title"><span>HAND CONTROL</span><button class="ctrl-btn" style="padding:3px 8px;font-size:9px" onclick="toggleHandControl()">OFF</button></div>' +
+    '<div class="hp-row"><label>Sensitivity</label><input id="hp-sens" type="range" min="0.4" max="2.2" step="0.05" value="1.0"></div>' +
+    '<div class="hp-row"><label>Camera preview</label><input id="hp-prev" type="checkbox"></div>' +
+    '<div class="hp-row"><label>Two-hand zoom</label><input id="hp-two" type="checkbox" checked></div>' +
+    '<div class="hp-mini">Move hand to rotate. Pinch to zoom. Two hands = smoother zoom.</div>';
+  wrap.appendChild(p);
+  HAND.ui.panel = p;
+
+  var sens = p.querySelector('#hp-sens');
+  var prev = p.querySelector('#hp-prev');
+  var two  = p.querySelector('#hp-two');
+  if (sens) sens.addEventListener('input', function() { HAND.settings.sensitivity = parseFloat(sens.value || '1') || 1; });
+  if (prev) prev.addEventListener('change', function() { HAND.settings.showPreview = !!prev.checked; _handSyncPreview(); });
+  if (two)  two.addEventListener('change', function() { HAND.settings.twoHand = !!two.checked; });
+
+  return p;
+}
+
+function _handSyncPreview() {
+  if (!HAND.video) { return; }
+  HAND.video.style.opacity = HAND.settings.showPreview ? '0.85' : '0';
+}
+
+function _handEnsureVideo() {
+  if (HAND.video) { return HAND.video; }
+  var v = document.createElement('video');
+  v.id = 'hand-video';
+  v.playsInline = true;
+  v.muted = true;
+  v.autoplay = true;
+  v.style.cssText = 'position:fixed;right:12px;bottom:12px;width:160px;height:120px;opacity:0;pointer-events:none;z-index:2;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:#000;';
+  document.body.appendChild(v);
+  HAND.video = v;
+  _handSyncPreview();
+  return v;
+}
+
+function toggleHandControl() {
+  HAND.enabled = !HAND.enabled;
+  var btn = document.getElementById('btn-hand');
+  if (btn) {
+    btn.classList.toggle('active', HAND.enabled);
+    btn.classList.toggle('hand', HAND.enabled);
+  }
+  if (HAND.enabled) {
+    var panel = _handEnsurePanel();
+    if (panel) { panel.classList.add('shown'); }
+    toast('Hand control: ON (camera permission required)', 'info');
+    startHandControl();
+  } else {
+    stopHandControl();
+    if (HAND.ui.panel) { HAND.ui.panel.classList.remove('shown'); }
+    toast('Hand control: OFF', 'default');
+  }
+}
+
+function startHandControl() {
+  try {
+    var v = _handEnsureVideo();
+    var panel = _handEnsurePanel();
+    if (panel) { panel.classList.add('shown'); }
+    HAND.last = { x: null, y: null, pinch: null };
+    HAND.smooth = { dx: 0, dy: 0, dz: 0 };
+
+    if (!window.Hands || !window.Camera) {
+      toast('Hand control unavailable (scripts not loaded)', 'err');
+      HAND.enabled = false;
+      var btn = document.getElementById('btn-hand');
+      if (btn) { btn.classList.remove('active', 'hand'); }
+      return;
+    }
+
+    HAND.hands = new Hands({
+      locateFile: function(file) {
+        return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/' + file;
+      }
+    });
+    HAND.hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.65,
+      minTrackingConfidence: 0.6
+    });
+
+    HAND.hands.onResults(function(res) {
+      if (!HAND.enabled) { return; }
+      if (!res || !res.multiHandLandmarks || !res.multiHandLandmarks.length) {
+        HAND.last.x = null; HAND.last.y = null; HAND.last.pinch = null;
+        return;
+      }
+      var sens = HAND.settings.sensitivity || 1.0;
+
+      // Two-hand mode: smoother zoom using hand-to-hand distance
+      if (HAND.settings.twoHand && res.multiHandLandmarks.length >= 2) {
+        var a = res.multiHandLandmarks[0];
+        var b = res.multiHandLandmarks[1];
+        var aC = { x: (a[0].x + a[5].x) * 0.5, y: (a[0].y + a[5].y) * 0.5 };
+        var bC = { x: (b[0].x + b[5].x) * 0.5, y: (b[0].y + b[5].y) * 0.5 };
+        var midX = (aC.x + bC.x) * 0.5;
+        var midY = (aC.y + bC.y) * 0.5;
+        var dist = Math.hypot(aC.x - bC.x, aC.y - bC.y);
+
+        if (HAND.last.x == null) {
+          HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist;
+          return;
+        }
+
+        var dx2 = midX - HAND.last.x;
+        var dy2 = midY - HAND.last.y;
+        HAND.smooth.dx = HAND.smooth.dx * 0.78 + dx2 * 0.22;
+        HAND.smooth.dy = HAND.smooth.dy * 0.78 + dy2 * 0.22;
+
+        var rotSpeed2 = 2.1 * sens;
+        sph.tTheta -= HAND.smooth.dx * rotSpeed2;
+        sph.tPhi   -= HAND.smooth.dy * rotSpeed2;
+        sph.tPhi    = Math.max(0.08, Math.min(Math.PI - 0.08, sph.tPhi));
+
+        var dd = dist - (HAND.last.pinch || dist);
+        HAND.smooth.dz = HAND.smooth.dz * 0.75 + dd * 0.25;
+        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 120));
+
+        HAND.last.x = midX; HAND.last.y = midY; HAND.last.pinch = dist;
+        return;
+      }
+
+      // One-hand mode: rotate + pinch zoom
+      var lm = res.multiHandLandmarks[0];
+      var wrist = lm[0];
+      var ix = lm[8];   // index tip
+      var it = lm[5];   // index base
+      var tt = lm[4];   // thumb tip
+
+      var cx = (wrist.x + it.x) * 0.5;
+      var cy = (wrist.y + it.y) * 0.5;
+
+      var pinch = Math.hypot(ix.x - tt.x, ix.y - tt.y);
+      var isPinch = pinch < 0.055;
+
+      if (HAND.last.x == null) {
+        HAND.last.x = cx; HAND.last.y = cy; HAND.last.pinch = pinch;
+        return;
+      }
+
+      // Rotation from hand movement
+      var dx = cx - HAND.last.x;
+      var dy = cy - HAND.last.y;
+
+      // Smooth to avoid jitter
+      HAND.smooth.dx = HAND.smooth.dx * 0.75 + dx * 0.25;
+      HAND.smooth.dy = HAND.smooth.dy * 0.75 + dy * 0.25;
+
+      // Map to orbit deltas (tuned)
+      var rotSpeed = 2.4 * sens;
+      sph.tTheta -= HAND.smooth.dx * rotSpeed;
+      sph.tPhi   -= HAND.smooth.dy * rotSpeed;
+      sph.tPhi    = Math.max(0.08, Math.min(Math.PI - 0.08, sph.tPhi));
+
+      // Zoom only while pinching
+      if (isPinch && HAND.last.pinch != null) {
+        var dp = pinch - HAND.last.pinch; // + means fingers separating
+        HAND.smooth.dz = HAND.smooth.dz * 0.7 + dp * 0.3;
+        sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius - HAND.smooth.dz * 80 * sens));
+      } else {
+        HAND.smooth.dz = HAND.smooth.dz * 0.7;
+      }
+
+      HAND.last.x = cx; HAND.last.y = cy; HAND.last.pinch = pinch;
+    });
+
+    HAND.cam = new Camera(v, {
+      onFrame: async function() {
+        if (!HAND.enabled || !HAND.hands) { return; }
+        await HAND.hands.send({ image: v });
+      },
+      width: 640,
+      height: 480
+    });
+    HAND.cam.start();
+  } catch (e) {
+    toast('Hand control error: ' + (e.message || e), 'err');
+    HAND.enabled = false;
+    var btn = document.getElementById('btn-hand');
+    if (btn) { btn.classList.remove('active', 'hand'); }
+  }
+}
+
+function stopHandControl() {
+  try {
+    if (HAND.cam && HAND.cam.stop) { HAND.cam.stop(); }
+  } catch (e) {}
+  HAND.cam = null;
+  try {
+    if (HAND.hands && HAND.hands.close) { HAND.hands.close(); }
+  } catch (e2) {}
+  HAND.hands = null;
+  HAND.last = { x: null, y: null, pinch: null };
+  if (HAND.ui.panel) { HAND.ui.panel.classList.remove('shown'); }
+
+  // Stop webcam tracks if any
+  try {
+    if (HAND.video && HAND.video.srcObject) {
+      var tracks = HAND.video.srcObject.getTracks ? HAND.video.srcObject.getTracks() : [];
+      tracks.forEach(function(t) { try { t.stop(); } catch (e3) {} });
+      HAND.video.srcObject = null;
+    }
+  } catch (e4) {}
+}
 
 /* ============================================================
    AMBIENT BACKGROUND PARTICLES
@@ -3215,6 +3622,30 @@ function initThreeJS() {
   ro.observe(wrap);
 }
 
+function ensurePlaceholder() {
+  if (placeholderObject) { return; }
+  var geo = new THREE.TorusKnotGeometry(0.55, 0.18, 160, 22);
+  var mat = new THREE.MeshStandardMaterial({
+    color: 0x0a0a18,
+    roughness: 0.25,
+    metalness: 0.75,
+    emissive: new THREE.Color(0x101020),
+    emissiveIntensity: 0.6
+  });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(0, 0.2, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  placeholderObject = mesh;
+  scene.add(placeholderObject);
+}
+
+function removePlaceholder() {
+  if (!placeholderObject) { return; }
+  try { scene.remove(placeholderObject); } catch (e) {}
+  placeholderObject = null;
+}
+
 /* ============================================================
    ORBIT CONTROLS
    ============================================================ */
@@ -3316,6 +3747,14 @@ function animate() {
   sph.radius += (sph.tRadius - sph.radius) * d;
   if (APP.autoRotate) { sph.tTheta -= 0.0038; }
   updateCam();
+  var es = document.getElementById('empty-state');
+  var emptyVisible = !!(es && !es.classList.contains('gone') && es.style.display !== 'none');
+  if (emptyVisible && !currentObject) { ensurePlaceholder(); }
+  if ((!emptyVisible || currentObject) && placeholderObject) { removePlaceholder(); }
+  if (placeholderObject && emptyVisible && !currentObject) {
+    placeholderObject.rotation.y += 0.006;
+    placeholderObject.rotation.x += 0.0025;
+  }
   renderer.render(scene, camera);
 }
 
@@ -3333,6 +3772,7 @@ function resizeRenderer() {
    GLB LOADING
    ============================================================ */
 function loadGLB(url, onDone, onError) {
+  removePlaceholder();
   if (currentObject) { scene.remove(currentObject); currentObject = null; }
   var loader = new THREE.GLTFLoader();
   loader.load(url, function(gltf) {

@@ -19,40 +19,19 @@
 
 When finished, the viewer loads the new model and a **Model Loaded** action strip offers Refine, Variants, Save, and Share.
 
-## Hand Gesture Engine v2 (Jarvis-Class)
+## Hand Gesture Control
 
-Click **HAND** to enable. Allow camera permissions. On first use, show an **open palm** for ~2 seconds to calibrate (saved in your browser).
+Click **HAND** to turn on instantly (no calibration screen). Allow camera when the browser asks.
 
-### Gesture vocabulary (10 gestures)
+- **Open hand + move** → rotate / orbit the model
+- **Pinch** (thumb + index) → zoom in/out
+- **Fist** → pan the view
+- **Peace sign** → cycle through model parts (if part gestures enabled)
+- **Two hands** (optional in panel): spread/pinch distance = zoom
 
-| Gesture | Hand pose | Action |
-|---------|-----------|--------|
-| **ORBIT** | Open palm (4+ fingers), move hand | Rotate/orbit the model with inertia |
-| **ZOOM** | Pinch thumb + index | Precision zoom (physics-smooth) |
-| **PAN** | Fist (0–1 fingers extended) | Pan camera target (shift focus point) |
-| **PART_CYCLE** | Peace sign (index + middle) | Cycle focused model part |
-| **INSPECT** | Point (index only) | Raycast highlight + mesh name tooltip |
-| **WIREFRAME** | Rock on (index + pinky) | Toggle wireframe |
-| **SAVE** | Thumbs up | Open save dialog |
-| **FIT** | Full spread (all 5 fingers wide) | Fit camera to full model |
-| **RESET** | Open palm + fast wave | Reset camera |
-| **ROLL** | Open palm + wrist roll | Subtle roll-orbit |
+Use the small **Hand Control** panel (bottom-left) for sensitivity, camera preview, two-hand mode, and part gestures.
 
-### Two-hand mode
-
-- **Both open**: orbit + twist between hands
-- **Both pinch**: cinematic dolly zoom (+ subtle FOV)
-- **Both fist**: 3D pan (X/Y/Z from hand depth)
-- **Orbit + point**: one hand orbits, other inspects with crosshair tooltip
-
-### UI while HAND is on
-
-- **Gesture HUD** (bottom-left of viewport): emoji, gesture name, confidence bar
-- **Control panel**: cheat sheet, sensitivity, inertia, preview, two-hand, part gestures
-- **Camera preview** (bottom-right): skeleton overlay color-coded by gesture; click to expand
-- **Recalibrate** anytime from the panel
-
-Turn off with **HAND** again (camera released).
+Turn off with **HAND** again (camera is released).
 
 ## Enhance Prompt
 

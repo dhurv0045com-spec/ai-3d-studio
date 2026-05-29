@@ -33,6 +33,7 @@ import subprocess
 import re
 import copy
 import datetime
+import uuid
 
 import requests
 import urllib3
@@ -82,6 +83,7 @@ else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR      = os.path.join(BASE_DIR, "static")
 MODELS_DIR      = os.path.join(BASE_DIR, "models")
+GENERATED_MODELS_DIR = os.path.join(MODELS_DIR, "generated")
 CACHE_DIR       = os.path.join(BASE_DIR, "models", "cache")
 PRESETS_DIR     = os.path.join(BASE_DIR, "models", "presets")
 LOGS_DIR        = os.path.join(BASE_DIR, "logs")
@@ -95,6 +97,7 @@ SERVER_LOG      = os.path.join(LOGS_DIR, "server.log")
 GEN_LOG         = os.path.join(LOGS_DIR, "generation.log")
 ERR_LOG         = os.path.join(LOGS_DIR, "error.log")
 SHAPEE_FLAG     = os.path.join(BASE_DIR, "shapee_installed.flag")
+LAST_SCRIPT_PATH = os.path.join(BASE_DIR, "_last_gemini_script.py")
 def _find_blender_exe():
     """Auto-detect Blender. Works on Windows local AND Railway Linux cloud."""
     import glob
@@ -124,7 +127,10 @@ MAX_LOG_LINES   = 80
 #  FLASK APP
 # ---------------------------------------------------------------------------
 app = Flask(__name__, static_folder=STATIC_DIR)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
+app.secret_key = SECRET_KEY
 CORS(app)
 
 # ---------------------------------------------------------------------------
@@ -398,12 +404,12 @@ def upload_to_cloudinary(local_path, public_id=None):
         for k in sorted(sign_params.keys()):
             params_to_sign.append(f"{k}={sign_params[k]}")
         
-        # 3. Append API Secret and hash with SHA256 (or SHA1 - Cloudinary standard is SHA1 actually, but user specifically asked for SHA256 in BUG 2 description earlier)
-        # Wait, the prompt said: "make sure parameters are sorted alphabetically... NO BASE 64... use raw file upload"
-        # Most Cloudinary SDKs use SHA1. But I will use SHA256 if requested or SHA1 if that's what's standard for their API.
-        # The user's earlier fix prompt said: "signature = hashlib.sha256( (params_to_sign + api_secret).encode() ).hexdigest()"
+        # Cloudinary v1 upload signatures default to SHA1. SHA256 is opt-in.
         sign_input = "&".join(params_to_sign) + CLOUDINARY_SECRET
-        signature = hashlib.sha256(sign_input.encode("utf-8")).hexdigest()
+        if os.environ.get("CLOUDINARY_SIGNATURE_SHA256", "").lower() == "true":
+            signature = hashlib.sha256(sign_input.encode("utf-8")).hexdigest()
+        else:
+            signature = hashlib.sha1(sign_input.encode("utf-8")).hexdigest()
 
         # 4. Prepare upload URL
         upload_url = f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD}/raw/upload"
@@ -427,7 +433,7 @@ def upload_to_cloudinary(local_path, public_id=None):
             log_srv(f"[CLOUD] SUCCESS: {url}")
             return url
         else:
-            log_error(f"[CLOUD] Failed: {resp.status_code} - {resp.text[:200]}")
+            log_error(f"[CLOUD] Failed: {resp.status_code} - {resp.text[:1000]}")
             return None
 
     except Exception as e:
@@ -821,6 +827,20 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     return None
 
 
+def _strip_think_blocks(content):
+    """Remove DeepSeek/OpenRouter reasoning blocks without consuming script output."""
+    text = str(content or "")
+    for tag in ("think", "redacted_thinking"):
+        pattern = re.compile(r"<" + tag + r"\b[^>]*>.*?</" + tag + r">", re.IGNORECASE | re.DOTALL)
+        text = pattern.sub("", text)
+        open_match = re.search(r"<" + tag + r"\b[^>]*>", text, re.IGNORECASE)
+        if open_match:
+            after = text[open_match.end():]
+            script_start = after.find("import bpy")
+            text = after[script_start:] if script_start >= 0 else text[:open_match.start()]
+    return text.strip()
+
+
 def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
     """DeepSeek R1 via OpenRouter for Blender script generation. Returns text or None."""
     alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
@@ -848,7 +868,7 @@ def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
                     "max_tokens":  max_tokens,
                     "temperature": 0
                 },
-                timeout=120,
+                timeout=60,
                 verify=False
             )
             log_srv("[R1] Status: " + str(r.status_code))
@@ -859,12 +879,7 @@ def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
                     content = (msg.get("content") or "").strip()
                     if not content and msg.get("reasoning_content"):
                         content = str(msg.get("reasoning_content") or "").strip()
-                    _think_end = "<" + "/think" + ">"
-                    if _think_end in content:
-                        content = content.split(_think_end)[-1].strip()
-                    _red_end = "<" + "/redacted_thinking" + ">"
-                    if _red_end in content:
-                        content = content.split(_red_end)[-1].strip()
+                    content = _strip_think_blocks(content)
                     if content:
                         k["fails"] = 0
                         k["last_used"] = time.time()
@@ -1062,7 +1077,7 @@ def load_history(user_id=None):
 
     if SUPABASE_ENABLED:
         try:
-            res = supabase_request("GET", f"models?user_id=eq.{user_id}&order=id.desc")
+            res = supabase_request("GET", f"models?user_id=eq.{user_id}&order=created_at.desc")
             if res is not None and isinstance(res, list):
                 log_srv(f"[load_history] Supabase returned {len(res)} entries for {user_id}")
                 return res
@@ -1235,8 +1250,9 @@ def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=
             sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
 
         ts = int(time.time())
+        row_id = uuid.uuid4().hex
         data = {
-            "id":            ts,
+            "id":            row_id,
             "user_id":       sub_id,
             "prompt":        prompt,
             "color":         color,
@@ -1247,6 +1263,7 @@ def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=
             "size":          size,
             "quality_score": get_state().get("quality_score", 0),
             "created":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "created_at":    datetime.datetime.utcnow().isoformat(timespec="microseconds") + "Z",
         }
 
         log_srv(f"[SUPABASE] save_to_supabase: prompt='{prompt}', user='{sub_id}', size={size}")
@@ -1351,6 +1368,9 @@ IDLE_STATE = {
     "share_url":     "",
     "style":         "",
     "complexity":    3,
+    "request_id":    "",
+    "script_version": 0,
+    "stages":        [],
 }
 
 _state = copy.deepcopy(IDLE_STATE)
@@ -1370,6 +1390,45 @@ def set_state(**kwargs):
 def get_state():
     with _state_lock:
         return copy.deepcopy(_state)
+
+
+def save_blender_script(script_text):
+    """Persist the latest Blender script and bump the lightweight status version."""
+    try:
+        with open(LAST_SCRIPT_PATH, "w", encoding="utf-8", errors="replace") as f:
+            f.write(script_text or "")
+    except Exception as e:
+        log_error(f"save_blender_script: {e}")
+    with _state_lock:
+        _state["script_version"] = int(_state.get("script_version", 0) or 0) + 1
+
+
+_stage_log_current = {}
+
+
+def reset_stage_log():
+    global _stage_log_current
+    _stage_log_current = {"name": None, "start": time.time()}
+    set_state(stages=[])
+
+
+def log_stage(stage, result="start"):
+    """Record elapsed time for the previous pipeline stage and start a new one."""
+    global _stage_log_current
+    now = time.time()
+    prev_name = _stage_log_current.get("name")
+    prev_start = _stage_log_current.get("start", now)
+    if prev_name:
+        entry = {
+            "stage":  prev_name,
+            "result": result,
+            "ms":     int((now - prev_start) * 1000),
+        }
+        with _state_lock:
+            stages = list(_state.get("stages") or [])
+            stages.append(entry)
+            _state["stages"] = stages[-30:]
+    _stage_log_current = {"name": stage, "start": now}
 
 
 def save_state_file():
@@ -1393,6 +1452,7 @@ def reset_state():
 # ---------------------------------------------------------------------------
 REQUIRED_DIRS = [
     MODELS_DIR,
+    GENERATED_MODELS_DIR,
     CACHE_DIR,
     PRESETS_DIR,
     os.path.join(BASE_DIR, "models", "scripts"),
@@ -1509,29 +1569,37 @@ def validate_glb(path):
         return False, str(e)
 
 
-def score_glb_quality(path):
-    """Score a GLB 0-10 on file size, valid header, and mesh count."""
+def score_glb_quality(path, source_type="unknown"):
+    """Score a GLB 0-10 by generation source first, then geometry density."""
     global _last_quality_score
-    score   = 0
+    source = str(source_type or "unknown").lower()
+    if "gemini" in source or "blender" in source:
+        score = 7
+    elif "shap" in source:
+        score = 6
+    elif "preset" in source:
+        score = 6
+    elif "library" in source:
+        score = 5
+    elif "fallback" in source:
+        score = 2
+    elif "cache" in source:
+        score = 5
+    else:
+        score = 4
     details = []
     if not os.path.exists(path):
         return 0, "file missing"
     size = os.path.getsize(path)
-    if size >= 100000:
-        score += 4; details.append("large:" + str(size))
-    elif size >= 50000:
-        score += 3; details.append("medium:" + str(size))
-    elif size >= 20000:
-        score += 2; details.append("small:" + str(size))
-    elif size >= 8192:
-        score += 1; details.append("tiny:" + str(size))
-    else:
+    if size < 8192:
         return 0, "too small: " + str(size)
+    details.append("source:" + source)
+    details.append("size:" + str(size))
     try:
         with open(path, "rb") as f:
             magic = f.read(4)
         if magic == b"glTF":
-            score += 2; details.append("valid_header")
+            details.append("valid_header")
         else:
             return 0, "invalid magic"
     except Exception:
@@ -1544,18 +1612,23 @@ def score_glb_quality(path):
             json_data = f.read(chunk_len)
             gltf = json.loads(json_data.decode("utf-8", errors="ignore"))
             mesh_count = len(gltf.get("meshes", []))
-            if mesh_count >= 15:
-                score += 4; details.append("meshes:" + str(mesh_count))
-            elif mesh_count >= 8:
-                score += 3; details.append("meshes:" + str(mesh_count))
-            elif mesh_count >= 3:
-                score += 2; details.append("meshes:" + str(mesh_count))
-            elif mesh_count >= 1:
-                score += 1; details.append("meshes:" + str(mesh_count))
-            else:
-                score -= 2
+            vertex_count = 0
+            for acc in gltf.get("accessors", []):
+                if acc.get("type") == "VEC3" and acc.get("count"):
+                    vertex_count = max(vertex_count, int(acc.get("count") or 0))
+            if vertex_count >= 20000:
+                score += 3
+            elif vertex_count >= 8000:
+                score += 2
+            elif vertex_count >= 1500:
+                score += 1
+            elif vertex_count < 300:
+                score -= 1
+            details.append("meshes:" + str(mesh_count))
+            details.append("vertices:" + str(vertex_count))
     except Exception:
-        score += 1; details.append("parse_skip")
+        details.append("parse_skip")
+    score = max(0, min(10, score))
     detail_str = ",".join(details)
     log_gen("[QUALITY] Score=" + str(score) + "/10 " + detail_str)
     _last_quality_score = score
@@ -1712,6 +1785,67 @@ def interpret_prompt(prompt_text, color_hex="#aaaaaa"):
     return result
 
 
+def _fallback_interp(prompt_text, color_hex="#aaaaaa", style="realistic", complexity=3):
+    words = str(prompt_text or "").lower().split()
+    obj = words[-1] if words else "object"
+    color_word = color_name_from_hex(color_hex)
+    for w in words:
+        if w in COLOR_MAP:
+            color_word = w
+            break
+    return {
+        "object":          obj,
+        "style":           style,
+        "material":        None,
+        "features":        [],
+        "size":            "medium",
+        "color":           color_word,
+        "multi_object":    "false",
+        "complexity":      complexity,
+        "search_keywords": f"{obj} 3d model",
+        "parts":           [],
+        "notes":           prompt_text,
+    }
+
+
+def enhance_and_interpret(raw_prompt, color_hex="#aaaaaa", style="realistic", complexity=3):
+    """Combine prompt enhancement and interpretation into one LLM roundtrip."""
+    system = (
+        "You prepare prompts for a 3D generation pipeline. Return strict JSON only with keys: "
+        "enhanced_prompt, object, style, material, features, size, color, complexity, "
+        "search_keywords, parts, notes. enhanced_prompt must be one detailed sentence under "
+        "70 words. parts must list the concrete physical pieces a 3D artist should model."
+    )
+    user_msg = (
+        "Prompt: " + str(raw_prompt or "").strip() + "\n"
+        "Preferred color hex: " + str(color_hex) + "\n"
+        "Preferred style: " + str(style) + "\n"
+        "Preferred complexity: " + str(complexity)
+    )
+    try:
+        raw = call_llm(system, user_msg, max_tokens=650, temperature=0.2)
+        if raw:
+            clean = strip_md_fences(raw)
+            if "{" in clean and "}" in clean:
+                clean = clean[clean.find("{"):clean.rfind("}") + 1]
+            data = json.loads(clean)
+            enhanced = str(data.get("enhanced_prompt") or data.get("notes") or raw_prompt).strip()
+            interp = _fallback_interp(enhanced, color_hex, style, complexity)
+            for key in ("object", "style", "material", "features", "size", "color",
+                        "complexity", "search_keywords", "parts", "notes"):
+                if key in data and data.get(key) not in ("", None):
+                    interp[key] = data.get(key)
+            if not interp.get("notes"):
+                interp["notes"] = enhanced
+            log_gen(f"[ENHANCE+INTERPRET] object={interp.get('object')} parts={len(interp.get('parts') or [])}")
+            return enhanced or raw_prompt, interp
+    except Exception as e:
+        log_gen(f"[ENHANCE+INTERPRET] combined call failed: {e}")
+
+    enhanced = enhance_prompt(raw_prompt)
+    return enhanced, interpret_prompt(enhanced, color_hex)
+
+
 # ---------------------------------------------------------------------------
 #  CACHE  (fuzzy token matching - "red car" == "a red car" == "red colored car")
 # ---------------------------------------------------------------------------
@@ -1738,15 +1872,16 @@ def _fuzzy_key(prompt):
     return frozenset(tokens)
 
 
-def _fuzzy_hash(prompt):
+def _fuzzy_hash(prompt, color_hex="#aaaaaa"):
     """Stable MD5 of the sorted canonical token string."""
     key = _fuzzy_key(prompt)
-    canonical = " ".join(sorted(key))
+    color_key = (color_hex or "#aaaaaa").strip().lower()
+    canonical = " ".join(sorted(key)) + "|" + color_key
     return hashlib.md5(canonical.encode("utf-8")).hexdigest()
 
 
-def get_cache_path(prompt):
-    h = _fuzzy_hash(prompt)
+def get_cache_path(prompt, color_hex="#aaaaaa"):
+    h = _fuzzy_hash(prompt, color_hex)
     return os.path.join(CACHE_DIR, f"{h}.glb"), h
 
 
@@ -1793,8 +1928,8 @@ def cleanup_cache_if_needed():
     log_srv("[CACHE] Deleted " + str(deleted) + " old cache files")
 
 
-def check_cache(prompt):
-    path, h = get_cache_path(prompt)
+def check_cache(prompt, color_hex="#aaaaaa"):
+    path, h = get_cache_path(prompt, color_hex)
     if os.path.exists(path):
         ok, msg = validate_glb(path)
         if ok:
@@ -1810,9 +1945,9 @@ def check_cache(prompt):
     return None
 
 
-def store_cache(src_path, prompt):
+def store_cache(src_path, prompt, color_hex="#aaaaaa"):
     try:
-        dest, h = get_cache_path(prompt)
+        dest, h = get_cache_path(prompt, color_hex)
         shutil.copy2(src_path, dest)
         log_gen(f"[CACHE] stored hash={h} (fuzzy key: {sorted(_fuzzy_key(prompt))})")
     except Exception as e:
@@ -2032,6 +2167,16 @@ FORBIDDEN_EXACT = [
     "bpy.ops.object.transform_apply(",
     "bpy.ops.mesh.extrude_region_move(",
     "bpy.ops.mesh.extrude_faces_move(",
+    "bpy.ops.wm.open_mainfile(",
+    "bpy.ops.wm.save_as_mainfile(",
+    "bpy.ops.wm.read_factory_settings(",
+    "bpy.ops.wm.quit_blender(",
+    "bpy.ops.wm.append(",
+    "bpy.ops.wm.link(",
+    "bpy.ops.script.python_file_run(",
+    "bpy.ops.preferences.addon_install(",
+    "bpy.ops.preferences.addon_enable(",
+    "bpy.ops.import_scene.",
     "orient_type=",
     "constraint_axis=",
     "proportional=",
@@ -2091,6 +2236,12 @@ def validate_and_fix_script(script_text):
                     changes += 1
                     was_fixed = True
                     break
+        if ("bpy.ops.export_scene.gltf(" in fixed
+                and "export_apply=" not in fixed
+                and fixed.rstrip().endswith(")")):
+            fixed = fixed.rstrip().rsplit(")", 1)[0] + ", export_apply=True)"
+            changes += 1
+            log_gen("[VALIDATOR] Added export_apply=True to export")
         fixed_lines.append(fixed)
 
     fixed_script = "\n".join(fixed_lines)
@@ -2110,7 +2261,7 @@ def validate_and_fix_script(script_text):
     fixed_script = "\n".join(clean_lines)
 
     if "export_scene.gltf" not in fixed_script:
-        fixed_script += "\nbpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB')\n"
+        fixed_script += "\nbpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB', export_apply=True)\n"
         changes += 1
         log_gen("[VALIDATOR] Added missing export line")
 
@@ -2166,7 +2317,6 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
     
     current_script = _inject(script)
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
-    debug_path      = os.path.join(BASE_DIR, "_last_gemini_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
 
     for attempt in range(max_retries + 1):
@@ -2185,11 +2335,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
         # validate_and_fix_script() may strip it, so re-inject unconditionally.
         fixed_script = inject_output_path(fixed_script, output_path)
 
-        try:
-            with open(debug_path, "w", encoding="utf-8", errors="replace") as f:
-                f.write(fixed_script)
-        except Exception:
-            pass
+        save_blender_script(fixed_script)
 
         if fixes == -1:
             log_gen("[BLENDER] Syntax error detected before running, skipping Blender subprocess")
@@ -2259,7 +2405,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                 "- Every ( closes on same line\n"
                 "- No f-strings\n"
                 "- OUTPUT_PATH already defined, never redefine\n"
-                "- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')\n"
+                "- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB',export_apply=True)\n"
                 "- Raw Python only\n"
                 "Correct sphere syntax: bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0))\n"
                 "Generate script for: " + prompt
@@ -2269,6 +2415,9 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                 current_script = fixed
                 log_gen("[BLENDER] Got Gemini fix ("
                         + str(len(fixed)) + " chars), retrying...")
+            elif fixed is None:
+                log_gen("[BLENDER] LLM fix unavailable, stopping retries")
+                break
             else:
                 log_gen("[BLENDER] Gemini fix empty, stopping retries")
                 break
@@ -2351,6 +2500,11 @@ Before writing code, mentally decompose the object:
 - Where is each part positioned relative to the object's center?
 - What materials and colors should each part have?
 
+GEOMETRY PLAN:
+- The user prompt may include a GEOMETRY PLAN section.
+- Treat that plan as the source of truth for parts, proportions, materials, and placement.
+- Build every listed major part before adding decorative detail.
+
 Technical requirements (Blender 4.2 Linux, these are absolute):
 - Output raw Python only. No markdown. No backticks. No explanations.
 - Start with: import bpy / import math
@@ -2359,7 +2513,7 @@ Technical requirements (Blender 4.2 Linux, these are absolute):
 - Every primitive call uses keyword arguments only
 - Never use: align=, enter_editmode=, segments= in uv_sphere, ring_count=
 - After each primitive, set: obj = bpy.context.active_object, then obj.location and obj.scale
-- Last line must be exactly: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB')
+- Last line must be exactly: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB', export_apply=True)
 - Minimum 15 primitives for a recognizable model
 - Each material uses: bsdf.inputs['Base Color'].default_value = (R, G, B, 1.0)
 
@@ -2381,13 +2535,18 @@ Write the most detailed, geometrically accurate Blender script you can produce.
 BLENDER_SYSTEM = """You are an expert Blender 4.2 Python scripter on Linux.
 Your job: write a complete Python script that builds a detailed, recognizable 3D model.
 
+GEOMETRY PLAN:
+- The user prompt may include a GEOMETRY PLAN section.
+- Treat that plan as the source of truth for parts, proportions, materials, and placement.
+- Build every listed major part before adding decorative detail.
+
 OUTPUT FORMAT:
 - Raw Python ONLY. Zero markdown. Zero backticks. Zero comments.
 - First line: import bpy
 - Second line: import math
 - Third line: bpy.ops.object.select_all(action='SELECT')
 - Fourth line: bpy.ops.object.delete(use_global=False)
-- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB')
+- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB',export_apply=True)
 
 STRICT SYNTAX RULES (violation = broken script):
 1. NEVER use align= parameter in any primitive
@@ -2462,6 +2621,44 @@ COMPLEXITY_DIRECTIVES = {
     4: "30-50 primitives. Every sub-part. Surface details.",
     5: "50-80+ primitives. Every feature plus implied features. Maximum realism.",
 }
+
+
+GEOMETRY_PLANNER_SYSTEM = """You are a senior 3D geometry planner.
+Return strict JSON only, with:
+object: short object name
+scale: one sentence about bounding box/proportions
+parts: array of objects with name, primitive, size, location, material, color_role, details
+build_order: array of part names from largest structural forms to fine details
+Do not write Blender code. Plan concrete visible geometry only."""
+
+
+def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complexity=3):
+    """Create a parts-first geometry plan before Blender script generation."""
+    try:
+        obj = interp.get("object", "") if isinstance(interp, dict) else ""
+        parts = interp.get("parts", []) if isinstance(interp, dict) else []
+        user_msg = (
+            "Prompt: " + str(prompt or "") + "\n"
+            "Object: " + str(obj or "") + "\n"
+            "Known parts: " + json.dumps(parts) + "\n"
+            "Color: " + str(color_hex) + "\n"
+            "Style: " + str(style) + "\n"
+            "Complexity: " + str(complexity)
+        )
+        raw = call_llm(GEOMETRY_PLANNER_SYSTEM, user_msg, max_tokens=1200, temperature=0.15)
+        if not raw:
+            return None
+        clean = strip_md_fences(raw)
+        if "{" in clean and "}" in clean:
+            clean = clean[clean.find("{"):clean.rfind("}") + 1]
+        plan = json.loads(clean)
+        if not isinstance(plan, dict) or not plan.get("parts"):
+            return None
+        log_gen("[GEOMETRY_PLAN] " + json.dumps(plan)[:1200])
+        return plan
+    except Exception as e:
+        log_gen("[GEOMETRY_PLAN] failed: " + str(e))
+        return None
 
 
 def get_parts_hint(obj_name, parts_override=None):
@@ -2743,7 +2940,30 @@ def build_blender_user_prompt(interp, color_hex, style="realistic", complexity=3
     except Exception:
         r, g, b = 0.6, 0.6, 0.6
 
-    prompt_text = interp if isinstance(interp, str) else str(interp.get("notes") or interp.get("description") or interp.get("object") or "object")
+    if isinstance(interp, str):
+        prompt_text = interp.strip()
+    elif isinstance(interp, dict):
+        prompt_text = str(
+            interp.get("notes")
+            or interp.get("description")
+            or interp.get("prompt")
+            or interp.get("enhanced_prompt")
+            or ""
+        ).strip()
+        if not prompt_text:
+            obj = str(interp.get("object") or "").strip()
+            features = interp.get("features") or []
+            parts = interp.get("parts") or []
+            detail_bits = []
+            if features:
+                detail_bits.append(", ".join([str(x) for x in features if x]))
+            if parts:
+                detail_bits.append("with " + ", ".join([str(x) for x in parts if x]))
+            prompt_text = " ".join([x for x in [obj, " ".join(detail_bits)] if x]).strip()
+    else:
+        prompt_text = str(interp or "").strip()
+    if not prompt_text or prompt_text.lower() == "object":
+        prompt_text = "recognizable detailed 3D object"
     style_dir = STYLE_DIRECTIVES.get(style, STYLE_DIRECTIVES["realistic"])
     complexity_dir = COMPLEXITY_DIRECTIVES.get(complexity, COMPLEXITY_DIRECTIVES[3])
 
@@ -2838,24 +3058,6 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
 #  PRESET BLENDER SCRIPTS  (40 shapes, 20+ primitives each)
 # ---------------------------------------------------------------------------
 
-def make_material_line(r, g, b, name="Mat"):
-    """Return Blender Python lines to create a Principled BSDF material."""
-    return f"""
-mat = bpy.data.materials.new(name="{name}")
-mat.use_nodes = True
-bsdf = mat.node_tree.nodes.get("Principled BSDF")
-if bsdf:
-    bsdf.inputs["Base Color"].default_value = ({r:.4f}, {g:.4f}, {b:.4f}, 1.0)
-    bsdf.inputs["Roughness"].default_value = 0.4
-    bsdf.inputs["Metallic"].default_value = 0.1
-
-def apply_mat(obj):
-    if obj.data and hasattr(obj.data, "materials"):
-        obj.data.materials.clear()
-        obj.data.materials.append(mat)
-"""
-
-
 def _preset_header():
     return """import bpy
 import bmesh
@@ -2869,7 +3071,7 @@ bpy.ops.object.delete()
 
 def _preset_footer():
     return """
-bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB')
+bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB', export_apply=True)
 """
 
 
@@ -4476,7 +4678,8 @@ def stage_c_preset(prompt, interp, color_hex, output_path):
         keyword = "sphere"
     log_gen(f"[PRESET] matched keyword: {keyword}")
     # Check cache for preset
-    cached_preset = os.path.join(PRESETS_DIR, f"{keyword}.glb")
+    color_key = (color_hex or "").strip().lower().replace("#", "") or "default"
+    cached_preset = os.path.join(PRESETS_DIR, f"{keyword}_{color_key}.glb")
     if os.path.exists(cached_preset):
         ok, msg = validate_glb(cached_preset)
         if ok:
@@ -4585,77 +4788,107 @@ def call_llm_unified(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     return None, None
 
 
+def cleanup_old_generated_models(max_age_seconds=86400):
+    """Delete stale per-request GLBs so generated/ does not grow forever."""
+    try:
+        now = time.time()
+        if not os.path.isdir(GENERATED_MODELS_DIR):
+            return
+        for fname in os.listdir(GENERATED_MODELS_DIR):
+            if not fname.endswith(".glb"):
+                continue
+            path = os.path.join(GENERATED_MODELS_DIR, fname)
+            if os.path.isfile(path) and now - os.path.getmtime(path) > max_age_seconds:
+                os.remove(path)
+    except Exception as e:
+        log_gen(f"[CLEANUP] generated model cleanup skipped: {e}")
+
+
+def _model_url_for_path(path):
+    try:
+        rel = os.path.relpath(path, MODELS_DIR).replace("\\", "/")
+        if not rel.startswith(".."):
+            return "/models/" + rel
+    except Exception:
+        pass
+    return "/rocket.glb"
+
+
+def _finalize_generation(src_path, output_path, original_prompt, gen_prompt, color_hex,
+                         folder, service, sub_id, cached=False, error=""):
+    """Validate, cache, upload, save history, and publish success state once."""
+    if src_path != output_path:
+        shutil.copy2(src_path, output_path)
+    ok, msg = validate_glb(output_path)
+    if not ok:
+        log_gen(f"[FINALIZE] invalid output from {service}: {msg}")
+        return False
+    sz = os.path.getsize(output_path)
+    log_gen(f"[FINALIZE] {service} output ready: {msg}")
+    if not cached and service != "Fallback":
+        store_cache(output_path, gen_prompt, color_hex)
+    set_state(progress=80, step="uploading_cloudinary")
+    _cloud = upload_to_cloudinary(output_path)
+    set_state(progress=95, step="saving_supabase")
+    quality_score = score_glb_quality(output_path, service)[0]
+    set_state(quality_score=quality_score)
+    saved_id = save_to_supabase(
+        original_prompt, color_hex, folder, service, output_path, sz,
+        cloud_url=_cloud, sub_id=sub_id
+    )
+    set_state(status="done", progress=100, step="done",
+              service=service, cached=cached, glb_size=sz,
+              last_model=output_path, model_url=_model_url_for_path(output_path),
+              cloud_url=_cloud or "",
+              share_url=f"/share/{saved_id}" if saved_id else "",
+              quality_score=quality_score,
+              error=error)
+    log_stage("done", "ok")
+    return True
+
+
 def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous", history_prompt=None):
     """Full generation pipeline. Called in background thread."""
     global _generating
     _gen_start_time = time.time()
+    request_id = uuid.uuid4().hex
+    output_path = os.path.join(GENERATED_MODELS_DIR, f"{request_id}.glb")
+    temp_path = os.path.join(GENERATED_MODELS_DIR, f"{request_id}_tmp.glb")
     original_prompt = history_prompt or prompt
 
     try:
+        cleanup_old_generated_models()
+        reset_stage_log()
         log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id}")
         print(f"[PIPELINE] Generation thread alive for '{prompt}'", flush=True)
         set_state(status="generating", prompt=original_prompt, progress=5,
-                  step="enhancing_prompt", error="", cached=False, service="", glb_size=0)
+                  step="enhance_interpret", error="", cached=False, service="", glb_size=0,
+                  request_id=request_id, last_model="", model_url="", script_version=0,
+                  cloud_url="", share_url="", quality_score=0)
 
-        log_gen("[enhance] expanding prompt...")
-        enhanced_prompt = enhance_prompt(prompt)
-        log_gen(f"[enhance] '{prompt}' -> '{enhanced_prompt}'")
+        log_stage("enhance_interpret")
+        log_gen("[enhance+interpret] expanding and parsing prompt...")
+        enhanced_prompt, interp = enhance_and_interpret(prompt, color_hex, style, complexity)
+        log_gen(f"[enhance+interpret] '{prompt}' -> '{enhanced_prompt}'")
         gen_prompt = enhanced_prompt
-
-        temp_path = os.path.join(BASE_DIR, "_temp_output.glb")
 
         # ------------------------------------------------------------------
         # STEP 0: Cache check
         # ------------------------------------------------------------------
+        log_stage("cache_check", "ok")
         set_state(progress=10, step="cache_check")
-        cached = check_cache(gen_prompt)
+        cached = check_cache(gen_prompt, color_hex)
         if cached:
             set_state(progress=15, step="cache_hit")
-            shutil.copy2(cached, ROCKET_GLB)
-            ok, msg = validate_glb(ROCKET_GLB)
-            if ok:
-                sz = os.path.getsize(ROCKET_GLB)
-                log_gen(f"[CACHE] served from cache: {msg}")
-                set_state(progress=80, step="uploading_cloudinary")
-                _cloud = upload_to_cloudinary(ROCKET_GLB)
-                set_state(progress=95, step="saving_supabase")
-                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Cache", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-                set_state(status="done", progress=100, step="done",
-                          service="Cache", cached=True, glb_size=sz,
-                          last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "",
-                          share_url=f"/share/{saved_id}" if saved_id else "",
-                          quality_score=score_glb_quality(ROCKET_GLB)[0])
+            log_gen("[CACHE] served from cache")
+            if _finalize_generation(cached, output_path, original_prompt, gen_prompt,
+                                    color_hex, folder, "Cache", sub_id, cached=True):
                 return
         set_state(progress=15, step="cache_miss")
         log_gen("[CACHE] miss - proceeding to generation")
-
-        # ------------------------------------------------------------------
-        # STEP 1: Prompt interpreter
-        # ------------------------------------------------------------------
-        set_state(progress=20, step="interpreting")
-        interp = interpret_prompt(gen_prompt, color_hex)
         if not interp or interp.get("object") in ("", "object", None):
-            color_word = color_name_from_hex(color_hex)
-            words = gen_prompt.lower().split()
-            for w in words:
-                if w in COLOR_MAP:
-                    color_word = w
-                    break
-            obj = words[-1] if words else "object"
-            interp = {
-                "object":          obj,
-                "style":           style,
-                "material":        None,
-                "features":        [],
-                "size":            "medium",
-                "color":           color_word,
-                "multi_object":    "false",
-                "complexity":      complexity,
-                "search_keywords": f"{obj} 3d model",
-                "notes":           gen_prompt
-            }
-            log_gen(f"[INTERPRETER] LLM failed, using local parse: obj={obj} color={color_word}")
+            interp = _fallback_interp(gen_prompt, color_hex, style, complexity)
+            log_gen(f"[INTERPRETER] using local parse: obj={interp.get('object')} color={interp.get('color')}")
         else:
             log_gen(f"[INTERPRETER] LLM parsed: obj={interp.get('object')} features={interp.get('features')}")
 
@@ -4663,6 +4896,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # STEP 2: Library mode
         # ------------------------------------------------------------------
         if library_mode:
+            log_stage("library_search", "miss")
             set_state(step="library_search")
             keywords = interp.get("search_keywords", interp.get("object", gen_prompt))
             log_gen(f"[LIBRARY] library_mode=True, searching: {keywords}")
@@ -4674,66 +4908,40 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     shutil.copy2(lib_path, temp_path)
                     ok, msg = validate_glb(temp_path)
                     if ok:
-                        shutil.copy2(temp_path, ROCKET_GLB)
-                        sz = os.path.getsize(ROCKET_GLB)
                         log_gen(f"[LIBRARY] success: {msg}")
-                        store_cache(ROCKET_GLB, gen_prompt)
-                        set_state(progress=80, step="uploading_cloudinary")
-                        _cloud = upload_to_cloudinary(ROCKET_GLB)
-                        set_state(progress=95, step="saving_supabase")
-                        saved_id = save_to_supabase(original_prompt, color_hex, folder, "Library", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-                        set_state(status="done", progress=100, step="done",
-                                  service="Library", cached=False, glb_size=sz,
-                                  last_model=ROCKET_GLB,
-                                  cloud_url=_cloud or "",
-                                  share_url=f"/share/{saved_id}" if saved_id else "")
-                        return
+                        if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
+                                                color_hex, folder, "Library", sub_id):
+                            return
             log_gen("[LIBRARY] library search failed, continuing")
 
         # ------------------------------------------------------------------
         # STEP 3: Stage A - Gemini + Blender
         # ------------------------------------------------------------------
+        log_stage("stage_b_gemini_blender", "start")
         set_state(progress=20, step="stage_b_gemini_blender")
         if os.path.exists(BLENDER_EXE):
             log_gen("[MODEL_B] attempting Gemini+Blender...")
             ok = stage_b_gemini_blender(gen_prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
             if ok:
-                shutil.copy2(temp_path, ROCKET_GLB)
-                sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[MODEL_B] Gemini+Blender success")
-                store_cache(ROCKET_GLB, gen_prompt)
-                set_state(progress=80, step="uploading_cloudinary")
-                _cloud = upload_to_cloudinary(ROCKET_GLB)
-                set_state(progress=95, step="saving_supabase")
-                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-                set_state(status="done", progress=100, step="done",
-                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "",
-                          share_url=f"/share/{saved_id}" if saved_id else "")
-                return
+                if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
+                                        color_hex, folder, "Gemini+Blender", sub_id):
+                    return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through")
 
         # ------------------------------------------------------------------
         # STEP 4: Stage B - Shap-E
         # ------------------------------------------------------------------
+        log_stage("stage_a_shapee", "fallback")
         set_state(progress=50, step="stage_a_shapee")
         if shap_e_available:
             log_gen("[SHAPEE] attempting Shap-E generation...")
             ok = run_shap_e(gen_prompt, temp_path)
             if ok:
-                shutil.copy2(temp_path, ROCKET_GLB)
-                sz = os.path.getsize(ROCKET_GLB)
                 log_gen("[SHAPEE] [MODEL_A] Shap-E success")
-                store_cache(ROCKET_GLB, gen_prompt)
-                set_state(progress=80, step="uploading_cloudinary")
-                _cloud = upload_to_cloudinary(ROCKET_GLB)
-                set_state(progress=95, step="saving_supabase")
-                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Shap-E", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-                set_state(status="done", progress=100, step="done",
-                          service="Shap-E", glb_size=sz, last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "",
-                          share_url=f"/share/{saved_id}" if saved_id else "")
-                return
+                if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
+                                        color_hex, folder, "Shap-E", sub_id):
+                    return
             log_gen("[SHAPEE] Shap-E failed, falling through")
         else:
             log_gen("[SHAPEE] not available - skipping Stage A")
@@ -4741,70 +4949,47 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         # STEP 5: Stage C - Preset
         # ------------------------------------------------------------------
+        log_stage("stage_c_preset", "fallback")
         set_state(progress=70, step="stage_c_preset")
         ok, matched_kw = stage_c_preset(gen_prompt, interp, color_hex, temp_path)
         if ok:
-            shutil.copy2(temp_path, ROCKET_GLB)
-            sz = os.path.getsize(ROCKET_GLB)
             log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
-            store_cache(ROCKET_GLB, gen_prompt)
-            set_state(progress=80, step="uploading_cloudinary")
-            _cloud = upload_to_cloudinary(ROCKET_GLB)
-            set_state(progress=95, step="saving_supabase")
-            saved_id = save_to_supabase(original_prompt, color_hex, folder, "Preset", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-            set_state(status="done", progress=100, step="done",
-                      service="Preset", glb_size=sz, last_model=ROCKET_GLB,
-                      cloud_url=_cloud or "",
-                      share_url=f"/share/{saved_id}" if saved_id else "",
-                      quality_score=score_glb_quality(ROCKET_GLB)[0])
-            return
+            if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
+                                    color_hex, folder, "Preset", sub_id):
+                return
 
         # ------------------------------------------------------------------
         # STEP 5.5: Shaped fallback
         # ------------------------------------------------------------------
+        log_stage("shaped_fallback", "fallback")
         set_state(progress=70, step="shaped_fallback")
         log_gen("[FALLBACK] Attempting shaped fallback")
         try:
             from generate_model import generate as gen_fallback_model
             obj_keyword = match_preset_keyword(gen_prompt) or interp.get("object", "sphere")
-            ok = gen_fallback_model(obj_keyword, color_hex, ROCKET_GLB)
+            ok = gen_fallback_model(obj_keyword, color_hex, output_path)
             if ok:
-                ok2, msg = validate_glb(ROCKET_GLB)
+                ok2, msg = validate_glb(output_path)
                 if ok2:
-                    sz = os.path.getsize(ROCKET_GLB)
                     log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword}")
-                    store_cache(ROCKET_GLB, gen_prompt)
-                    set_state(progress=80, step="uploading_cloudinary")
-                    _cloud = upload_to_cloudinary(ROCKET_GLB)
-                    set_state(progress=95, step="saving_supabase")
-                    saved_id = save_to_supabase(original_prompt, color_hex, folder, "Fallback-Shaped", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-                    set_state(status="done", progress=100, step="done",
-                              service="Fallback-Shaped", glb_size=sz,
-                              last_model=ROCKET_GLB,
-                              cloud_url=_cloud or "",
-                              share_url=f"/share/{saved_id}" if saved_id else "",
-                              quality_score=score_glb_quality(ROCKET_GLB)[0])
-                    return
+                    if _finalize_generation(output_path, output_path, original_prompt, gen_prompt,
+                                            color_hex, folder, "Fallback-Shaped", sub_id,
+                                            error="AI generation fell back to a shaped local model."):
+                        return
         except Exception as e:
             log_gen(f"[FALLBACK] Shaped fallback failed: {e}")
 
         # ------------------------------------------------------------------
         # STEP 6: Last Resort
         # ------------------------------------------------------------------
+        log_stage("generic_fallback", "fallback")
         set_state(progress=70, step="generic_fallback")
         log_gen("[FALLBACK] LAST RESORT: generic fallback")
-        ok = write_fallback_glb(ROCKET_GLB, color_hex)
-        sz = os.path.getsize(ROCKET_GLB) if os.path.exists(ROCKET_GLB) else 0
-        set_state(progress=80, step="uploading_cloudinary")
-        _cloud = upload_to_cloudinary(ROCKET_GLB)
-        set_state(progress=95, step="saving_supabase")
-        saved_id = save_to_supabase(original_prompt, color_hex, folder, "Fallback", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-        set_state(status="done", progress=100, step="done",
-                  service="Fallback", glb_size=sz, last_model=ROCKET_GLB,
-                  cloud_url=_cloud or "",
-                  share_url=f"/share/{saved_id}" if saved_id else "",
-                  quality_score=score_glb_quality(ROCKET_GLB)[0],
-                  error="Could not generate the requested 3D model. Showing placeholder shape.")
+        ok = write_fallback_glb(output_path, color_hex)
+        if ok:
+            _finalize_generation(output_path, output_path, original_prompt, gen_prompt,
+                                 color_hex, folder, "Fallback", sub_id,
+                                 error="Could not generate the requested 3D model. Showing placeholder shape.")
 
     except Exception as e:
         import traceback
@@ -4817,11 +5002,10 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                   error=err_msg, progress=0)
         # Emergency fallback - produce visible output
         try:
-            write_fallback_glb(ROCKET_GLB, "#888888")
-            set_state(status="done", progress=100, step="done",
-                      service="Fallback",
-                      glb_size=os.path.getsize(ROCKET_GLB),
-                      error=f"Generation failed: {e}. Showing placeholder.")
+            write_fallback_glb(output_path, "#888888")
+            _finalize_generation(output_path, output_path, original_prompt, prompt,
+                                 color_hex, folder, "Fallback", sub_id,
+                                 error=f"Generation failed: {e}. Showing placeholder.")
         except Exception as e2:
             log_error(f"[ERROR] Emergency fallback failed: {e2}")
             print(f"[PIPELINE-FATAL] Emergency fallback also failed: {e2}", flush=True)
@@ -4883,6 +5067,8 @@ def guest_login():
 def ping():
     """Health check and key status."""
     alive_keys, dead_keys = get_gemini_key_status()
+    st = get_state()
+    current_model = st.get("last_model") or ROCKET_GLB
     return jsonify({
         "ok":                   True,
         "version":              VERSION,
@@ -4898,6 +5084,10 @@ def ping():
         "cloudinary_enabled":   CLOUDINARY_ENABLED,
         "cloudinary_cloud":     CLOUDINARY_CLOUD,
         "model_count":          len(load_history()),
+        "glb_exists":           os.path.exists(current_model),
+        "model_url":            st.get("model_url", ""),
+        "prompt":               st.get("prompt", ""),
+        "service":              st.get("service", ""),
     })
 
 
@@ -5023,27 +5213,19 @@ def generate():
 def status():
     """Return current generation state."""
     st = get_state()
-    script_path = os.path.join(BASE_DIR, "_last_gemini_script.py")
-    if os.path.exists(script_path):
-        try:
-            with open(script_path, "r", encoding="utf-8", errors="replace") as f:
-                st["blender_script"] = f.read()
-        except Exception:
-            st["blender_script"] = ""
-    else:
-        st["blender_script"] = st.get("blender_script") or ""
+    current_model = st.get("last_model") or ROCKET_GLB
+    st["glb_exists"] = os.path.exists(current_model)
     return jsonify(st)
 
 
 @app.route("/api/blender_script", methods=["GET"])
 def api_blender_script():
     """Return the latest generated Blender Python script for live preview."""
-    script_path = os.path.join(BASE_DIR, "_last_gemini_script.py")
-    if not os.path.exists(script_path):
-        return jsonify({"script": ""})
+    if not os.path.exists(LAST_SCRIPT_PATH):
+        return jsonify({"script": "", "script_version": get_state().get("script_version", 0)})
     try:
-        with open(script_path, "r", encoding="utf-8", errors="replace") as f:
-            return jsonify({"script": f.read()})
+        with open(LAST_SCRIPT_PATH, "r", encoding="utf-8", errors="replace") as f:
+            return jsonify({"script": f.read(), "script_version": get_state().get("script_version", 0)})
     except Exception as e:
         return jsonify({"script": "", "error": str(e)})
 
@@ -5228,6 +5410,10 @@ function copyLink(){{navigator.clipboard.writeText(location.href).then(()=>{{con
 def api_v1_generate():
     """Public REST API for 3D model generation."""
     global _generating
+    _ip = request.remote_addr or "unknown"
+    if not check_rate_limit(_ip):
+        return jsonify({"error": "Rate limit exceeded. Max 10 per minute."}), 429
+
     api_key = request.headers.get("X-API-Key", "")
     if not api_key or not validate_api_key(api_key):
         return jsonify({"error": "Invalid or missing API key. Get one at /api/docs"}), 401
@@ -5258,7 +5444,6 @@ def api_v1_generate():
 
     _api_keys[api_key]["usage_count"] += 1
 
-    import uuid
     job_id = str(uuid.uuid4())[:8]
     t = threading.Thread(
         target=run_generation,
@@ -5281,15 +5466,19 @@ def api_v1_status():
     progress = state.get("progress", 0)
     step = state.get("step", "idle")
     cloud_url = state.get("cloud_url", "")
+    model_url = cloud_url or state.get("model_url", "")
     share_url = state.get("share_url", "")
 
-    if progress == 100 and cloud_url:
+    if progress == 100 and model_url:
         return jsonify({
             "status": "done",
             "progress": 100,
-            "model_url": cloud_url,
+            "model_url": model_url,
             "share_url": share_url,
-            "view_url": request.host_url.rstrip("/") + share_url if share_url else ""
+            "view_url": request.host_url.rstrip("/") + share_url if share_url else "",
+            "request_id": state.get("request_id", ""),
+            "stages": state.get("stages", []),
+            "error": state.get("error", "")
         })
     if state.get("status") == "error" or step == "error":
         return jsonify({"status": "error", "progress": progress, "step": step, "error": state.get("error", "")})
@@ -5474,6 +5663,16 @@ def get_variants(job_id):
 @app.route("/rocket.glb", methods=["GET"])
 def rocket_glb():
     """Serve the current GLB model. No-cache headers."""
+    st = get_state()
+    model_url = st.get("model_url") or ""
+    if model_url and model_url != "/rocket.glb":
+        return redirect(model_url, code=302)
+    last_model = st.get("last_model") or ""
+    if last_model and os.path.exists(last_model):
+        resp = send_file(last_model, mimetype="model/gltf-binary")
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
     if not os.path.exists(ROCKET_GLB):
         # Return minimal fallback
         data = build_fallback_glb("#888888")
@@ -5510,12 +5709,13 @@ def serve_model(filename):
 @app.route("/download", methods=["GET"])
 def download():
     """Download the current model as an attachment."""
-    if not os.path.exists(ROCKET_GLB):
+    current_path = get_state().get("last_model") or ROCKET_GLB
+    if not os.path.exists(current_path):
         abort(404)
     ts = int(time.time())
     fname = f"model_{ts}.glb"
     return send_file(
-        ROCKET_GLB,
+        current_path,
         mimetype="model/gltf-binary",
         as_attachment=True,
         download_name=fname
@@ -5534,7 +5734,8 @@ def export_model(fmt):
     if fmt not in ("obj", "fbx"):
         return jsonify({"error": "unsupported format - use obj or fbx"}), 400
 
-    if not os.path.exists(ROCKET_GLB):
+    current_model_path = get_state().get("last_model") or ROCKET_GLB
+    if not os.path.exists(current_model_path):
         return jsonify({"error": "no model to export"}), 404
 
     if not os.path.exists(BLENDER_EXE):
@@ -5565,7 +5766,7 @@ def export_model(fmt):
 
     conversion_script = (
         f"import bpy\n"
-        f"bpy.ops.wm.open_mainfile(filepath=r'{ROCKET_GLB}')\n"
+        f"bpy.ops.wm.open_mainfile(filepath=r'{current_model_path}')\n"
         f"{export_call}\n"
     )
 
@@ -5625,7 +5826,8 @@ def save_model():
     # Sanitize folder name
     folder = re.sub(r"[^a-z0-9_\-]", "_", folder.lower())[:24]
 
-    if not os.path.exists(ROCKET_GLB):
+    current_model_path = get_state().get("last_model") or ROCKET_GLB
+    if not os.path.exists(current_model_path):
         return jsonify({"success": False, "error": "no model to save"}), 400
 
     user_info = session.get('user', {})
@@ -5642,7 +5844,7 @@ def save_model():
     dest = os.path.join(folder_dir, fname)
 
     try:
-        shutil.copy2(ROCKET_GLB, dest)
+        shutil.copy2(current_model_path, dest)
         size = os.path.getsize(dest)
     except Exception as e:
         log_error(f"[SAVE] copy failed: {e}")
@@ -6299,9 +6501,10 @@ def reset_gemini_keys():
 @app.route("/api/cloudinary/test", methods=["POST"])
 def test_cloudinary():
     """Test Cloudinary upload with current model."""
-    if not os.path.exists(ROCKET_GLB):
+    current_model_path = get_state().get("last_model") or ROCKET_GLB
+    if not os.path.exists(current_model_path):
         return jsonify({"ok": False, "error": "No model to test with"}), 400
-    url = upload_to_cloudinary(ROCKET_GLB, CLOUDINARY_FOLDER + "/test_upload")
+    url = upload_to_cloudinary(current_model_path, CLOUDINARY_FOLDER + "/test_upload")
     if url:
         return jsonify({"ok": True, "url": url, "cloud": CLOUDINARY_CLOUD})
     return jsonify({"ok": False, "error": "Upload failed - check logs/error.log"})
@@ -6663,10 +6866,9 @@ def run_local_server():
 @app.route("/api/last_script", methods=["GET"])
 def last_script():
     """Return the last Gemini-generated Blender script for debugging."""
-    debug_path = os.path.join(BASE_DIR, "_last_gemini_script.py")
-    if not os.path.exists(debug_path):
+    if not os.path.exists(LAST_SCRIPT_PATH):
         return jsonify({"error": "no script yet"}), 404
-    with open(debug_path, "r", encoding="utf-8", errors="replace") as f:
+    with open(LAST_SCRIPT_PATH, "r", encoding="utf-8", errors="replace") as f:
         content = f.read()
     return jsonify({"lines": len(content.splitlines()), "script": content})
 

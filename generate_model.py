@@ -236,10 +236,14 @@ class GLBBuilder:
                 buf += struct.pack("<fff", float(item[0]), float(item[1]), float(item[2]))
             return bytes(buf)
 
-        def pack_u16_list(lst):
+        max_idx = max((max(tri) for tri in all_idx), default=0)
+        index_component_type = 5125 if max_idx > 65535 else 5123
+
+        def pack_index_list(lst):
             buf = bytearray()
+            fmt = "<III" if index_component_type == 5125 else "<HHH"
             for tri in lst:
-                buf += struct.pack("<HHH", tri[0], tri[1], tri[2])
+                buf += struct.pack(fmt, tri[0], tri[1], tri[2])
             return bytes(buf)
 
         def pad4(b):
@@ -249,7 +253,7 @@ class GLBBuilder:
         pos_bytes   = pad4(pack_f3_list(all_pos))
         nrm_bytes   = pad4(pack_f3_list(all_nrm))
         col_bytes   = pad4(pack_f3_list(all_col))
-        idx_bytes   = pad4(pack_u16_list(all_idx))
+        idx_bytes   = pad4(pack_index_list(all_idx))
 
         n_verts = len(all_pos)
         n_idx   = len(all_idx) * 3
@@ -295,7 +299,7 @@ class GLBBuilder:
                  "count": n_verts, "type": "VEC3"},
                 {"bufferView": 2, "byteOffset": 0, "componentType": 5126,
                  "count": n_verts, "type": "VEC3"},
-                {"bufferView": 3, "byteOffset": 0, "componentType": 5123,
+                {"bufferView": 3, "byteOffset": 0, "componentType": index_component_type,
                  "count": n_idx,   "type": "SCALAR"},
             ],
             "bufferViews": [

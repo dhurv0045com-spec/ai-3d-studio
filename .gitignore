@@ -28,6 +28,7 @@ wheels/
 *.cache
 _diag_pid.tmp
 _temp_output.glb
+_temp_preset_script.py
 _last_gemini_script.py
 github-recovery-codes.txt
 

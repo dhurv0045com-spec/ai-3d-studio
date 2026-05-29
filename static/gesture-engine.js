@@ -74,7 +74,7 @@ function _partsClearFocus() {
 var GestureEngine = (function() {
   /* ── One Euro Filter (Casiez et al. 2012) ── */
   var OEF_MIN_CUTOFF = 0.9;
-  var OEF_BETA       = 0.004;
+  var OEF_BETA       = 0.010;
   var OEF_D_CUTOFF   = 1.0;
 
   function OneEuroFilter() {
@@ -127,11 +127,13 @@ var GestureEngine = (function() {
   }
   /* ── End One Euro Filter ── */
   var LOCK_FRAMES = 6;
+  var PRELOCK_FRAMES = 3;
   var RELEASE_FRAMES = 10;
   var BUFFER_SIZE = 10;
   var LOCK_AGREEMENT = 0.72;
   var ONE_SHOT_COOLDOWN = 1200;
   var RELEASE_INERTIA_FRAMES = 18;
+  var LOST_HAND_GRACE_MS = 350;
 
   var GESTURES = {
     ORBIT:       { emoji: '✊', label: 'ROTATE',      color: '#00d4ff', continuous: true },
@@ -318,6 +320,9 @@ var GestureEngine = (function() {
     engine.smoothTrack.dx += (dx - engine.smoothTrack.dx) * k;
     engine.smoothTrack.dy += (dy - engine.smoothTrack.dy) * k;
     engine.smoothTrack.dz += (dz - engine.smoothTrack.dz) * k;
+    if (Math.abs(engine.smoothTrack.dx) < 0.0005) { engine.smoothTrack.dx = 0; }
+    if (Math.abs(engine.smoothTrack.dy) < 0.0005) { engine.smoothTrack.dy = 0; }
+    if (Math.abs(engine.smoothTrack.dz) < 0.0005) { engine.smoothTrack.dz = 0; }
     return {
       dx: engine.smoothTrack.dx,
       dy: engine.smoothTrack.dy,
@@ -329,7 +334,7 @@ var GestureEngine = (function() {
     var pinchNorm = pinchDistance(lm, fingers.palmWidth);
     var spread = spreadDistance(lm) / Math.max(fingers.palmWidth, 0.05);
 
-    if (fingers.count >= 5 && spread > 1.05) { return 'FIT'; }
+    if (fingers.count >= 5 && spread > 1.2) { return 'FIT'; }
 
     if (fingers.index && fingers.middle && !fingers.ring && !fingers.pinky) {
       return 'PART_CYCLE';
@@ -344,6 +349,7 @@ var GestureEngine = (function() {
     }
 
     if (fingers.thumb && !fingers.index && !fingers.middle && fingers.count <= 2 &&
+        lm[4].y < lm[2].y &&
         (fingers.wristPos.y - lm[4].y) > fingers.palmWidth * 0.35) {
       return 'SAVE';
     }
@@ -357,6 +363,10 @@ var GestureEngine = (function() {
     }
 
     if (ctx && ctx.waveDetected && fingers.count >= 4) { return 'RESET'; }
+
+    if (ctx && Math.abs(ctx.rollDelta || 0) > 0.10 && fingers.count >= 3) {
+      return 'ROLL_ORBIT';
+    }
 
     if (fingers.count >= 3) { return 'PAN'; }
 
@@ -416,7 +426,7 @@ var GestureEngine = (function() {
 
   function applyZoom(delta) {
     var s = sensScale() * 0.7;
-    engine.vel.zoom += (delta * 42 * s - engine.vel.zoom) * 0.12;
+    engine.vel.zoom += (delta * 42 * s - engine.vel.zoom) * 0.28;
     sph.tRadius = clamp(sph.tRadius - engine.vel.zoom, 1.2, 22);
   }
 
@@ -484,10 +494,18 @@ var GestureEngine = (function() {
 
   function canFireOneShot(name) {
     var now = Date.now();
+    if ((name === 'PART_CYCLE' || name === 'INSPECT') &&
+        engine.oneShotFired.PART_INSPECT &&
+        now - engine.oneShotFired.PART_INSPECT < ONE_SHOT_COOLDOWN) {
+      return false;
+    }
     if (engine.oneShotFired[name] && now - engine.oneShotFired[name] < ONE_SHOT_COOLDOWN) {
       return false;
     }
     engine.oneShotFired[name] = now;
+    if (name === 'PART_CYCLE' || name === 'INSPECT') {
+      engine.oneShotFired.PART_INSPECT = now;
+    }
     return true;
   }
 
@@ -654,23 +672,33 @@ var GestureEngine = (function() {
     var dx = engine.lastTrack.x == null ? 0 : cx - engine.lastTrack.x;
     var dy = engine.lastTrack.y == null ? 0 : cy - engine.lastTrack.y;
     var dz = engine.lastTrack.z == null ? 0 : cz - engine.lastTrack.z;
-    if (Math.abs(dx) < 0.018) { dx = 0; }
-    if (Math.abs(dy) < 0.018) { dy = 0; }
-    if (Math.abs(dz) < 0.012) { dz = 0; }
+    var xyDead = Math.max(0.006, fingers.palmWidth * 0.12);
+    var zDead = Math.max(0.004, fingers.palmWidth * 0.08);
+    if (Math.abs(dx) < xyDead) { dx = 0; }
+    if (Math.abs(dy) < xyDead) { dy = 0; }
+    if (Math.abs(dz) < zDead) { dz = 0; }
     var sm = smoothDelta(dx, dy, dz);
     dx = sm.dx;
     dy = sm.dy;
     dz = sm.dz;
 
-    engine.waveHistory.push(dx);
-    if (engine.waveHistory.length > 8) { engine.waveHistory.shift(); }
+    var waveNow = performance.now();
+    var waveSign = Math.abs(dx) >= 0.025 ? (dx > 0 ? 1 : -1) : 0;
+    if (waveSign !== 0) {
+      engine.waveHistory.push({ sign: waveSign, t: waveNow });
+    }
+    engine.waveHistory = engine.waveHistory.filter(function(entry) {
+      return waveNow - entry.t <= 1200;
+    });
     var waveDetected = false;
-    if (engine.waveHistory.length >= 4) {
-      var rapid = 0;
+    if (engine.waveHistory.length >= 5) {
+      var reversals = 0;
       for (var wi = 1; wi < engine.waveHistory.length; wi++) {
-        if (Math.abs(engine.waveHistory[wi]) > 0.055) { rapid += 1; }
+        if (engine.waveHistory[wi].sign !== engine.waveHistory[wi - 1].sign) {
+          reversals += 1;
+        }
       }
-      waveDetected = rapid >= 5 && fingers.count >= 4;
+      waveDetected = reversals >= 4 && fingers.count >= 4;
     }
 
     var rollNow = Math.atan2(fingers.palmNormal.y, fingers.palmNormal.x);
@@ -736,8 +764,12 @@ var GestureEngine = (function() {
 
     var pinchNorm = pinchDistance(lm, fingers.palmWidth);
     var moveGesture = engine.lockedGesture;
-    if (!moveGesture && dom.count >= LOCK_FRAMES - 1 && agree >= LOCK_AGREEMENT * 0.85) {
+    var prelockScale = 1;
+    var domMeta = GESTURES[dom.name];
+    if (!moveGesture && domMeta && domMeta.continuous &&
+        dom.count >= PRELOCK_FRAMES && agree >= LOCK_AGREEMENT * 0.5) {
       moveGesture = dom.name;
+      prelockScale = 0.5;
     }
     if (!moveGesture) {
       engine.lastTrack = {
@@ -753,17 +785,20 @@ var GestureEngine = (function() {
     var fistRotate = moveGesture === 'ORBIT' && isFist(fingers, lm);
 
     if (moveGesture === 'ORBIT') {
-      applyOrbit(dx, dy, fistRotate);
+      applyOrbit(dx * prelockScale, dy * prelockScale, fistRotate);
       if (fistRotate && Math.abs(dx) + Math.abs(dy) < 0.006) {
         applyOrbit(0.0022, 0.0008, true);
       }
     } else if (moveGesture === 'ZOOM') {
       var dp = engine.lastTrack.pinch == null ? 0 : pinchNorm - engine.lastTrack.pinch;
       if (Math.abs(dp) < 0.012) { dp = 0; }
-      applyZoom(dp);
+      applyZoom(dp * prelockScale);
     } else if (moveGesture === 'PAN') {
-      applyPan(dx, dy, dz);
+      applyPan(dx * prelockScale, dy * prelockScale, dz * prelockScale);
+    } else if (moveGesture === 'ROLL_ORBIT') {
+      applyRoll(rollDelta * prelockScale);
     } else if (moveGesture === 'INSPECT') {
+      engine.oneShotFired.PART_INSPECT = Date.now();
       inspectAtLandmark(lm);
     } else if (moveGesture !== 'ORBIT') {
       hideInspectTooltip();
@@ -861,7 +896,7 @@ var GestureEngine = (function() {
         engine._gracePeriodStart = performance.now();
       }
       var graceMsElapsed = performance.now() - engine._gracePeriodStart;
-      if (graceMsElapsed < 150) {
+      if (graceMsElapsed < LOST_HAND_GRACE_MS) {
         updateHud(engine.lockedGesture, 0.3);
         return;
       }

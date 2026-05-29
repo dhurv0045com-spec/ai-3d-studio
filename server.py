@@ -4691,9 +4691,32 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             log_gen("[LIBRARY] library search failed, continuing")
 
         # ------------------------------------------------------------------
-        # STEP 3: Stage A - Shap-E
+        # STEP 3: Stage A - Gemini + Blender
         # ------------------------------------------------------------------
-        set_state(progress=15, step="stage_a_shapee")
+        set_state(progress=20, step="stage_b_gemini_blender")
+        if os.path.exists(BLENDER_EXE):
+            log_gen("[MODEL_B] attempting Gemini+Blender...")
+            ok = stage_b_gemini_blender(gen_prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
+            if ok:
+                shutil.copy2(temp_path, ROCKET_GLB)
+                sz = os.path.getsize(ROCKET_GLB)
+                log_gen("[MODEL_B] Gemini+Blender success")
+                store_cache(ROCKET_GLB, gen_prompt)
+                set_state(progress=80, step="uploading_cloudinary")
+                _cloud = upload_to_cloudinary(ROCKET_GLB)
+                set_state(progress=95, step="saving_supabase")
+                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
+                set_state(status="done", progress=100, step="done",
+                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
+                          cloud_url=_cloud or "",
+                          share_url=f"/share/{saved_id}" if saved_id else "")
+                return
+            log_gen("[MODEL_B] Gemini+Blender failed, falling through")
+
+        # ------------------------------------------------------------------
+        # STEP 4: Stage B - Shap-E
+        # ------------------------------------------------------------------
+        set_state(progress=50, step="stage_a_shapee")
         if shap_e_available:
             log_gen("[SHAPEE] attempting Shap-E generation...")
             ok = run_shap_e(gen_prompt, temp_path)
@@ -4714,29 +4737,6 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             log_gen("[SHAPEE] Shap-E failed, falling through")
         else:
             log_gen("[SHAPEE] not available - skipping Stage A")
-
-        # ------------------------------------------------------------------
-        # STEP 4: Stage B - Gemini + Blender
-        # ------------------------------------------------------------------
-        set_state(progress=35, step="stage_b_gemini_blender")
-        if os.path.exists(BLENDER_EXE):
-            log_gen("[MODEL_B] attempting Gemini+Blender...")
-            ok = stage_b_gemini_blender(gen_prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
-            if ok:
-                shutil.copy2(temp_path, ROCKET_GLB)
-                sz = os.path.getsize(ROCKET_GLB)
-                log_gen("[MODEL_B] Gemini+Blender success")
-                store_cache(ROCKET_GLB, gen_prompt)
-                set_state(progress=80, step="uploading_cloudinary")
-                _cloud = upload_to_cloudinary(ROCKET_GLB)
-                set_state(progress=95, step="saving_supabase")
-                saved_id = save_to_supabase(original_prompt, color_hex, folder, "Gemini+Blender", ROCKET_GLB, sz, cloud_url=_cloud, sub_id=sub_id)
-                set_state(status="done", progress=100, step="done",
-                          service="Gemini+Blender", glb_size=sz, last_model=ROCKET_GLB,
-                          cloud_url=_cloud or "",
-                          share_url=f"/share/{saved_id}" if saved_id else "")
-                return
-            log_gen("[MODEL_B] Gemini+Blender failed, falling through to preset")
 
         # ------------------------------------------------------------------
         # STEP 5: Stage C - Preset
@@ -4867,8 +4867,16 @@ def app_main():
 
 @app.route("/guest", methods=["POST"])
 def guest_login():
-    """Guest login endpoint - just returns success for now."""
-    return jsonify({"success": True, "user": {"id": "guest", "name": "Guest"}})
+    """Create a guest session for users without Google OAuth."""
+    user = {
+        "sub": "guest",
+        "email": "guest@aurex3d.com",
+        "name": "Guest User",
+        "picture": ""
+    }
+    session["user"] = user
+    session.permanent = True
+    return jsonify({"success": True, "user": user})
 
 
 @app.route("/ping", methods=["GET"])
@@ -6630,14 +6638,14 @@ def run_local_server():
     print(f"Shap-E available: {shap_e_available}")
 
     print(f"Server log: {SERVER_LOG}")
-    print("Listening on http://0.0.0.0:8080")
+    port = int(os.environ.get("PORT", 5000))
+    host = "0.0.0.0"
+    print("Listening on http://" + host + ":" + str(port))
 
     # Start system tray
     start_tray()
 
     # Run Flask
-    port = int(os.environ.get("PORT", 5000))
-    host = "0.0.0.0"
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(
         host=host,

@@ -72,6 +72,60 @@ function _partsClearFocus() {
 }
 
 var GestureEngine = (function() {
+  /* ── One Euro Filter (Casiez et al. 2012) ── */
+  var OEF_MIN_CUTOFF = 1.7;
+  var OEF_BETA       = 0.007;
+  var OEF_D_CUTOFF   = 1.0;
+
+  function OneEuroFilter() {
+    this.xPrev  = null;
+    this.dxPrev = 0;
+    this.tPrev  = null;
+  }
+  OneEuroFilter.prototype.filter = function(x, ts) {
+    if (this.tPrev === null) { this.xPrev = x; this.tPrev = ts; return x; }
+    var Te = Math.max((ts - this.tPrev) / 1000, 0.001);
+    this.tPrev = ts;
+    var dx     = (x - this.xPrev) / Te;
+    var alphaD = _oefAlpha(Te, OEF_D_CUTOFF);
+    var dxHat  = alphaD * dx + (1 - alphaD) * this.dxPrev;
+    this.dxPrev = dxHat;
+    var cutoff = OEF_MIN_CUTOFF + OEF_BETA * Math.abs(dxHat);
+    var alpha  = _oefAlpha(Te, cutoff);
+    var xHat   = alpha * x + (1 - alpha) * this.xPrev;
+    this.xPrev = xHat;
+    return xHat;
+  };
+  function _oefAlpha(Te, cutoff) {
+    var tau = 1 / (2 * Math.PI * cutoff);
+    return 1 / (1 + tau / Te);
+  }
+  var _oefFilters = {};
+  function _oefGet(handIdx, lmIdx, axis) {
+    var k = handIdx + '_' + lmIdx + '_' + axis;
+    if (!_oefFilters[k]) { _oefFilters[k] = new OneEuroFilter(); }
+    return _oefFilters[k];
+  }
+  function _oefFilterLandmarks(landmarks, handIdx) {
+    var ts = performance.now();
+    return landmarks.map(function(lm, i) {
+      return {
+        x: _oefGet(handIdx, i, 'x').filter(lm.x, ts),
+        y: _oefGet(handIdx, i, 'y').filter(lm.y, ts),
+        z: _oefGet(handIdx, i, 'z').filter(lm.z || 0, ts),
+        visibility: lm.visibility
+      };
+    });
+  }
+  function _oefResetHand(handIdx) {
+    for (var i = 0; i < 21; i++) {
+      ['x','y','z'].forEach(function(ax) {
+        var k = handIdx + '_' + i + '_' + ax;
+        if (_oefFilters[k]) { _oefFilters[k] = new OneEuroFilter(); }
+      });
+    }
+  }
+  /* ── End One Euro Filter ── */
   var LOCK_FRAMES = 4;
   var RELEASE_FRAMES = 6;
   var BUFFER_SIZE = 6;
@@ -105,6 +159,7 @@ var GestureEngine = (function() {
     previewExpanded: false,
     frameBuffer: [],
     lastTrack: { x: null, y: null, z: null, pinch: null, roll: null, spread: null },
+    _gracePeriodStart: null,
     waveHistory: [],
     calSamples: [],
     calStartedAt: 0,
@@ -321,9 +376,9 @@ var GestureEngine = (function() {
       if (engine.enabled) { engine.inertiaRaf = requestAnimationFrame(tickInertia); }
       return;
     }
+    var mag = Math.abs(engine.vel.theta) + Math.abs(engine.vel.phi) +
+      Math.abs(engine.vel.zoom) + Math.abs(engine.vel.panX) + Math.abs(engine.vel.panY);
     if (engine.machineState === 'RELEASING') {
-      var mag = Math.abs(engine.vel.theta) + Math.abs(engine.vel.phi) +
-        Math.abs(engine.vel.zoom) + Math.abs(engine.vel.panX) + Math.abs(engine.vel.panY);
       sph.tTheta -= engine.vel.theta;
       sph.tPhi   -= engine.vel.phi;
       sph.tPhi = clamp(sph.tPhi, 0.08, Math.PI - 0.08);
@@ -338,11 +393,13 @@ var GestureEngine = (function() {
       engine.vel.panY  *= 0.88;
       engine.vel.panZ  *= 0.88;
       engine.vel.roll  *= 0.88;
-      engine.releaseFramesLeft -= 1;
-      if (engine.releaseFramesLeft <= 0 || mag < 0.0008) {
-        engine.machineState = engine.enabled ? 'TRACKING' : 'IDLE';
-        engine.lockedGesture = null;
-        zeroVel();
+      if (engine.machineState === 'RELEASING') {
+        engine.releaseFramesLeft -= 1;
+        if (engine.releaseFramesLeft <= 0 || mag < 0.0008) {
+          engine.machineState = engine.enabled ? 'TRACKING' : 'IDLE';
+          engine.lockedGesture = null;
+          zeroVel();
+        }
       }
     }
     if (engine.enabled) {
@@ -532,6 +589,9 @@ var GestureEngine = (function() {
     var dx = engine.lastTrack.x == null ? 0 : cx - engine.lastTrack.x;
     var dy = engine.lastTrack.y == null ? 0 : cy - engine.lastTrack.y;
     var dz = engine.lastTrack.z == null ? 0 : cz - engine.lastTrack.z;
+    if (Math.abs(dx) < 0.012) { dx = 0; }
+    if (Math.abs(dy) < 0.012) { dy = 0; }
+    if (Math.abs(dz) < 0.008) { dz = 0; }
 
     engine.waveHistory.push(dx);
     if (engine.waveHistory.length > 8) { engine.waveHistory.shift(); }
@@ -618,6 +678,7 @@ var GestureEngine = (function() {
       applyOrbit(dx, dy);
     } else if (moveGesture === 'ZOOM' || active === 'ZOOM') {
       var dp = engine.lastTrack.pinch == null ? 0 : pinchNorm - engine.lastTrack.pinch;
+      if (Math.abs(dp) < 0.018) { dp = 0; }
       applyZoom(dp);
     } else if (moveGesture === 'PAN' || active === 'PAN') {
       applyPan(dx, dy, dz);
@@ -738,17 +799,26 @@ var GestureEngine = (function() {
     }
 
     if (!res || !res.multiHandLandmarks || !res.multiHandLandmarks.length) {
+      if (!engine._gracePeriodStart) {
+        engine._gracePeriodStart = performance.now();
+      }
+      var graceMsElapsed = performance.now() - engine._gracePeriodStart;
+      if (graceMsElapsed < 150) {
+        updateHud(engine.lockedGesture, 0.3);
+        return;
+      }
+      engine._gracePeriodStart = null;
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
-      if (engine.machineState === 'CALIBRATING') {
-        var el = Date.now() - engine.calStartedAt;
-        updateCalOverlayProgress(0, el > 3000 ? 'Move hand closer to camera' : 'Show your open hand to the camera');
-        if (el > 15000) { skipCalibration(); }
-      } else if (engine.machineState !== 'RELEASING') {
+      _oefResetHand(0);
+      _oefResetHand(1);
+      if (engine.machineState !== 'RELEASING') {
         engine.machineState = engine.enabled ? 'TRACKING' : 'IDLE';
         engine.lockedGesture = null;
       }
       updateHud(null, 0);
-      updatePanelStatus(engine.machineState === 'CALIBRATING' ? 'CALIBRATING' : null, 0);
+      updatePanelStatus(
+        engine.machineState === 'CALIBRATING' ? 'CALIBRATING' : null, 0
+      );
       if (engine.ui.hud) {
         clearTimeout(engine.hudHideTimer);
         engine.hudHideTimer = setTimeout(function() {
@@ -758,10 +828,13 @@ var GestureEngine = (function() {
       return;
     }
 
+    engine._gracePeriodStart = null;
+    var lmFiltered0 = _oefFilterLandmarks(res.multiHandLandmarks[0], 0);
     if (res.multiHandLandmarks.length >= 2) {
-      processTwoHands(res.multiHandLandmarks[0], res.multiHandLandmarks[1]);
+      var lmFiltered1 = _oefFilterLandmarks(res.multiHandLandmarks[1], 1);
+      processTwoHands(lmFiltered0, lmFiltered1);
     } else {
-      processSingleHand(res.multiHandLandmarks[0]);
+      processSingleHand(lmFiltered0);
     }
   }
 
@@ -959,7 +1032,7 @@ var GestureEngine = (function() {
       '<div class="ge-settings">' +
         '<div class="ge-row"><label>Sensitivity</label><input id="ge-sens" type="range" min="0.4" max="2.2" step="0.05" value="1.0"></div>' +
         '<div class="ge-row"><label>Inertia</label><input id="ge-inertia" type="checkbox" checked></div>' +
-        '<div class="ge-row"><label>Camera preview</label><input id="ge-prev" type="checkbox" checked="checked"></div>' +
+        '<div class="ge-row"><label>Camera preview</label><input id="ge-prev" type="checkbox" checked></div>' +
         '<div class="ge-row"><label>Two-hand mode</label><input id="ge-two" type="checkbox" checked></div>' +
         '<div class="ge-row"><label>Part gestures</label><input id="ge-parts" type="checkbox" checked></div>' +
         '<div class="ge-row"><label>Adaptive speed</label><input id="ge-adaptive" type="checkbox" checked></div>' +
@@ -991,10 +1064,7 @@ var GestureEngine = (function() {
     });
     p.querySelector('#ge-recalib').addEventListener('click', function() {
       engine.calibration.ready = false;
-      engine.calSamples = [];
-      engine.calStartedAt = Date.now();
       showCalOverlay();
-      engine.machineState = 'CALIBRATING';
     });
 
     updateCalDot();

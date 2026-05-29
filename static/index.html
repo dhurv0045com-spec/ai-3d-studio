@@ -2477,7 +2477,7 @@ nav#nav { display: flex !important; }
 <!-- V7 OFFLINE OVERLAY -->
 <div id="offline-overlay">
   <div class="offline-title">SERVER OFFLINE</div>
-  <div class="offline-sub">Reconnecting to localhost:5000</div>
+  <div class="offline-sub">Reconnecting to the render server</div>
   <div class="offline-dots">
     <div class="offline-dot"></div>
     <div class="offline-dot"></div>
@@ -3079,6 +3079,7 @@ nav#nav { display: flex !important; }
             <span class="prog-pct"  id="prog-pct">0%</span>
             <span id="gen-timer">0:00</span>
           </div>
+          <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-fill"></div></div>
           <div id="pipeline-viz" class="pipeline-viz" style="display:none">
             <div class="pipe-stage" id="pipe-enhance">
               <div class="pipe-icon">✨</div>
@@ -3187,10 +3188,22 @@ nav#nav { display: flex !important; }
         <div class="settings-row" style="padding: 12px 0;">
           <div class="settings-row-l">
             <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Blender Engine</div>
-            <div class="settings-row-sub" id="set-blender-sub" style="font-size: 11px; color: var(--tx-3);">Checking executable path...</div>
+            <div class="settings-row-sub" id="set-blender-sub" style="font-size: 11px; color: var(--tx-3);">
+              <span id="set-blender-path">Checking executable path...</span>
+            </div>
           </div>
           <div class="settings-st info" id="set-blender-st">
             <div class="settings-st-dot"></div><span id="set-blender-text">-</span>
+          </div>
+        </div>
+
+        <div class="settings-row" style="padding: 12px 0; border-top: 1px solid var(--bd-1);">
+          <div class="settings-row-l">
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Shap-E Fallback</div>
+            <div class="settings-row-sub" style="font-size: 11px; color: var(--tx-3);">Optional local fallback generator</div>
+          </div>
+          <div class="settings-st info" id="set-shaper-st">
+            <div class="settings-st-dot"></div><span id="set-shaper-text">-</span>
           </div>
         </div>
       </div>
@@ -3198,7 +3211,30 @@ nav#nav { display: flex !important; }
       <div class="settings-sec" style="background: rgba(26, 34, 54, 0.4); border: 1px solid var(--bd-2); border-radius: var(--r-lg); padding: 24px;">
         <div class="settings-sec-title" style="margin-bottom: 20px; color: var(--amber); font-size: 14px;"><div class="sec-dot amber"></div>Account & Data</div>
         <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6; margin-bottom: 20px;">
-          Your models and folders are securely isolated within the Supabase cloud infrastructure securely via your Google Login. Ensure your backend policies are correctly tuned.
+          Your models and folders are isolated by your Google login and stored through the configured Supabase backend.
+        </div>
+        <div class="settings-row" style="padding: 12px 0; border-top: 1px solid var(--bd-1);">
+          <div class="settings-row-l">
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Library Mode</div>
+            <div class="settings-row-sub" style="font-size: 11px; color: var(--tx-3);">Use external model search before local generation</div>
+          </div>
+          <label class="toggle-sw" title="Search Sketchfab first">
+            <input type="checkbox" id="set-lib-toggle">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="settings-row" style="padding: 12px 0; border-top: 1px solid var(--bd-1);">
+          <div class="settings-row-l">
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">Cache</div>
+            <div class="settings-row-sub" style="font-size: 11px; color: var(--tx-3);" id="set-cache-size">-</div>
+          </div>
+        </div>
+        <div class="settings-row" style="padding: 12px 0; border-top: 1px solid var(--bd-1);">
+          <div class="settings-row-l">
+            <div class="settings-row-lbl" style="font-size: 14px; font-weight: 500;">History</div>
+            <div class="settings-row-sub" style="font-size: 11px; color: var(--tx-3);" id="set-hist-count">-</div>
+          </div>
         </div>
         <button class="settings-btn" style="padding: 10px 20px; font-size: 12px;" onclick="if(confirm('Clear local history cache?')) fetch('/api/history/clear',{method:'POST'}).then(()=>location.reload())">CLEAR CACHE</button>
       </div>
@@ -3559,7 +3595,11 @@ function toggleWireframe() {
    ============================================================ */
 function animate() {
   requestAnimationFrame(animate);
-  var d = 0.09;
+  var _now = performance.now();
+  if (typeof _animLastFrame === 'undefined') { window._animLastFrame = _now; }
+  var _dt = Math.min((_now - window._animLastFrame) / 1000, 0.1);
+  window._animLastFrame = _now;
+  var d = 1 - Math.pow(0.1, _dt * 60);
   sph.theta  += (sph.tTheta  - sph.theta)  * d;
   sph.phi    += (sph.tPhi    - sph.phi)    * d;
   sph.radius += (sph.tRadius - sph.radius) * d;
@@ -6144,11 +6184,12 @@ function resetServer() {
 
 function testApiKeys() {
   toast('Testing API keys...', 'default');
-  fetch('/api/llm/test')
+  fetch('/api/llm/test', { method: 'POST' })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      var ok = d.ok || d.status === 'ok';
-      toast('API test: ' + (ok ? 'PASS' : 'FAIL') + (d.message ? ' - ' + d.message : ''),
+      var ok = !!(d.ok || d.success || d.status === 'ok');
+      var msg = d.message || d.response || '';
+      toast('API test: ' + (ok ? 'PASS' : 'FAIL') + (msg ? ' - ' + msg : ''),
             ok ? 'ok' : 'err');
     })
     .catch(function() { toast('API test failed - server not responding', 'err'); });
@@ -6982,26 +7023,13 @@ function initLoginOverlay() {
   });
 }
 function guestLogin() {
-  fetch('/guest').then(function() {
-    var ov = document.getElementById('login-overlay');
-    if (ov) { ov.style.display='none'; ov.classList.add('hidden'); }
-    var nm = document.getElementById('user-name');
-    var wrap = document.getElementById('user-avatar-wrap');
-    if (nm) nm.textContent = 'Guest';
-    if (wrap) wrap.style.display = 'flex';
-  }).catch(function() {
-    var ov = document.getElementById('login-overlay');
-    if (ov) { ov.style.display='none'; ov.classList.add('hidden'); }
-  });
-}
-
-
-function guestLogin() {
-  fetch('/guest').then(function(){
+  fetch('/guest', { method: 'POST' }).then(function(){
     var ov=document.getElementById('login-overlay');
     if(ov) ov.classList.add('hidden');
     var nm=document.getElementById('user-name');
-    if(nm) nm.textContent='Guest';
+    var wrap=document.getElementById('user-avatar-wrap');
+    if(nm) nm.textContent='Guest User';
+    if(wrap) wrap.style.display='flex';
   }).catch(function(){
     var ov=document.getElementById('login-overlay');
     if(ov) ov.classList.add('hidden');
@@ -7213,8 +7241,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
-
-
 
 </body>
 </html>

@@ -821,6 +821,74 @@ def call_openrouter(system_msg, user_msg, max_tokens=4000, temperature=0.2):
     return None
 
 
+def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
+    """DeepSeek R1 via OpenRouter for Blender script generation. Returns text or None."""
+    alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
+    if not alive:
+        log_srv("[R1] No alive OpenRouter keys")
+        return None
+
+    for k in alive:
+        try:
+            log_srv("[R1] Trying key " + k["name"] + " with deepseek/deepseek-r1...")
+            r = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization":  "Bearer " + k["key"],
+                    "Content-Type":   "application/json",
+                    "HTTP-Referer":   "https://aurexs3d.up.railway.app/app",
+                    "X-Title":        "Aurex 3D"
+                },
+                json={
+                    "model":       "deepseek/deepseek-r1",
+                    "messages":    [
+                        {"role": "system", "content": system_msg},
+                        {"role": "user",   "content": user_msg}
+                    ],
+                    "max_tokens":  max_tokens,
+                    "temperature": 0
+                },
+                timeout=120,
+                verify=False
+            )
+            log_srv("[R1] Status: " + str(r.status_code))
+            if r.status_code == 200:
+                choices = r.json().get("choices", [])
+                if choices:
+                    msg = choices[0].get("message", {})
+                    content = (msg.get("content") or "").strip()
+                    if not content and msg.get("reasoning_content"):
+                        content = str(msg.get("reasoning_content") or "").strip()
+                    _think_end = "<" + "/think" + ">"
+                    if _think_end in content:
+                        content = content.split(_think_end)[-1].strip()
+                    _red_end = "<" + "/redacted_thinking" + ">"
+                    if _red_end in content:
+                        content = content.split(_red_end)[-1].strip()
+                    if content:
+                        k["fails"] = 0
+                        k["last_used"] = time.time()
+                        log_srv("[R1] Success — " + str(len(content)) + " chars")
+                        return content
+            elif r.status_code in (401, 403):
+                k["dead"] = True
+                k["fails"] = 99
+                log_srv("[R1] Key " + k["name"] + " auth error — dead")
+            elif r.status_code == 429:
+                k["fails"] += 1
+                log_srv("[R1] Key " + k["name"] + " rate limited")
+                time.sleep(5)
+            else:
+                k["fails"] += 1
+                log_srv("[R1] status " + str(r.status_code) + ": " + (r.text or "")[:300])
+        except Exception as e:
+            k["fails"] += 1
+            log_srv("[R1] Exception: " + str(e))
+
+    log_srv("[R1] All OpenRouter keys failed for DeepSeek R1")
+    return None
+
+
 def call_openrouter_payload(body):
     """Call OpenRouter with a prebuilt chat-completions payload."""
     alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
@@ -2272,6 +2340,44 @@ def run_blender_script(script_text, output_path):
 # ---------------------------------------------------------------------------
 #  BLENDER SYSTEM PROMPT V2 + PROMPT BUILDERS
 # ---------------------------------------------------------------------------
+BLENDER_SYSTEM_R1 = """You are an expert 3D modeler writing Blender 4.2 Python scripts for Linux.
+
+Your task: Think carefully about the 3D object's real-world geometry, then write a complete
+Blender Python script that builds it from primitives with proper proportions and placement.
+
+Before writing code, mentally decompose the object:
+- What are its major structural parts and their relative sizes?
+- What primitive shapes best approximate each part?
+- Where is each part positioned relative to the object's center?
+- What materials and colors should each part have?
+
+Technical requirements (Blender 4.2 Linux, these are absolute):
+- Output raw Python only. No markdown. No backticks. No explanations.
+- Start with: import bpy / import math
+- Clear scene: bpy.ops.object.select_all(action='SELECT') then bpy.ops.object.delete(use_global=False)
+- OUTPUT_PATH is already defined as a variable — never redefine it
+- Every primitive call uses keyword arguments only
+- Never use: align=, enter_editmode=, segments= in uv_sphere, ring_count=
+- After each primitive, set: obj = bpy.context.active_object, then obj.location and obj.scale
+- Last line must be exactly: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB')
+- Minimum 15 primitives for a recognizable model
+- Each material uses: bsdf.inputs['Base Color'].default_value = (R, G, B, 1.0)
+
+Correct primitive syntax:
+  bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0))
+  bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0,0,0))
+  bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=1.0, location=(0,0,0))
+  bpy.ops.mesh.primitive_cone_add(radius1=0.5, radius2=0.0, depth=1.0, location=(0,0,0))
+  bpy.ops.mesh.primitive_torus_add(major_radius=1.0, minor_radius=0.3, location=(0,0,0))
+
+Think through the geometry carefully. A laptop is NOT just two boxes — it has a screen
+panel, keyboard deck with keycap grid, trackpad, hinge mechanism, ports, vents, logo.
+A dragon is NOT just a sphere — it has a body, neck, head, snout, 4 legs, clawed feet,
+2 bat wings with membrane ribs, a tapering tail, horns, dorsal spines.
+
+Write the most detailed, geometrically accurate Blender script you can produce.
+"""
+
 BLENDER_SYSTEM = """You are an expert Blender 4.2 Python scripter on Linux.
 Your job: write a complete Python script that builds a detailed, recognizable 3D model.
 
@@ -2687,9 +2793,15 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
             + " complexity=" + str(complexity) + ")")
 
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
-    script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=8000, temperature=0.35)
+    log_gen("[MODEL_B] Trying DeepSeek R1 for Blender script...")
+    script_raw = call_deepseek_r1(BLENDER_SYSTEM_R1, user_msg, max_tokens=16000)
+    if script_raw:
+        log_gen("[MODEL_B] R1 succeeded — using reasoning model output")
+    else:
+        log_gen("[MODEL_B] R1 failed — falling back to standard LLM")
+        script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=8000, temperature=0.35)
     if not script_raw:
-        log_gen("[MODEL_B] Gemini returned no script")
+        log_gen("[MODEL_B] LLM returned no script")
         return False
 
     log_gen("[MODEL_B] Raw Gemini Response (First 500 chars): " + script_raw[:500].replace("\n", " | "))

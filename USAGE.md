@@ -12,6 +12,7 @@
   - Good: `laptop with keyboard, touchpad, bezel, hinge`
 - **Pick a color**, **style**, and **complexity** (4–5 gives the best results).
 - Click **GENERATE MODEL**.
+- Blender scripts are generated with **DeepSeek R1** first (reasoning model via OpenRouter); if R1 is unavailable, the app falls back to the standard LLM. Server logs show `[R1]` / `[MODEL_B]` lines during generation.
 - While it runs, watch:
   - **Progress bar + pipeline** (with ETA during Blender stage)
   - **Live Blender script** — expand **View Script** under the pipeline
@@ -21,7 +22,7 @@ When finished, the viewer loads the new model and a **Model Loaded** action stri
 
 ## Hand Gesture Control
 
-Click **HAND** to turn on instantly (no calibration screen). Allow camera when the browser asks.
+Hand control is provided by `static/gesture-engine.js` (loaded by the studio page). Click **HAND** to turn on instantly — there is no blocking calibration screen on startup. Allow camera when the browser asks.
 
 - **Open hand + move** → rotate / orbit the model
 - **Pinch** (thumb + index) → zoom in/out

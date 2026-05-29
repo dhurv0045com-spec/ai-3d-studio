@@ -123,7 +123,7 @@ var GestureEngine = (function() {
       inertia: true,
       adaptiveSpeed: true
     },
-    calibration: { palmWidth: 0.14, ready: false },
+    calibration: { palmWidth: 0.14, ready: true },
     vel: { theta: 0, phi: 0, zoom: 0, panX: 0, panY: 0, panZ: 0, roll: 0 },
     ui: { panel: null, hud: null, calOverlay: null }
   };
@@ -317,10 +317,13 @@ var GestureEngine = (function() {
   }
 
   function tickInertia() {
-    if (!engine.settings.inertia) { return; }
-    var mag = Math.abs(engine.vel.theta) + Math.abs(engine.vel.phi) +
-      Math.abs(engine.vel.zoom) + Math.abs(engine.vel.panX) + Math.abs(engine.vel.panY);
-    if (engine.machineState === 'RELEASING' || (engine.machineState === 'TRACKING' && mag > 0.0008)) {
+    if (!engine.settings.inertia) {
+      if (engine.enabled) { engine.inertiaRaf = requestAnimationFrame(tickInertia); }
+      return;
+    }
+    if (engine.machineState === 'RELEASING') {
+      var mag = Math.abs(engine.vel.theta) + Math.abs(engine.vel.phi) +
+        Math.abs(engine.vel.zoom) + Math.abs(engine.vel.panX) + Math.abs(engine.vel.panY);
       sph.tTheta -= engine.vel.theta;
       sph.tPhi   -= engine.vel.phi;
       sph.tPhi = clamp(sph.tPhi, 0.08, Math.PI - 0.08);
@@ -335,13 +338,11 @@ var GestureEngine = (function() {
       engine.vel.panY  *= 0.88;
       engine.vel.panZ  *= 0.88;
       engine.vel.roll  *= 0.88;
-      if (engine.machineState === 'RELEASING') {
-        engine.releaseFramesLeft -= 1;
-        if (engine.releaseFramesLeft <= 0 || mag < 0.0008) {
-          engine.machineState = engine.enabled ? 'TRACKING' : 'IDLE';
-          engine.lockedGesture = null;
-          zeroVel();
-        }
+      engine.releaseFramesLeft -= 1;
+      if (engine.releaseFramesLeft <= 0 || mag < 0.0008) {
+        engine.machineState = engine.enabled ? 'TRACKING' : 'IDLE';
+        engine.lockedGesture = null;
+        zeroVel();
       }
     }
     if (engine.enabled) {
@@ -958,7 +959,7 @@ var GestureEngine = (function() {
       '<div class="ge-settings">' +
         '<div class="ge-row"><label>Sensitivity</label><input id="ge-sens" type="range" min="0.4" max="2.2" step="0.05" value="1.0"></div>' +
         '<div class="ge-row"><label>Inertia</label><input id="ge-inertia" type="checkbox" checked></div>' +
-        '<div class="ge-row"><label>Camera preview</label><input id="ge-prev" type="checkbox" checked></div>' +
+        '<div class="ge-row"><label>Camera preview</label><input id="ge-prev" type="checkbox" checked="checked"></div>' +
         '<div class="ge-row"><label>Two-hand mode</label><input id="ge-two" type="checkbox" checked></div>' +
         '<div class="ge-row"><label>Part gestures</label><input id="ge-parts" type="checkbox" checked></div>' +
         '<div class="ge-row"><label>Adaptive speed</label><input id="ge-adaptive" type="checkbox" checked></div>' +
@@ -990,7 +991,10 @@ var GestureEngine = (function() {
     });
     p.querySelector('#ge-recalib').addEventListener('click', function() {
       engine.calibration.ready = false;
+      engine.calSamples = [];
+      engine.calStartedAt = Date.now();
       showCalOverlay();
+      engine.machineState = 'CALIBRATING';
     });
 
     updateCalDot();
@@ -1066,15 +1070,13 @@ var GestureEngine = (function() {
       ensurePanel();
       ensurePreview();
       loadCalibration();
+      if (!engine.calibration.palmWidth) { engine.calibration.palmWidth = 0.14; }
+      engine.calibration.ready = true;
+      engine.machineState = 'TRACKING';
+      hideCalOverlay();
+
       var panel = ensurePanel();
       if (panel) { panel.classList.add('shown'); }
-
-      if (!engine.calibration.ready) {
-        showCalOverlay();
-      } else {
-        engine.machineState = 'TRACKING';
-        hideCalOverlay();
-      }
 
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
       engine.frameBuffer = [];
@@ -1100,8 +1102,8 @@ var GestureEngine = (function() {
       engine.hands.setOptions({
         maxNumHands: 2,
         modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
+        minDetectionConfidence: 0.75,
+        minTrackingConfidence: 0.65
       });
       engine.hands.onResults(onResults);
 
@@ -1189,14 +1191,18 @@ var GestureEngine = (function() {
     engine.enabled = !engine.enabled;
     syncHandButton();
     if (engine.enabled) {
-      if (typeof toast === 'function') { toast('Hand control: ON — allow camera access', 'info'); }
+      hideCalOverlay();
+      var ov = document.getElementById('ge-cal-overlay');
+      if (ov) { ov.classList.add('hidden'); ov.style.display = 'none'; }
+      if (typeof toast === 'function') { toast('Hand control ON — show your hand to the camera', 'info'); }
       if (!start()) {
         engine.enabled = false;
         syncHandButton();
       }
     } else {
       stop();
-      if (typeof toast === 'function') { toast('Hand control: OFF', 'default'); }
+      hideCalOverlay();
+      if (typeof toast === 'function') { toast('Hand control OFF', 'default'); }
     }
   }
 

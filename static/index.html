@@ -3599,7 +3599,8 @@ function animate() {
   if (typeof _animLastFrame === 'undefined') { window._animLastFrame = _now; }
   var _dt = Math.min((_now - window._animLastFrame) / 1000, 0.1);
   window._animLastFrame = _now;
-  var d = 1 - Math.pow(0.1, _dt * 60);
+  var _handOn = window.GestureEngine && GestureEngine.enabled;
+  var d = 1 - Math.pow(_handOn ? 0.055 : 0.1, _dt * 60);
   sph.theta  += (sph.tTheta  - sph.theta)  * d;
   sph.phi    += (sph.tPhi    - sph.phi)    * d;
   sph.radius += (sph.tRadius - sph.radius) * d;

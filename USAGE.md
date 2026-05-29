@@ -24,11 +24,11 @@ When finished, the viewer loads the new model and a **Model Loaded** action stri
 
 Hand control is provided by `static/gesture-engine.js` (loaded by the studio page). Click **HAND** to turn on instantly — there is no blocking calibration screen on startup. Allow camera when the browser asks.
 
-- **Open hand + move** → rotate / orbit the model
-- **Pinch** (thumb + index) → zoom in/out
-- **Fist** → pan the view
+- **Open palm + move** → pan the model smoothly in 3D (all axes)
+- **Closed fist + move** → slow, smooth rotate around the model
+- **Two open hands framing** (capture pose) → zoom in/out by changing distance between palms
+- **Pinch** (one hand, thumb + index only) → fine zoom
 - **Peace sign** → cycle through model parts (if part gestures enabled)
-- **Two hands** (optional in panel): spread/pinch distance = zoom
 
 Use the small **Hand Control** panel (bottom-left) for sensitivity, camera preview, two-hand mode, and part gestures.
 

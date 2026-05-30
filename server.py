@@ -881,7 +881,7 @@ def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
                     "max_tokens":  max_tokens,
                     "temperature": 0
                 },
-                timeout=60,
+                timeout=180,
                 verify=False
             )
             log_srv("[R1] Status: " + str(r.status_code))
@@ -1205,10 +1205,12 @@ def _write_log(filepath, message):
     try:
         # Mirror to stdout so platform deploy logs (Railway/Render/etc.) capture it.
         import sys as _sys
+        import os as _os
         _sys.stdout.write(message + "\n")
         _sys.stdout.flush()
         
         with _log_lock:
+            _os.makedirs(_os.path.dirname(filepath), exist_ok=True)
             with open(filepath, "a", encoding="ascii", errors="replace") as f:
                 f.write(message + "\n")
     except Exception:

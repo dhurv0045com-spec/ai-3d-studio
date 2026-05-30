@@ -3679,7 +3679,10 @@ function resizeRenderer() {
 /* ============================================================
    GLB LOADING
    ============================================================ */
+var _currentLoadId = 0;
 function loadGLB(url, onDone, onError) {
+  _currentLoadId++;
+  var myLoadId = _currentLoadId;
   var loading = document.getElementById('viewer-loading');
   if (loading) { loading.classList.add('visible'); }
   removePlaceholder();
@@ -3688,9 +3691,23 @@ function loadGLB(url, onDone, onError) {
     scene.remove(currentObject);
     currentObject = null;
   }
+  // Failsafe: sweep any previously named main models left behind
+  var oldModel = scene.getObjectByName('MAIN_MODEL');
+  if (oldModel) { scene.remove(oldModel); }
+  
   var loader = new THREE.GLTFLoader();
   loader.load(url, function(gltf) {
+    if (_currentLoadId !== myLoadId) {
+      // A newer load was initiated; discard this one
+      return;
+    }
+    // Double check cleanup again
+    if (currentObject) { scene.remove(currentObject); }
+    var old = scene.getObjectByName('MAIN_MODEL');
+    if (old) { scene.remove(old); }
+
     var model  = gltf.scene;
+    model.name = 'MAIN_MODEL';
     var box    = new THREE.Box3().setFromObject(model);
     var center = box.getCenter(new THREE.Vector3());
     var size   = box.getSize(new THREE.Vector3());
@@ -3717,6 +3734,7 @@ function loadGLB(url, onDone, onError) {
     if (loading) { loading.classList.remove('visible'); }
     if (onDone) { onDone(); }
   }, undefined, function(err) {
+    if (_currentLoadId !== myLoadId) return;
     if (loading) { loading.classList.remove('visible'); }
     toast('Failed to load model', 'err');
     if (onError) { onError(err); }

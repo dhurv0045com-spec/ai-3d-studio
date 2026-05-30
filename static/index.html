@@ -1972,121 +1972,24 @@ nav#nav { display: flex !important; }
 }
 .hist-empty-s { font-size: 11px; color: var(--tx-4); }
 
-.enhance-btn {
-  background: transparent;
-  border: 1px solid var(--gold-dim);
-  color: var(--gold);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 11px;
-  cursor: pointer;
-  transition: background 0.2s;
+.engine-selector {
+  display: flex; gap: 12px;
 }
-.enhance-btn:hover { background: var(--gold-faint); }
-.enhance-btn:disabled { opacity: 0.45; cursor: wait; }
-.enhance-preview {
-  font-size: 11px;
-  color: var(--tx-3);
-  padding: 6px 10px;
-  background: var(--bg-3);
-  border-radius: 6px;
-  margin-top: 4px;
-  display: none;
-  line-height: 1.5;
+.engine-opt {
+  flex: 1; cursor: pointer;
 }
-.enhance-preview.visible { display: block; }
-@keyframes goldShimmer {
-  0%,100% { border-color: var(--bd-2); }
-  50% { border-color: var(--gold); box-shadow: 0 0 8px var(--gold-faint); }
+.engine-opt input { display: none; }
+.engine-card {
+  border: 1px solid var(--bd-2); background: var(--bg-3);
+  padding: 12px; border-radius: 8px; transition: all 0.2s;
+  text-align: center; height: 100%; box-sizing: border-box;
 }
-.shimmer { animation: goldShimmer 0.8s ease; }
-.prompt-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.img-upload-zone {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+.engine-opt input:checked + .engine-card {
+  border-color: var(--cyan); background: rgba(0,212,255,0.05);
 }
-.img-upload-btn {
-  background: var(--bg-3);
-  border: 1px dashed var(--bd-3);
-  color: var(--tx-2);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-.img-upload-btn:hover { border-color: var(--cyan); color: var(--cyan); }
-.img-upload-name { font-size: 11px; color: var(--tx-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.img-preview-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg-3);
-  border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 8px;
-}
-.img-detected-prompt {
-  font-size: 11px;
-  color: var(--tx-2);
-  flex: 1;
-  line-height: 1.45;
-}
-.variant-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0 10px;
-  color: var(--tx-3);
-  font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-}
-.variant-toggle input { accent-color: var(--gold); }
-.variants-panel {
-  display: none;
-  gap: 12px;
-  margin-top: 16px;
-}
-.variants-panel.visible { display: flex; }
-.variant-card {
-  flex: 1;
-  background: var(--bg-3);
-  border: 1px solid var(--bd-2);
-  border-radius: 8px;
-  padding: 10px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-  text-align: center;
-  min-width: 0;
-}
-.variant-card:hover { border-color: var(--cyan); }
-.variant-card.selected { border-color: var(--gold); }
-.variant-card canvas {
-  width: 100%;
-  aspect-ratio: 1;
-  background: var(--bg-2);
-  border-radius: 6px;
-  display: block;
-}
-.variant-label {
-  font-size: 11px;
-  color: var(--tx-3);
-  margin-top: 6px;
-  min-height: 30px;
-  line-height: 1.35;
-}
-.btn-use-variant {
-  background: var(--gold-faint);
-  border: 1px solid var(--gold-dim);
-  color: var(--gold);
-  border-radius: 6px;
-  padding: 4px 12px;
-  font-size: 11px;
-  cursor: pointer;
-  margin-top: 8px;
-}
+.engine-title { font-size: 13px; font-weight: 600; color: var(--tx-1); margin-bottom: 4px; }
+.engine-desc { font-size: 11px; color: var(--tx-3); margin-bottom: 6px; }
+.engine-stars { font-size: 10px; color: var(--gold); }
 .pipeline-viz {
   display: flex;
   align-items: center;
@@ -2783,20 +2686,6 @@ nav#nav { display: flex !important; }
             <div class="f-wrap">
               <div class="f-lbl prompt-title-row">
                 <span style="display:flex;align-items:center;gap:6px"><div class="f-dot amber"></div>Describe Your Model</span>
-                <button type="button" id="btn-enhance" class="enhance-btn" onclick="enhancePrompt()">Enhance</button>
-              </div>
-              <div id="img-upload-zone" class="img-upload-zone">
-                <input type="file" id="img-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
-                <button type="button" id="btn-img-upload" class="img-upload-btn" onclick="document.getElementById('img-file-input').click()">Generate from Image</button>
-                <span id="img-upload-name" class="img-upload-name"></span>
-              </div>
-              <div id="img-preview-card" class="img-preview-card" style="display:none">
-                <img id="img-preview-thumb" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px">
-                <div id="img-detected-prompt" class="img-detected-prompt"></div>
-                <button onclick="removeUploadedImage()" style="
-                  background:transparent;border:1px solid #ff4444;color:#ff4444;
-                  border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;margin-left:auto
-                ">✕ Remove</button>
               </div>
               <div class="prompt-wrap">
                 <textarea id="prompt"
@@ -2812,7 +2701,6 @@ nav#nav { display: flex !important; }
                 <button class="pr-link" onclick="togglePrDrop()">Recent</button>
                 <span class="prompt-counter" id="prompt-counter">0 / 500</span>
               </div>
-              <div id="enhance-preview" class="enhance-preview"></div>
               <div id="pr-drop"></div>
             </div>
 
@@ -2937,17 +2825,39 @@ nav#nav { display: flex !important; }
               <select id="folder-select" class="folder-dropdown"></select>
             </div>
 
-            <!-- THE TARANTINO BUTTON -->
-            <label class="variant-toggle">
-              <input type="checkbox" id="chk-variants"> Generate 3 Variants
-            </label>
+            <div class="f-wrap" style="margin-top: 20px;">
+              <div class="f-lbl"><div class="f-dot cyan"></div>Compute Engine</div>
+              <div class="engine-selector">
+                <label class="engine-opt" title="Render on remote Cloud Servers (Standard Quality)">
+                  <input type="radio" name="compute_engine" value="cloud" checked>
+                  <div class="engine-card">
+                    <div class="engine-title">Cloud Server</div>
+                    <div class="engine-stars">★★ (Standard)</div>
+                  </div>
+                </label>
+                <label class="engine-opt" title="Render using your own Device's GPU natively in browser (Fastest)">
+                  <input type="radio" name="compute_engine" value="browser">
+                  <div class="engine-card">
+                    <div class="engine-title">Device GPU</div>
+                    <div class="engine-stars">★ (Fast)</div>
+                  </div>
+                </label>
+                <label class="engine-opt" title="Render on your Local Desktop GPU (Highest Quality)">
+                  <input type="radio" name="compute_engine" value="desktop">
+                  <div class="engine-card">
+                    <div class="engine-title">Desktop GPU</div>
+                    <div class="engine-stars">★★★ (Cinematic)</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <button id="gen-btn" onclick="generate()">GENERATE MODEL</button>
             <button id="new-model-btn" onclick="startNewModel()" style="
               margin-top:8px;width:100%;padding:8px;background:transparent;
               border:1px solid var(--bd-2);color:var(--tx-2);border-radius:6px;
               font-size:11px;cursor:pointer;font-weight:500;letter-spacing:1px
             ">NEW MODEL</button>
-            <div id="variants-panel" class="variants-panel"></div>
 
           </div>
         </div>
@@ -3027,7 +2937,7 @@ nav#nav { display: flex !important; }
                 <div class="export-title">GLB Binary</div>
                 <div class="export-sub">Universal 3D - Three.js ready</div>
               </div>
-              <button class="export-btn glb" id="export-btn-glb" onclick="window.location='/download'">DOWNLOAD</button>
+              <button class="export-btn glb" id="export-btn-glb" onclick="if(APP.selectedModel){downloadHistModel(APP.selectedModel);}else{window.location='/download';}">DOWNLOAD</button>
             </div>
 
             <div class="export-card">
@@ -3304,6 +3214,7 @@ nav#nav { display: flex !important; }
 <div id="toasts" aria-live="polite" role="status"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 <!-- MediaPipe Hands — load order matters -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
@@ -4891,14 +4802,8 @@ function glbQualityLabel(bytes) {
   return '★★ Complex';
 }
 
-var variantAnimFrames = [];
 var _genStageStartedAt = 0;
 var _genLastStep = '';
-
-function stopVariantAnims() {
-  variantAnimFrames.forEach(function(id) { cancelAnimationFrame(id); });
-  variantAnimFrames = [];
-}
 
 function showPostGenStrip(qualityText) {
   var host = document.getElementById('studio-center');
@@ -5018,9 +4923,12 @@ function generate() {
     complexity:   APP.complexity
   };
 
-  var variantsOn = document.getElementById('chk-variants');
-  if (variantsOn && variantsOn.checked) {
-    generateVariants(body);
+  var engineOpt = document.querySelector('input[name="compute_engine"]:checked');
+  var engine = engineOpt ? engineOpt.value : 'browser';
+  body.engine = engine;
+
+  if (engine === 'browser') {
+    generateInBrowser(body);
     return;
   }
 
@@ -5051,176 +4959,82 @@ function generate() {
     });
 }
 
-function generateVariants(body) {
-  var panel = document.getElementById('variants-panel');
-  if (panel) {
-    panel.classList.add('visible');
-    panel.innerHTML = '<div style="color:var(--tx-3);font-size:11px;padding:12px">Generating variants...</div>';
-  }
-  updatePipelineViz('stage_b_gemini_blender', 35);
-
-  fetch('/generate_variants', {
+function generateInBrowser(body) {
+  updatePipelineViz('stage_a_nlp', 20);
+  
+  fetch('/generate_client_script', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
     .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.status !== 'started') { throw new Error(d.error || 'Failed to start variants'); }
-      toast('Variant generation started...', 'default');
-      pollVariants(d.job_id);
+    .then(function(data) {
+      if (data.error) { throw new Error(data.error); }
+      updatePipelineViz('stage_b_gemini_blender', 50);
+      
+      var scriptCode = data.script;
+      if (!scriptCode) { throw new Error('No script returned for local generation.'); }
+      
+      // Execute the returned script securely to build a THREE.Group
+      var group = null;
+      try {
+        var func = new Function('THREE', scriptCode);
+        group = func(window.THREE);
+      } catch (err) {
+        throw new Error('Local procedural generation failed: ' + err.message);
+      }
+      
+      if (!group || !group.isObject3D) {
+        throw new Error('Local procedural generation did not return a valid 3D object.');
+      }
+      
+      updatePipelineViz('stage_c_export', 75);
+      
+      // Export to GLB
+      var exporter = new THREE.GLTFExporter();
+      exporter.parse(group, function(gltfOutput) {
+        var blob = new Blob([gltfOutput], { type: 'model/gltf-binary' });
+        
+        var fd = new FormData();
+        fd.append('model', blob, 'local_model.glb');
+        fd.append('prompt', body.original_prompt || body.prompt);
+        fd.append('engine', 'browser');
+        fd.append('color', body.color || '#aaaaaa');
+        
+        // Upload to server to be stored in history
+        fetch('/upload_local_model', {
+          method: 'POST',
+          body: fd
+        })
+          .then(function(res) { return res.json(); })
+          .then(function(uploadData) {
+            if (uploadData.error) { throw new Error(uploadData.error); }
+            updatePipelineViz('done', 100);
+            setGenerating(false);
+            hideProgress();
+            toast('Browser rendering complete', 'ok');
+            if (uploadData.url) {
+              loadModelUrl(uploadData.url, body.original_prompt || body.prompt);
+            }
+          })
+          .catch(function(err) {
+            setGenerating(false);
+            hideProgress();
+            toast('Failed to upload local model: ' + err.message, 'err');
+          });
+          
+      }, function(error) {
+        throw new Error('GLTF Exporter failed: ' + error.message);
+      }, { binary: true });
+      
     })
     .catch(function(err) {
       setGenerating(false);
       hideProgress();
-      toast(err.message || 'Variant generation failed', 'err');
+      toast(err.message || 'Browser generation failed', 'err');
     });
 }
 
-function pollVariants(jobId) {
-  var tries = 0;
-  var timer = setInterval(function() {
-    tries += 1;
-    fetch('/variants/' + encodeURIComponent(jobId))
-      .then(function(r) { return r.json(); })
-      .then(function(job) {
-        if (job.error) { throw new Error(job.error); }
-        var total = job.total || 3;
-        var doneCount = (job.results || []).length;
-        updateProgressUI({ progress: Math.min(95, 35 + doneCount * 20), step: 'stage_b_gemini_blender' });
-        if (job.status === 'done' || doneCount >= total) {
-          clearInterval(timer);
-          renderVariants(job.results || []);
-          setGenerating(false);
-          updatePipelineViz('done', 100);
-          setTimeout(hideProgress, 2200);
-          toast('Variants ready', 'ok');
-        }
-      })
-      .catch(function(err) {
-        if (tries > 2) {
-          clearInterval(timer);
-          setGenerating(false);
-          hideProgress();
-          toast(err.message || 'Variant polling failed', 'err');
-        }
-      });
-  }, 3000);
-}
-
-var _variantCards = [];
-var _variantSelectedIdx = 0;
-
-function renderVariants(results) {
-  var panel = document.getElementById('variants-panel');
-  if (!panel) { return; }
-  stopVariantAnims();
-  _variantCards = [];
-  var okResults = (results || []).filter(function(r) { return r.ok && (r.cloud_url || r.local_url); });
-  if (!okResults.length) {
-    panel.classList.add('visible');
-    panel.innerHTML = '<div style="color:var(--red);font-size:11px;padding:12px">No variants completed.</div>';
-    return;
-  }
-  panel.classList.add('visible');
-  panel.innerHTML = '<div style="font-size:9px;color:var(--tx-4);margin-bottom:8px">Keys 1-3 select · Enter confirm</div>';
-  okResults.forEach(function(item, idx) {
-    var url = item.cloud_url || item.local_url;
-    var card = document.createElement('div');
-    card.className = 'variant-card';
-    card.style.position = 'relative';
-    var canvas = document.createElement('canvas');
-    var label = document.createElement('div');
-    label.className = 'variant-label';
-    label.textContent = 'Variant ' + (Number(item.index) + 1) + ': ' + (item.prompt || '').slice(0, 46);
-    var badge = document.createElement('div');
-    badge.className = 'variant-badge';
-    badge.textContent = item.quality_score ? ('Q' + item.quality_score) : '★';
-    var svc = document.createElement('div');
-    svc.className = 'variant-svc';
-    svc.style.background = 'rgba(0,212,255,.15)';
-    svc.style.color = 'var(--cyan)';
-    svc.textContent = (item.service || 'AI').toUpperCase();
-    var btn = document.createElement('button');
-    btn.className = 'btn-use-variant';
-    btn.textContent = 'Use This';
-    function selectCard() {
-      document.querySelectorAll('.variant-card').forEach(function(c) { c.classList.remove('selected'); });
-      card.classList.add('selected');
-      _variantSelectedIdx = idx;
-      loadModelUrl(url, item.prompt || item.enhanced || 'Variant');
-    }
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      selectCard();
-    });
-    card.addEventListener('click', function() { selectCard(); });
-    card.appendChild(canvas);
-    card.appendChild(badge);
-    card.appendChild(label);
-    card.appendChild(svc);
-    card.appendChild(btn);
-    panel.appendChild(card);
-    _variantCards.push(card);
-    renderVariantPreview(canvas, url, item);
-  });
-}
-
-function renderVariantPreview(canvas, url, meta) {
-  if (!canvas || !window.THREE || !THREE.GLTFLoader) { return; }
-  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-  var size = Math.max(120, canvas.clientWidth || 140);
-  renderer.setSize(size, size, false);
-  var sceneMini = new THREE.Scene();
-  var cam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-  cam.position.set(2.5, 1.8, 3.2);
-  sceneMini.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.4));
-  var loader = new THREE.GLTFLoader();
-  var running = true;
-  loader.load(url, function(gltf) {
-    var model = gltf.scene;
-    var box = new THREE.Box3().setFromObject(model);
-    var center = box.getCenter(new THREE.Vector3());
-    var modelSize = box.getSize(new THREE.Vector3());
-    var maxDim = Math.max(modelSize.x, modelSize.y, modelSize.z);
-    model.scale.setScalar(maxDim > 0 ? 2.2 / maxDim : 1);
-    center.multiplyScalar(model.scale.x);
-    model.position.sub(center);
-    sceneMini.add(model);
-    function loop() {
-      if (!running) { return; }
-      model.rotation.y += 0.012;
-      renderer.render(sceneMini, cam);
-      var id = requestAnimationFrame(loop);
-      variantAnimFrames.push(id);
-    }
-    loop();
-  }, undefined, function() {
-    renderer.render(sceneMini, cam);
-  });
-  canvas._stopVariantAnim = function() { running = false; };
-}
-
-document.addEventListener('keydown', function(e) {
-  var panel = document.getElementById('variants-panel');
-  if (!panel || !panel.classList.contains('visible')) { return; }
-  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { return; }
-  var n = parseInt(e.key, 10);
-  if (n >= 1 && n <= 3 && _variantCards[n - 1]) {
-    _variantCards[n - 1].click();
-    e.preventDefault();
-  }
-  if (e.key === 'ArrowRight' && _variantCards.length) {
-    _variantSelectedIdx = (_variantSelectedIdx + 1) % _variantCards.length;
-    _variantCards[_variantSelectedIdx].click();
-    e.preventDefault();
-  }
-  if (e.key === 'ArrowLeft' && _variantCards.length) {
-    _variantSelectedIdx = (_variantSelectedIdx - 1 + _variantCards.length) % _variantCards.length;
-    _variantCards[_variantSelectedIdx].click();
-    e.preventDefault();
-  }
-});
 
 /* ============================================================
    APPLY EDIT - Ridley Scott transformation
@@ -5524,12 +5338,12 @@ function editHistModel(item) {
 
 function downloadHistModel(item) {
   var url = '/download';
-  if (item.file && item.file !== 'rocket.glb') {
+  if (item && item.file && item.file !== 'rocket.glb') {
     url = '/models/' + item.file.replace(/\\/g, '/');
   }
   var a = document.createElement('a');
   a.href     = url;
-  a.download = 'model_' + (item.timestamp || Date.now()) + '.glb';
+  a.download = 'model_' + (item ? (item.timestamp || Date.now()) : Date.now()) + '.glb';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -5802,7 +5616,8 @@ function saveModel() {
     body:    JSON.stringify({
       folder: folder,
       prompt: APP.lastPrompt || 'model',
-      color:  APP.selectedColor || '#00d4ff'
+      color:  APP.selectedColor || '#00d4ff',
+      file:   (APP.selectedModel && APP.selectedModel.file) ? APP.selectedModel.file : undefined
     })
   })
     .then(function(r) { return r.json(); })

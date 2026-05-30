@@ -1392,8 +1392,7 @@ _state = copy.deepcopy(IDLE_STATE)
 _state_lock = threading.Lock()
 _generating = False
 _gen_lock = threading.Lock()
-_variant_jobs = {}
-_variant_jobs_lock = threading.Lock()
+
 
 
 def set_state(**kwargs):
@@ -5522,69 +5521,75 @@ def api_blender_script():
         return jsonify({"script": "", "error": str(e)})
 
 
-@app.route("/api/enhance_prompt", methods=["POST"])
-def api_enhance_prompt():
-    """Preview prompt enhancement without starting generation."""
+@app.route("/generate_client_script", methods=["POST"])
+def generate_client_script():
+    """Generates a Three.js procedural script for client-side rendering."""
     data = request.get_json(force=True, silent=True) or {}
-    raw = str(data.get("prompt", "")).strip()
-    if not raw:
-        return jsonify({"error": "empty prompt"}), 400
-    enhanced = enhance_prompt(raw)
-    return jsonify({"original": raw, "enhanced": enhanced})
+    prompt = data.get("prompt", "")
+    color = data.get("color", "#aaaaaa")
+    
+    system_msg = """You are an expert Three.js procedural generator.
+Generate ONLY the JavaScript code block (the body of a function) that constructs a 3D model and returns a THREE.Group.
+The code will be executed via `new Function('THREE', code)`.
+You MUST ONLY return the raw javascript code. NO markdown (no ```javascript). NO explanations.
+Use basic geometries (BoxGeometry, CylinderGeometry, etc.) and MeshStandardMaterial.
+Make sure to add all meshes to a main group and return the group.
+Use the requested color and prompt to design a reasonably detailed procedural model (at least 5-10 distinct parts).
+
+Example output format:
+const group = new THREE.Group();
+// ... build the model ...
+return group;"""
+    
+    user_msg = f"Generate a detailed 3D model for this prompt: '{prompt}'. Main color: {color}."
+    
+    script = call_deepseek_r1(system_msg, user_msg, max_tokens=3000)
+    if not script:
+        return jsonify({"error": "Failed to generate script from LLM."}), 500
+        
+    script = _strip_think_blocks(script)
+    script = script.replace('```javascript', '').replace('```js', '').replace('```', '').strip()
+    return jsonify({"script": script})
 
 
-@app.route("/api/image_to_prompt", methods=["POST"])
-def image_to_prompt():
-    if "image" not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
-    f = request.files["image"]
-    raw_bytes = f.read()
-    if len(raw_bytes) > 5 * 1024 * 1024:
-        return jsonify({"error": "Image too large (max 5MB)"}), 400
-    import base64
-    b64_data = base64.b64encode(raw_bytes).decode("utf-8")
-    mime_type = f.content_type or "image/jpeg"
-    if mime_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
-        mime_type = "image/jpeg"
-    payload = {
-        "contents": [{
-            "parts": [
-                {"inline_data": {"mime_type": mime_type, "data": b64_data}},
-                {"text": (
-                    "Describe the main object in this image for 3D modeling. "
-                    "ONE sentence, max 40 words. Shape, geometry, proportions, surface details. "
-                    "Start with the object name. No preamble. No quotes."
-                )}
-            ]
-        }],
-        "generationConfig": {"maxOutputTokens": 120, "temperature": 0.4}
-    }
-    base_url = ("https://generativelanguage.googleapis.com"
-                "/v1beta/models/gemini-2.0-flash:generateContent")
-    for attempt in range(min(len(GEMINI_KEYS), 5)):
-        key_str = get_gemini_key()
-        if not key_str:
-            break
-        try:
-            resp = requests.post(base_url + "?key=" + key_str,
-                                 json=payload, timeout=30, verify=False)
-            if resp.status_code == 200:
-                parts = (resp.json().get("candidates", [{}])[0]
-                         .get("content", {}).get("parts", []))
-                text = "".join(p.get("text", "") for p in parts).strip()
-                if text:
-                    mark_key_success(key_str)
-                    enhanced = enhance_prompt(text)
-                    return jsonify({"prompt": text, "enhanced": enhanced, "enhanced_prompt": enhanced})
-                rotate_gemini_key()
-            elif resp.status_code in (401, 403):
-                mark_key_dead(key_str)
-            else:
-                rotate_gemini_key()
-        except Exception as e:
-            rotate_gemini_key()
-            log_error(f"[vision] {e}")
-    return jsonify({"error": "Vision failed - all Gemini keys exhausted"}), 500
+@app.route("/upload_local_model", methods=["POST"])
+def upload_local_model():
+    """Handles upload of client-side generated .glb blob and saves to history."""
+    if "model" not in request.files:
+        return jsonify({"error": "No model file uploaded"}), 400
+        
+    f = request.files["model"]
+    prompt = request.form.get("prompt", "Local Model")
+    color = request.form.get("color", "#aaaaaa")
+    
+    file_id = str(uuid.uuid4())[:8]
+    filename = f"local_{file_id}.glb"
+    file_path = os.path.join(BASE_DIR, "models", filename)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    f.save(file_path)
+    
+    size_str = "0KB"
+    if os.path.exists(file_path):
+        size_str = f"{os.path.getsize(file_path) / 1024:.1f}KB"
+    
+    sub_id = "anonymous"
+    if flask.has_request_context():
+        user_info = flask.session.get('user', {})
+        sub_id = user_info.get('email') or user_info.get('sub') or 'anonymous'
+        
+    local_url = f"/models/{filename}"
+    save_to_supabase(
+        prompt=prompt,
+        color=color,
+        folder="default",
+        service="browser",
+        file_path=filename,
+        size=size_str,
+        cloud_url=local_url,
+        sub_id=sub_id
+    )
+    
+    return jsonify({"success": True, "url": local_url, "size": size_str})
 
 
 @app.route("/share/<model_id>")
@@ -5857,99 +5862,6 @@ def community_gallery():
         return jsonify({"models": [], "error": str(e)})
 
 
-@app.route("/generate_variants", methods=["POST"])
-def generate_variants():
-    import uuid
-
-    data = request.get_json(force=True, silent=True) or {}
-    raw_prompt = str(data.get("prompt", "a 3d object")).strip() or "a 3d object"
-    color_hex = str(data.get("color", "#aaaaaa"))
-    style = str(data.get("style", "realistic"))
-    complexity = int(data.get("complexity", 3))
-    if not re.match(r"^#[0-9a-fA-F]{6}$", color_hex):
-        color_hex = "#aaaaaa"
-    if style not in STYLE_DIRECTIVES:
-        style = "realistic"
-    complexity = max(1, min(5, complexity))
-
-    variant_instructions = [
-        raw_prompt,
-        raw_prompt + ", viewed from above, emphasize top geometry",
-        raw_prompt + ", more stylized, exaggerated proportions"
-    ]
-
-    job_id = str(uuid.uuid4())[:8]
-    with _variant_jobs_lock:
-        _variant_jobs[job_id] = {"status": "running", "results": [], "total": 3}
-
-    def run_variant(idx, variant_prompt):
-        ok = False
-        cloud_url = ""
-        out_path = os.path.join(BASE_DIR, "models", f"variant_{job_id}_{idx}.glb")
-        local_url = f"/models/variant_{job_id}_{idx}.glb"
-        enhanced = variant_prompt
-        try:
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            enhanced = enhance_prompt(variant_prompt)
-            interp = interpret_prompt(enhanced, color_hex)
-            if not interp:
-                words = enhanced.lower().split()
-                obj = words[-1] if words else "object"
-                interp = {
-                    "object": obj,
-                    "style": style,
-                    "material": None,
-                    "features": [],
-                    "size": "medium",
-                    "color": color_name_from_hex(color_hex),
-                    "multi_object": "false",
-                    "complexity": complexity,
-                    "search_keywords": f"{obj} 3d model",
-                    "notes": enhanced
-                }
-            if os.path.exists(BLENDER_EXE):
-                ok = stage_b_gemini_blender(enhanced, interp, color_hex, out_path,
-                                             style=style, complexity=complexity)
-            if not ok:
-                ok, _matched = stage_c_preset(enhanced, interp, color_hex, out_path)
-            if ok and os.path.exists(out_path):
-                cloud_url = upload_to_cloudinary(out_path) or ""
-        except Exception as e:
-            log_error(f"[variants] job={job_id} idx={idx} error: {e}")
-            ok = False
-
-        result = {
-            "index": idx,
-            "prompt": variant_prompt,
-            "enhanced": enhanced,
-            "ok": ok,
-            "cloud_url": cloud_url,
-            "local_url": local_url if ok else "",
-            "local_path": out_path if ok else ""
-        }
-        with _variant_jobs_lock:
-            job = _variant_jobs.get(job_id)
-            if not job:
-                return
-            job["results"].append(result)
-            if len(job["results"]) >= job["total"]:
-                job["results"].sort(key=lambda r: r.get("index", 0))
-                job["status"] = "done"
-
-    for i, vp in enumerate(variant_instructions):
-        t = threading.Thread(target=run_variant, args=(i, vp), daemon=True)
-        t.start()
-
-    return jsonify({"status": "started", "job_id": job_id})
-
-
-@app.route("/variants/<job_id>", methods=["GET"])
-def get_variants(job_id):
-    with _variant_jobs_lock:
-        job = copy.deepcopy(_variant_jobs.get(job_id))
-    if not job:
-        return jsonify({"error": "job not found"}), 404
-    return jsonify(job)
 
 
 @app.route("/rocket.glb", methods=["GET"])
@@ -6117,6 +6029,12 @@ def save_model():
     folder = re.sub(r"[^a-z0-9_\-]", "_", folder.lower())[:24]
 
     current_model_path = get_state().get("last_model") or ROCKET_GLB
+    req_file = data.get("file")
+    if req_file:
+        resolved_req = os.path.realpath(os.path.join(BASE_DIR, "models", os.path.basename(req_file)))
+        if os.path.exists(resolved_req):
+            current_model_path = resolved_req
+
     if not os.path.exists(current_model_path):
         return jsonify({"success": False, "error": "no model to save"}), 400
 

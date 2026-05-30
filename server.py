@@ -679,6 +679,8 @@ def _build_openrouter_keys():
     return list(keys_dict.values())
 
 OPENROUTER_KEYS  = _build_openrouter_keys()
+QWEN_KEYS        = OPENROUTER_KEYS[:4]
+DEEPSEEK_KEYS    = OPENROUTER_KEYS[4:]
 OPENROUTER_MODEL = os.environ.get(
     "OPENROUTER_MODEL",
     "google/gemini-2.0-flash-001"
@@ -853,17 +855,24 @@ def _strip_think_blocks(content):
             text = after[script_start:] if script_start >= 0 else text[:open_match.start()]
     return text.strip()
 
-
-def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
-    """DeepSeek R1 via OpenRouter for Blender script generation. Returns text or None."""
-    alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
+# ---------------------------------------------------------------------------
+#  OPENROUTER GENERIC KEY-ROTATED CALLER
+#  Core reusable engine: takes a key pool, model ID, and calls OpenRouter
+#  with automatic failover across all keys in that pool.
+# ---------------------------------------------------------------------------
+def _call_openrouter_with_pool(key_pool, model_id, system_msg, user_msg,
+                               max_tokens=4000, temperature=0.2, timeout=90,
+                               tag="OR"):
+    """Generic OpenRouter call with key rotation across a specific key pool.
+    Returns text on success, None on failure."""
+    alive = [k for k in key_pool if not k.get("dead", False)]
+    log_srv(f"[{tag}] {len(alive)} alive of {len(key_pool)} keys for model={model_id}")
     if not alive:
-        log_srv("[R1] No alive OpenRouter keys")
+        log_srv(f"[{tag}] No alive keys - returning None")
         return None
-
     for k in alive:
         try:
-            log_srv("[R1] Trying key " + k["name"] + " with deepseek/deepseek-r1...")
+            log_srv(f"[{tag}] Trying key {k['name']}...")
             r = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
@@ -873,188 +882,212 @@ def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
                     "X-Title":        "Aurex 3D"
                 },
                 json={
-                    "model":       "deepseek/deepseek-r1",
+                    "model":       model_id,
                     "messages":    [
                         {"role": "system", "content": system_msg},
                         {"role": "user",   "content": user_msg}
                     ],
                     "max_tokens":  max_tokens,
-                    "temperature": 0
+                    "temperature": temperature
                 },
-                timeout=180,
+                timeout=timeout,
                 verify=False
             )
-            log_srv("[R1] Status: " + str(r.status_code))
+            log_srv(f"[{tag}] Key {k['name']} status: {r.status_code}")
             if r.status_code == 200:
                 choices = r.json().get("choices", [])
                 if choices:
                     msg = choices[0].get("message", {})
                     content = (msg.get("content") or "").strip()
+                    # DeepSeek R1 may return reasoning_content instead
                     if not content and msg.get("reasoning_content"):
                         content = str(msg.get("reasoning_content") or "").strip()
                     content = _strip_think_blocks(content)
                     if content:
-                        k["fails"] = 0
+                        k["fails"]     = 0
                         k["last_used"] = time.time()
-                        log_srv("[R1] Success — " + str(len(content)) + " chars")
+                        log_srv(f"[{tag}] Success model={model_id} — {len(content)} chars")
                         return content
             elif r.status_code in (401, 403):
-                k["dead"] = True
+                k["dead"]  = True
                 k["fails"] = 99
-                log_srv("[R1] Key " + k["name"] + " auth error — dead")
+                log_srv(f"[{tag}] Key {k['name']} auth error — marked dead")
             elif r.status_code == 429:
                 k["fails"] += 1
-                log_srv("[R1] Key " + k["name"] + " rate limited")
-                time.sleep(5)
-            else:
-                k["fails"] += 1
-                log_srv("[R1] status " + str(r.status_code) + ": " + (r.text or "")[:300])
-        except Exception as e:
-            k["fails"] += 1
-            log_srv("[R1] Exception: " + str(e))
-
-    log_srv("[R1] All OpenRouter keys failed for DeepSeek R1")
-    return None
-
-
-def call_openrouter_payload(body):
-    """Call OpenRouter with a prebuilt chat-completions payload."""
-    alive = [k for k in OPENROUTER_KEYS if not k["dead"]]
-    if not alive:
-        log_srv("[OR-PAYLOAD] No alive OpenRouter keys")
-        return None
-    payload = dict(body or {})
-    if "model" not in payload:
-        payload["model"] = OPENROUTER_MODEL
-    for k in alive:
-        try:
-            r = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": "Bearer " + k["key"],
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://aurexs3d.up.railway.app/app",
-                    "X-Title": "Aurex 3D"
-                },
-                json=payload,
-                timeout=90,
-                verify=False
-            )
-            log_srv(f"[OR-PAYLOAD] Key {k['name']} status: {r.status_code}")
-            if r.status_code == 200:
-                choices = r.json().get("choices", [])
-                if choices:
-                    text = choices[0].get("message", {}).get("content", "").strip()
-                    if text:
-                        k["fails"] = 0
-                        k["last_used"] = time.time()
-                        return text
-            elif r.status_code in (401, 403):
-                k["dead"] = True
-                k["fails"] = 99
-            elif r.status_code == 429:
-                k["fails"] += 1
+                log_srv(f"[{tag}] Key {k['name']} rate limited — rotating")
                 time.sleep(3)
             else:
                 k["fails"] += 1
-                log_srv(f"[OR-PAYLOAD] status {r.status_code}: {r.text[:200]}")
+                log_srv(f"[{tag}] status {r.status_code}: {(r.text or '')[:300]}")
+                if r.status_code == 404:
+                    log_srv(f"[{tag}] Model '{model_id}' may be unavailable on OpenRouter")
+        except requests.exceptions.Timeout:
+            k["fails"] += 1
+            log_srv(f"[{tag}] Timeout for key {k['name']}")
         except Exception as e:
             k["fails"] += 1
-            log_srv("[OR-PAYLOAD] Exception: " + str(e))
+            log_srv(f"[{tag}] Exception: {e}")
+    log_srv(f"[{tag}] All keys exhausted for model={model_id}")
     return None
 
 
 # ---------------------------------------------------------------------------
-#  UNIFIED LLM CALL  
-#  Priority: OpenRouter FIRST (most reliable), then Gemini, then Groq
+#  DEDICATED MODEL ENGINES
+#  Each function routes to a specific model using its dedicated key pool.
+#  No cross-model fallback — if the pool is empty, it returns None.
 # ---------------------------------------------------------------------------
-def call_llm(system_msg, user_msg=None, max_tokens=4000, temperature=0.2):
-    """Call LLM API with priority: OpenRouter > Gemini > Groq."""
-    if isinstance(system_msg, dict) and user_msg is None:
-        return call_openrouter_payload(system_msg)
-    
-    # PRIORITY 1: OpenRouter (most reliable, fast)
-    if OPENROUTER_KEYS:
-        log_srv("[LLM] Priority 1: Trying OpenRouter first...")
-        result = call_openrouter(system_msg, user_msg, max_tokens, temperature)
-        if result:
-            log_srv("[LLM] OpenRouter success")
-            return result
-        log_srv("[LLM] OpenRouter failed or ran out of keys -> Falling back to Gemini")
-    else:
-        log_srv("[LLM] No OpenRouter keys -> Falling back to Gemini")
-    
-    # PRIORITY 2: Gemini (with key rotation)
+QWEN_MODEL    = "qwen/qwen-2.5-coder-32b-instruct"
+DEEPSEEK_MODEL = "deepseek/deepseek-r1"
+
+
+def call_qwen(system_msg, user_msg, max_tokens=8000, temperature=0.2):
+    """Call Qwen Coder 32B via OpenRouter using QWEN_KEYS (keys 1-4)."""
+    return _call_openrouter_with_pool(
+        QWEN_KEYS, QWEN_MODEL, system_msg, user_msg,
+        max_tokens=max_tokens, temperature=temperature,
+        timeout=120, tag="QWEN"
+    )
+
+
+def call_deepseek(system_msg, user_msg, max_tokens=16000, temperature=0.0):
+    """Call DeepSeek R1 via OpenRouter using DEEPSEEK_KEYS (keys 5-6)."""
+    return _call_openrouter_with_pool(
+        DEEPSEEK_KEYS, DEEPSEEK_MODEL, system_msg, user_msg,
+        max_tokens=max_tokens, temperature=temperature,
+        timeout=180, tag="DEEPSEEK"
+    )
+
+
+def call_gemini_direct(system_msg, user_msg, max_tokens=4000, temperature=0.2):
+    """Call Gemini 2.0 Flash using the dedicated GEMINI_KEYS pool with rotation."""
     _base = (
         "https://generativelanguage.googleapis.com"
         "/v1beta/models/gemini-2.0-flash:generateContent"
     )
-    total_attempts = len(GEMINI_KEYS) + 2
-    for attempt in range(total_attempts):
+    for _attempt in range(len(GEMINI_KEYS) + 2):
         key_str = get_gemini_key()
         if not key_str:
             break
-        url     = _base + "?key=" + key_str
+        url = _base + "?key=" + key_str
         payload = {
-            "system_instruction": {
-                "parts": [{"text": system_msg}]
-            },
-            "contents": [{
-                "parts": [{"text": user_msg}]
-            }],
+            "system_instruction": {"parts": [{"text": system_msg}]},
+            "contents": [{"parts": [{"text": user_msg}]}],
             "generationConfig": {
                 "maxOutputTokens": max_tokens,
-                "temperature":     temperature
+                "temperature": temperature
             }
         }
         try:
             r = requests.post(url, json=payload, timeout=90, verify=False)
             if r.status_code == 200:
-                data  = r.json()
-                parts = (data.get("candidates", [{}])[0]
-                         .get("content", {})
-                         .get("parts", []))
-                text  = "".join(p.get("text", "") for p in parts).strip()
+                parts = (r.json().get("candidates", [{}])[0]
+                         .get("content", {}).get("parts", []))
+                text = "".join(p.get("text", "") for p in parts).strip()
                 if text:
                     mark_key_success(key_str)
-                    log_srv("[GEMINI] Success attempt=" + str(attempt + 1))
+                    log_srv(f"[GEMINI] Success attempt={_attempt + 1}")
                     return text
-                log_srv("[GEMINI] Empty response attempt=" + str(attempt + 1))
                 rotate_gemini_key()
             elif r.status_code in (401, 403):
-                log_srv("[GEMINI] Auth error " + str(r.status_code) + " - killing key")
                 mark_key_dead(key_str)
             elif r.status_code == 429:
-                log_srv("[GEMINI] 429 rate limit - rotating key")
                 rotate_gemini_key()
                 time.sleep(2)
             else:
-                log_srv("[GEMINI] HTTP " + str(r.status_code) + " - rotating key")
                 rotate_gemini_key()
         except requests.exceptions.Timeout:
-            log_srv("[GEMINI] Timeout attempt=" + str(attempt + 1) + " - rotating")
             rotate_gemini_key()
-        except Exception as e:
-            log_srv("[GEMINI] Exception: " + str(e))
+        except Exception as _e:
+            log_srv("[GEMINI] Exception: " + str(_e))
             rotate_gemini_key()
-
-    log_srv("[LLM] Gemini failed -> Falling back to Groq")
-
-    # PRIORITY 3: Groq (final fallback)
-    if GROQ_KEYS:
-        result = call_groq(system_msg, user_msg, max_tokens, temperature)
-        if result:
-            log_srv("[LLM] Groq success")
-            return result
-        log_srv("[LLM] Groq failed or ran out of keys.")
-    else:
-        log_srv("[LLM] No Groq keys available.")
-
-    log_srv("[LLM] ERROR: ALL providers failed (OpenRouter, Gemini, Groq)")
+    log_srv("[GEMINI] All Gemini keys exhausted")
     return None
 
 
-def enhance_prompt(raw_prompt: str) -> str:
+# ---------------------------------------------------------------------------
+#  LLM ROUTER - THE MASTER DISPATCHER
+#  Accepts a model selection string from the UI and routes to the correct
+#  dedicated engine. NO silent cross-model fallback when user picks explicitly.
+# ---------------------------------------------------------------------------
+def call_llm_router(selected_model, system_msg, user_msg,
+                    max_tokens=4000, temperature=0.2):
+    """Route LLM call to the user-selected model engine.
+    Returns (text, provider_name) on success, (None, None) on failure."""
+    selected = (selected_model or "auto").strip().lower()
+    log_srv(f"[ROUTER] Dispatching to model='{selected}'")
+
+    if selected == "qwen":
+        result = call_qwen(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "Qwen Coder"
+        log_srv("[ROUTER] Qwen failed")
+        return None, None
+
+    if selected == "deepseek":
+        result = call_deepseek(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "DeepSeek R1"
+        log_srv("[ROUTER] DeepSeek failed")
+        return None, None
+
+    if selected == "gemini":
+        result = call_gemini_direct(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "Gemini"
+        log_srv("[ROUTER] Gemini failed")
+        return None, None
+
+    if selected == "groq":
+        result = call_groq(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "Groq Llama"
+        log_srv("[ROUTER] Groq failed")
+        return None, None
+
+    # "auto" mode: try all in priority order (backward compatible)
+    log_srv("[ROUTER] Auto mode - trying all providers")
+    if QWEN_KEYS:
+        result = call_qwen(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "Qwen Coder (auto)"
+    if GEMINI_KEYS:
+        result = call_gemini_direct(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "Gemini (auto)"
+    if DEEPSEEK_KEYS:
+        result = call_deepseek(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "DeepSeek R1 (auto)"
+    if GROQ_KEYS:
+        result = call_groq(system_msg, user_msg, max_tokens, temperature)
+        if result:
+            return result, "Groq Llama (auto)"
+    log_srv("[ROUTER] ALL providers failed in auto mode")
+    return None, None
+
+
+# ---------------------------------------------------------------------------
+#  LEGACY WRAPPERS - call_llm and call_deepseek_r1
+# ---------------------------------------------------------------------------
+def call_llm(system_msg, user_msg=None, max_tokens=4000, temperature=0.2,
+             llm_model="auto"):
+    """Legacy wrapper: routes through the new LLM router."""
+    if isinstance(system_msg, dict) and user_msg is None:
+        return _call_openrouter_with_pool(
+            OPENROUTER_KEYS, OPENROUTER_MODEL, "", "",
+            max_tokens=max_tokens, temperature=temperature, tag="OR-LEGACY"
+        )
+    result, _provider = call_llm_router(llm_model, system_msg, user_msg,
+                                        max_tokens, temperature)
+    return result
+
+
+def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
+    """Legacy wrapper: routes to DeepSeek via the new engine."""
+    return call_deepseek(system_msg, user_msg, max_tokens=max_tokens)
+
+
+def enhance_prompt(raw_prompt: str, llm_model="auto") -> str:
     """
     Expand a short user prompt into a rich 3D-ready description.
     Returns the original prompt unchanged on any failure. Never raises.
@@ -1067,7 +1100,7 @@ def enhance_prompt(raw_prompt: str) -> str:
         "No preamble. No quotes. No punctuation other than commas."
     )
     try:
-        result = call_llm(system, raw_prompt, max_tokens=120, temperature=0.7)
+        result = call_llm(system, raw_prompt, max_tokens=120, temperature=0.7, llm_model=llm_model)
         if result and len(result.strip()) > 10:
             return result.strip()
     except Exception as e:
@@ -1860,10 +1893,10 @@ INTERPRETER_SYSTEM = (
 )
 
 
-def interpret_prompt(prompt_text, color_hex="#aaaaaa"):
+def interpret_prompt(prompt_text, color_hex="#aaaaaa", llm_model="auto"):
     """Call Groq interpreter. Returns dict with parsed fields."""
     log_gen("[INTERPRETER] Calling Gemini interpreter...")
-    raw = call_llm(INTERPRETER_SYSTEM, prompt_text, max_tokens=500, temperature=0.1)
+    raw = call_llm(INTERPRETER_SYSTEM, prompt_text, max_tokens=500, temperature=0.1, llm_model=llm_model)
     if raw:
         # Strip any accidental markdown fences
         clean = raw.strip()
@@ -1926,7 +1959,7 @@ def _fallback_interp(prompt_text, color_hex="#aaaaaa", style="realistic", comple
     }
 
 
-def enhance_and_interpret(raw_prompt, color_hex="#aaaaaa", style="realistic", complexity=3):
+def enhance_and_interpret(raw_prompt, color_hex="#aaaaaa", style="realistic", complexity=3, llm_model="auto"):
     """Combine prompt enhancement and interpretation into one LLM roundtrip."""
     system = (
         "You prepare prompts for a 3D generation pipeline. Return strict JSON only with keys: "
@@ -1941,7 +1974,7 @@ def enhance_and_interpret(raw_prompt, color_hex="#aaaaaa", style="realistic", co
         "Preferred complexity: " + str(complexity)
     )
     try:
-        raw = call_llm(system, user_msg, max_tokens=650, temperature=0.2)
+        raw = call_llm(system, user_msg, max_tokens=650, temperature=0.2, llm_model=llm_model)
         if raw:
             clean = strip_md_fences(raw)
             if "{" in clean and "}" in clean:
@@ -2433,7 +2466,7 @@ def extract_key_error(stderr):
     return "Script execution failed"
 
 
-def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2):
+def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2, llm_model="auto"):
     """Run a Blender script with up to max_retries Gemini-powered auto-fix attempts."""
     
     # Force inject OUTPUT_PATH - runs before every attempt
@@ -2542,7 +2575,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                 "6. Return raw Python only. No markdown. No f-strings. No class definitions.\n"
                 "\nOriginal request: " + prompt + "\n\nCurrent script:\n" + fixed_script
             )
-            fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
+            fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05, llm_model=llm_model)
             if fixed and len(fixed.strip()) > 100:
                 current_script = fixed
                 log_gen("[BLENDER] Got Gemini fix ("
@@ -2872,7 +2905,7 @@ def _enrich_geometry_plan(plan, complexity):
     return plan
 
 
-def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complexity=3):
+def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complexity=3, llm_model="auto"):
     """Create a parts-first geometry plan before Blender script generation."""
     import concurrent.futures
     obj = interp.get("object", "object") if isinstance(interp, dict) else "object"
@@ -2901,7 +2934,7 @@ def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complex
         user_msg = ("Object: " + obj + "\nDescription: " + prompt + "\nStyle: " + style +
                     "\nComplexity: " + str(complexity) + "/5\nPrimary color: " + color_hex +
                     "\nReturn JSON plan only.")
-        raw = call_llm(GEOMETRY_PLANNER_SYSTEM, user_msg, max_tokens=800, temperature=0.1)
+        raw = call_llm(GEOMETRY_PLANNER_SYSTEM, user_msg, max_tokens=800, temperature=0.1, llm_model=llm_model)
         if not raw:
             return None
         try:
@@ -3280,7 +3313,7 @@ def build_blender_prompt(interp, color_hex, raw_prompt="", style="realistic", co
 
 
 def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
-                            style="realistic", complexity=3):
+                            style="realistic", complexity=3, llm_model="auto"):
     """Stage B: Gemini writes a Blender script, validator cleans it, retry on failure."""
     log_gen("[MODEL_B] Starting Gemini+Blender (style=" + style
             + " complexity=" + str(complexity) + ")")
@@ -3292,23 +3325,19 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
         if fixes_saved != -1 and "import bpy" in fixed_saved and "export_scene.gltf" in fixed_saved:
             log_gen("[MODEL_B] Reusing saved script from library")
             save_blender_script(fixed_saved)
-            ok, final_script = run_blender_with_retry(fixed_saved, prompt, color_hex, output_path)
+            ok, final_script = run_blender_with_retry(fixed_saved, prompt, color_hex, output_path, llm_model=llm_model)
             if ok:
                 return True
         else:
             log_gen("[MODEL_B] Saved script invalid — regenerating")
 
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
-    plan = generate_geometry_plan(prompt, interp, color_hex, style, complexity)
+    plan = generate_geometry_plan(prompt, interp, color_hex, style, complexity, llm_model=llm_model)
     if plan:
         user_msg += "\n\nGEOMETRY PLAN:\n" + json.dumps(plan, separators=(",", ":"))
-    log_gen("[MODEL_B] Trying DeepSeek R1 for Blender script...")
-    script_raw = call_deepseek_r1(BLENDER_SYSTEM_R1, user_msg, max_tokens=16000)
-    if script_raw:
-        log_gen("[MODEL_B] R1 succeeded — using reasoning model output")
-    else:
-        log_gen("[MODEL_B] R1 failed — falling back to standard LLM")
-        script_raw = call_llm(BLENDER_SYSTEM, user_msg, max_tokens=8000, temperature=0.35)
+    log_gen(f"[MODEL_B] Requesting script generation (model={llm_model})...")
+    
+    script_raw = call_llm(BLENDER_SYSTEM_R1, user_msg, max_tokens=16000, temperature=0.0, llm_model=llm_model)
     if not script_raw:
         log_gen("[MODEL_B] LLM returned no script")
         return False
@@ -3336,7 +3365,7 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
         log_gen("[MODEL_B] REJECT: script too short (" + str(len(fixed_script)) + " chars)")
         return False
 
-    ok, final_script = run_blender_with_retry(fixed_script, prompt, color_hex, output_path)
+    ok, final_script = run_blender_with_retry(fixed_script, prompt, color_hex, output_path, llm_model=llm_model)
     if ok:
         log_gen("[MODEL_B] Success")
         save_successful_script(prompt, final_script)
@@ -5138,7 +5167,7 @@ def _finalize_generation(src_path, output_path, original_prompt, gen_prompt, col
     return True
 
 
-def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous", history_prompt=None):
+def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous", history_prompt=None, llm_model="auto"):
     """Full generation pipeline. Called in background thread."""
     global _generating
     _gen_start_time = time.time()
@@ -5159,7 +5188,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
 
         log_stage("enhance_interpret")
         log_gen("[enhance+interpret] expanding and parsing prompt...")
-        enhanced_prompt, interp = enhance_and_interpret(prompt, color_hex, style, complexity)
+        enhanced_prompt, interp = enhance_and_interpret(prompt, color_hex, style, complexity, llm_model)
         log_gen(f"[enhance+interpret] '{prompt}' -> '{enhanced_prompt}'")
         gen_prompt = enhanced_prompt
 
@@ -5212,7 +5241,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         set_state(progress=20, step="stage_b_gemini_blender")
         if os.path.exists(BLENDER_EXE):
             log_gen("[MODEL_B] attempting Gemini+Blender...")
-            ok = stage_b_gemini_blender(gen_prompt, interp, color_hex, temp_path, style=style, complexity=complexity)
+            ok = stage_b_gemini_blender(gen_prompt, interp, color_hex, temp_path, style=style, complexity=complexity, llm_model=llm_model)
             if ok:
                 log_gen("[MODEL_B] Gemini+Blender success")
                 if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
@@ -5465,6 +5494,7 @@ def generate():
     library_mode   = bool(data.get("library_mode", False))
     style          = str(data.get("style", "realistic"))
     complexity     = int(data.get("complexity", 3))
+    llm_model      = str(data.get("llm_model", "auto"))
     if style not in STYLE_DIRECTIVES:
         style = "realistic"
     complexity = max(1, min(5, complexity))
@@ -5493,7 +5523,7 @@ def generate():
 
     t = threading.Thread(
         target=run_generation,
-        args=(prompt, color_hex, folder, add_list, remove_list, library_mode, style, complexity, sub_id, history_prompt),
+        args=(prompt, color_hex, folder, add_list, remove_list, library_mode, style, complexity, sub_id, history_prompt, llm_model),
         daemon=True
     )
     t.start()
@@ -5542,8 +5572,9 @@ const group = new THREE.Group();
 return group;"""
     
     user_msg = f"Generate a detailed 3D model for this prompt: '{prompt}'. Main color: {color}."
+    llm_model = data.get("llm_model", "auto")
     
-    script = call_deepseek_r1(system_msg, user_msg, max_tokens=3000)
+    script = call_llm(system_msg, user_msg, max_tokens=3000, llm_model=llm_model)
     if not script:
         return jsonify({"error": "Failed to generate script from LLM."}), 500
         

@@ -2851,6 +2851,17 @@ nav#nav { display: flex !important; }
                 </label>
               </div>
             </div>
+            
+            <div class="f-wrap" style="margin-top: 15px;">
+              <div class="f-lbl"><div class="f-dot"></div>AI Brain</div>
+              <select id="llm-model-select" class="folder-dropdown" style="width:100%; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px; background:#1e1e1e; color:#fff; cursor:pointer;">
+                <option value="gemini">Gemini 2.0 Flash (Recommended)</option>
+                <option value="qwen">Qwen Coder 32B (OpenRouter)</option>
+                <option value="deepseek">DeepSeek R1 (OpenRouter)</option>
+                <option value="groq">Groq Llama 3 (Fastest)</option>
+                <option value="auto">Auto (Best Available)</option>
+              </select>
+            </div>
 
             <button id="gen-btn" onclick="generate()">GENERATE MODEL</button>
             <button id="new-model-btn" onclick="startNewModel()" style="
@@ -4925,7 +4936,10 @@ function generate() {
 
   var engineOpt = document.querySelector('input[name="compute_engine"]:checked');
   var engine = engineOpt ? engineOpt.value : 'browser';
+  var llmSel = document.getElementById('llm-model-select');
+  var llm_model = llmSel ? llmSel.value : 'auto';
   body.engine = engine;
+  body.llm_model = llm_model;
 
   if (engine === 'browser') {
     generateInBrowser(body);

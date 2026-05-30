@@ -5564,7 +5564,6 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
     finally:
         elapsed = time.time() - _gen_start_time
         with _gen_lock:
-            global _generating
             _generating = False
         log_gen(f"[DONE] Generation thread complete in {elapsed:.1f}s")
         print(f"[PIPELINE] Thread finished in {elapsed:.1f}s", flush=True)

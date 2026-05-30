@@ -3336,8 +3336,7 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     if plan:
         user_msg += "\n\nGEOMETRY PLAN:\n" + json.dumps(plan, separators=(",", ":"))
     log_gen(f"[MODEL_B] Requesting script generation (model={llm_model})...")
-    
-    script_raw = call_llm(BLENDER_SYSTEM_R1, user_msg, max_tokens=16000, temperature=0.0, llm_model=llm_model)
+    script_raw = call_llm(BLENDER_SYSTEM_R1, user_msg, max_tokens=6000, temperature=0.0, llm_model=llm_model)
     if not script_raw:
         log_gen("[MODEL_B] LLM returned no script")
         return False

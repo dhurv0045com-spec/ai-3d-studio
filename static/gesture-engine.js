@@ -142,10 +142,10 @@ var GestureEngine = (function() {
 
   var GESTURE_LABELS = {
     Open_Palm:    { emoji: '🖐️', label: 'ORBIT',        color: '#00d4ff' },
-    Closed_Fist:  { emoji: '✊',  label: 'PAN',          color: '#f59e0b' },
+    Closed_Fist:  { emoji: '✊',  label: 'GRAB OBJECT',  color: '#f59e0b' },
     Pinch:        { emoji: '🤏', label: 'ZOOM',         color: '#f0c040' },
     Pointing_Up:  { emoji: '☝️', label: 'RESET VIEW',   color: '#c084fc' },
-    TwoHandScale: { emoji: '🙌', label: 'SCALE OBJECT', color: '#4ade80' },
+    TwoHandScale: { emoji: '🙌', label: 'ZOOM / SCALE', color: '#4ade80' },
     None:         { emoji: '✋', label: 'SHOW HAND',    color: '#8899aa' }
   };
   var GESTURES = GESTURE_LABELS;
@@ -179,6 +179,8 @@ var GestureEngine = (function() {
     _lastFrameTime: null,
     _momentum: { theta: 0, phi: 0, targetX: 0, targetY: 0 },
     _momentumActive: false,
+    _grabVelocity: null,
+    _grabDepthRef: null,
     _gracePeriodStart: null,
     waveHistory: [],
     calSamples: [],
@@ -490,6 +492,61 @@ var GestureEngine = (function() {
     engine._momentum.targetY = dY * 0.35;
   }
 
+  function getObjectWorldRadius() {
+    if (!currentObject || !window.THREE) { return 1; }
+    try {
+      var box = new THREE.Box3().setFromObject(currentObject);
+      var size = box.getSize(new THREE.Vector3());
+      return Math.max(0.35, Math.max(size.x, size.y, size.z) * 0.5);
+    } catch (e) {
+      return 1;
+    }
+  }
+
+  function applyObjectGrab(dx, dy, dz, fingers, pose) {
+    if (!currentObject || !camera || !window.THREE) {
+      applyDrag(dx, dy, dz, clamp(1 / Math.max(fingers.palmWidth, 0.05), 1, 4));
+      return;
+    }
+    var forward = new THREE.Vector3();
+    camera.getWorldDirection(forward).normalize();
+    var right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+    var up = camera.up.clone().normalize();
+    var objectScale = currentObject.scale && currentObject.scale.x ? currentObject.scale.x : 1;
+    var sceneRadius = getObjectWorldRadius();
+    var s = sensScale() * clamp(sph.tRadius / 5.5, 0.55, 1.8) * sceneRadius * 3.2 / Math.max(objectScale, 0.35);
+    var depthDelta = dz || 0;
+    if (pose && engine.lastPose) {
+      var palmDepth = (pose.palmWidth || fingers.palmWidth) - (engine.lastPose.palmWidth || fingers.palmWidth);
+      depthDelta += palmDepth * 1.25;
+    }
+    var move = new THREE.Vector3();
+    move.addScaledVector(right, -dx * s);
+    move.addScaledVector(up, -dy * s);
+    move.addScaledVector(forward, -depthDelta * s * 1.8);
+    if (move.lengthSq() < 0.000001) { return; }
+    if (!engine._grabVelocity) { engine._grabVelocity = new THREE.Vector3(); }
+    engine._grabVelocity.lerp(move, 0.42);
+    currentObject.position.add(engine._grabVelocity);
+    sph.tTargetX += engine._grabVelocity.x;
+    sph.tTargetY += engine._grabVelocity.y;
+    sph.tTargetZ += engine._grabVelocity.z;
+  }
+
+  function applyTwoHandZoomAndScale(handDist) {
+    if (engine.lastTwoHandDistance == null) { return; }
+    var dd = handDist - engine.lastTwoHandDistance;
+    if (Math.abs(dd) <= 0.006) { return; }
+    var zoomDelta = -dd * sph.tRadius * 2.7 * sensScale();
+    sph.tRadius = clamp(sph.tRadius + zoomDelta, 1.0, 24);
+    if (currentObject) {
+      var currentScale = currentObject.scale && currentObject.scale.x ? currentObject.scale.x : 1;
+      var scaleFactor = clamp(1 + dd * 4.2 * sensScale(), 0.88, 1.14);
+      var nextScale = clamp(currentScale * scaleFactor, 0.18, 6.0);
+      currentObject.scale.setScalar(nextScale);
+    }
+  }
+
   function tickInertia() {
     if (!engine.settings.inertia) {
       if (engine.enabled) { engine.inertiaRaf = requestAnimationFrame(tickInertia); }
@@ -770,6 +827,7 @@ var GestureEngine = (function() {
       engine.lastPose = null;
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
+      engine._grabVelocity = null;
       resetSmoothTrack();
       engine._prevMode = mode;
     }
@@ -790,7 +848,7 @@ var GestureEngine = (function() {
       applyPinchZoom(pose, dy, dt);
       engine.lastPinch = pinchDistance(lm, fingers.palmWidth);
     } else if (mode === 'Closed_Fist') {
-      applyDrag(dx, dy, dz, clamp(1 / Math.max(fingers.palmWidth, 0.05), 1, 4));
+      applyObjectGrab(dx, dy, dz, fingers, pose);
     } else if (mode === 'Pointing_Up') {
       fireOneShot('Pointing_Up');
     }
@@ -830,15 +888,12 @@ var GestureEngine = (function() {
       engine.lastPose = null;
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
+      engine._grabVelocity = null;
       resetSmoothTrack();
       engine._prevMode = mode;
     }
-    if (mode === 'TwoHandScale' && currentObject) {
-      var dd = engine.lastTwoHandDistance == null ? 0 : handDist - engine.lastTwoHandDistance;
-      if (Math.abs(dd) > 0.008) {
-        var nextScale = clamp((currentObject.scale.x || 1) + dd * 3.0, 0.2, 5.0);
-        currentObject.scale.setScalar(nextScale);
-      }
+    if (mode === 'TwoHandScale') {
+      applyTwoHandZoomAndScale(handDist);
     }
     engine.lastTwoHandDistance = handDist;
     engine.lastTrack = { x: midX, y: midY, z: midZ, pinch: handDist, roll: null, spread: null };
@@ -877,6 +932,7 @@ var GestureEngine = (function() {
       engine.lastPose = null;
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
+      engine._grabVelocity = null;
       engine._lastFrameTime = null;
       engine.twoHandZoomActive = false;
       clearModeStabilizer();
@@ -1081,8 +1137,8 @@ var GestureEngine = (function() {
     var chips = [
       ['🖐️', 'Open palm', 'Orbit (rotate view)'],
       ['🤏', 'Pinch thumb + index', 'Zoom in / out'],
-      ['✊', 'Closed fist', 'Pan (shift view)'],
-      ['🙌', 'Two hands', 'Scale object up / down'],
+      ['✊', 'Closed fist', 'Grab and move object in 3D'],
+      ['🙌', 'Two hands', 'Zoom camera and scale object'],
       ['☝️', 'Index finger only', 'Reset camera']
     ];
     return chips.map(function(chip) {

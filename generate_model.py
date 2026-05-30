@@ -231,20 +231,17 @@ class GLBBuilder:
 
         # Pack binary data
         def pack_f3_list(lst):
-            buf = bytearray()
-            for item in lst:
-                buf += struct.pack("<fff", float(item[0]), float(item[1]), float(item[2]))
-            return bytes(buf)
+            return b"".join(
+                struct.pack("<fff", float(item[0]), float(item[1]), float(item[2]))
+                for item in lst
+            )
 
         max_idx = max((max(tri) for tri in all_idx), default=0)
         index_component_type = 5125 if max_idx > 65535 else 5123
 
         def pack_index_list(lst):
-            buf = bytearray()
             fmt = "<III" if index_component_type == 5125 else "<HHH"
-            for tri in lst:
-                buf += struct.pack(fmt, tri[0], tri[1], tri[2])
-            return bytes(buf)
+            return b"".join(struct.pack(fmt, tri[0], tri[1], tri[2]) for tri in lst)
 
         def pad4(b):
             r = len(b) % 4

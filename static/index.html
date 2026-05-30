@@ -3367,6 +3367,33 @@ var sph = {
   tTargetX: 0, tTargetY: 0, tTargetZ: 0
 };
 var ms = { down: false, lx: 0, ly: 0, btn: 0 };
+var viewerPerf = { active: false, timer: null };
+
+function viewerPixelRatio(active) {
+  var full = Math.min(window.devicePixelRatio || 1, 2);
+  if (!active) { return full; }
+  return Math.min(full, 1.25);
+}
+
+function setViewerPixelRatio(active) {
+  if (!renderer) { return; }
+  var ratio = viewerPixelRatio(active);
+  if (renderer.getPixelRatio && Math.abs(renderer.getPixelRatio() - ratio) < 0.01) { return; }
+  renderer.setPixelRatio(ratio);
+  resizeRenderer();
+}
+
+function markViewerInteraction() {
+  if (!viewerPerf.active) {
+    viewerPerf.active = true;
+    setViewerPixelRatio(true);
+  }
+  if (viewerPerf.timer) { clearTimeout(viewerPerf.timer); }
+  viewerPerf.timer = setTimeout(function() {
+    viewerPerf.active = false;
+    setViewerPixelRatio(false);
+  }, 450);
+}
 
 /* Hand gesture: static/gesture-engine.js (toggleHandControl, PARTS helpers) */
 
@@ -3427,7 +3454,7 @@ function initThreeJS() {
   var wrap   = document.getElementById('studio-center');
 
   renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(viewerPixelRatio(false));
   renderer.setSize(wrap.offsetWidth, wrap.offsetHeight);
   renderer.shadowMap.enabled   = true;
   renderer.shadowMap.type      = THREE.PCFSoftShadowMap;
@@ -3516,12 +3543,14 @@ function removePlaceholder() {
    ============================================================ */
 function initOrbit(canvas) {
   canvas.addEventListener('mousedown', function(e) {
+    markViewerInteraction();
     ms.down = true; ms.lx = e.clientX; ms.ly = e.clientY; ms.btn = e.button;
     e.preventDefault();
   });
   window.addEventListener('mouseup', function() { ms.down = false; });
   window.addEventListener('mousemove', function(e) {
     if (!ms.down) { return; }
+    markViewerInteraction();
     var dx = e.clientX - ms.lx;
     var dy = e.clientY - ms.ly;
     ms.lx = e.clientX; ms.ly = e.clientY;
@@ -3532,6 +3561,7 @@ function initOrbit(canvas) {
     }
   });
   canvas.addEventListener('wheel', function(e) {
+    markViewerInteraction();
     sph.tRadius = Math.max(1.5, Math.min(20, sph.tRadius + e.deltaY * 0.001 * sph.tRadius * 0.4));
     e.preventDefault();
   }, { passive: false });
@@ -3541,6 +3571,7 @@ function initOrbit(canvas) {
   /* Touch support */
   var touches = {}, prevPinch = 0;
   canvas.addEventListener('touchstart', function(e) {
+    markViewerInteraction();
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i];
       touches[t.identifier] = { x: t.clientX, y: t.clientY };
@@ -3548,6 +3579,7 @@ function initOrbit(canvas) {
     e.preventDefault();
   }, { passive: false });
   canvas.addEventListener('touchmove', function(e) {
+    markViewerInteraction();
     if (e.touches.length === 1) {
       var t    = e.changedTouches[0];
       var prev = touches[t.identifier];
@@ -3638,6 +3670,7 @@ function resizeRenderer() {
   if (!wrap || !renderer) { return; }
   var w = wrap.offsetWidth; var h = wrap.offsetHeight;
   if (w < 1 || h < 1) { return; }
+  renderer.setPixelRatio(viewerPixelRatio(viewerPerf.active));
   renderer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();

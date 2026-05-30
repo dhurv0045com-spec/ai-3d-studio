@@ -16,7 +16,16 @@
     "default_folder": "default",
     "auto_save": true,
     "cache_enabled": true,
-    "library_mode_default": false
+    "library_mode_default": false,
+    "use_llm_geometry_planner": false,
+    "geometry_planner_timeout": 6,
+    "blender_timeout": 120
+  },
+  "quality": {
+    "min_glb_size_bytes": 8192,
+    "min_blender_vertices": 300,
+    "min_blender_meshes": 3,
+    "min_blender_primitives": 3
   },
   "blender": {
     "path": "",

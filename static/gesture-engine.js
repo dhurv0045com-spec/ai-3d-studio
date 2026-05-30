@@ -165,6 +165,7 @@ var GestureEngine = (function() {
     frameBuffer: [],
     lastTrack: { x: null, y: null, z: null, pinch: null, roll: null, spread: null },
     lastPos: { x: null, y: null, z: null },
+    lastPose: null,
     lastPinch: null,
     lastTwoHandDistance: null,
     smoothTrack: { dx: 0, dy: 0, dz: 0 },
@@ -205,6 +206,14 @@ var GestureEngine = (function() {
   var HAND = engine;
 
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  function angleDelta(now, prev) {
+    if (prev == null) { return 0; }
+    var d = now - prev;
+    while (d > Math.PI) { d -= Math.PI * 2; }
+    while (d < -Math.PI) { d += Math.PI * 2; }
+    return d;
+  }
 
   function dist3(a, b) {
     return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) + Math.pow((a.z || 0) - (b.z || 0), 2));
@@ -284,6 +293,22 @@ var GestureEngine = (function() {
     return d / Math.max(palmWidth, 0.05);
   }
 
+  function handPose(lm, fingers) {
+    var side = vecSub(lm[17], lm[5]);
+    var up = vecSub(lm[9], lm[0]);
+    var depth = ((lm[0].z || 0) + (lm[5].z || 0) + (lm[9].z || 0) + (lm[13].z || 0) + (lm[17].z || 0)) / 5;
+    return {
+      x: fingers.palmCenter.x,
+      y: fingers.palmCenter.y,
+      z: fingers.palmCenter.z,
+      palmWidth: fingers.palmWidth,
+      roll: Math.atan2(side.y, side.x),
+      pitch: Math.atan2(up.y, Math.max(Math.sqrt(up.x * up.x + up.z * up.z), 0.035)),
+      yaw: Math.atan2(side.z || 0, side.x || 0.001),
+      depth: depth
+    };
+  }
+
   function spreadDistance(lm) {
     return dist3(lm[8], lm[20]);
   }
@@ -303,11 +328,10 @@ var GestureEngine = (function() {
 
   /** Open palm - four or five extended fingers with visible spread. */
   function isOpenPalm(fingers, lm) {
-    if (fingers.count < 4) { return false; }
-    var pinchRaw = dist3(lm[4], lm[8]);
-    if (pinchRaw < 0.065) { return false; }
+    if (fingers.count < 3) { return false; }
+    if (pinchDistance(lm, fingers.palmWidth) < 0.42) { return false; }
     var spread = spreadDistance(lm) / Math.max(fingers.palmWidth, 0.05);
-    return spread > 0.65;
+    return spread > 0.52;
   }
 
   function resetSmoothTrack() {
@@ -333,8 +357,8 @@ var GestureEngine = (function() {
 
   function classifyFromLandmarks(lm) {
     var fingers = classifyFingers(lm);
-    var pinchRaw = dist3(lm[4], lm[8]);
-    if (pinchRaw < 0.065) { return 'Pinch'; }
+    var pinchRatio = pinchDistance(lm, fingers.palmWidth);
+    if (pinchRatio < 0.42) { return 'Pinch'; }
     if (fingers.index && !fingers.thumb && !fingers.middle && !fingers.ring && !fingers.pinky) {
       return 'Pointing_Up';
     }
@@ -413,9 +437,45 @@ var GestureEngine = (function() {
     engine._momentum.phi   = dPhi   * 0.35;
   }
 
+  function applyPoseOrbit(pose, dx, dy, dt) {
+    var last = engine.lastPose;
+    if (!last) {
+      applyOrbit(dx, dy);
+      return;
+    }
+    var dRoll = angleDelta(pose.roll, last.roll);
+    var dYaw = angleDelta(pose.yaw, last.yaw);
+    var dPitch = angleDelta(pose.pitch, last.pitch);
+    var s = sensScale();
+
+    var dTheta = (-dx * 3.2) + (dRoll * 1.15) + (dYaw * 0.65);
+    var dPhi = (-dy * 3.0) + (dPitch * 0.32);
+
+    dTheta = clamp(dTheta * s, -0.16 * dt, 0.16 * dt);
+    dPhi = clamp(dPhi * s, -0.12 * dt, 0.12 * dt);
+
+    if (Math.abs(dTheta) < 0.0015 && Math.abs(dPhi) < 0.0015) { return; }
+    sph.tTheta += dTheta;
+    sph.tPhi = clamp(sph.tPhi + dPhi, 0.08, Math.PI - 0.08);
+    engine._momentum.theta = dTheta * 0.42;
+    engine._momentum.phi = dPhi * 0.42;
+  }
+
   function applyZoom(delta) {
     var s = sensScale() * 18;
     sph.tRadius = clamp(sph.tRadius + delta * s, 1.2, 22);
+  }
+
+  function applyPinchZoom(pose, dy, dt) {
+    var last = engine.lastPose;
+    if (!last) { return; }
+    var dSize = pose.palmWidth - last.palmWidth;
+    var dDepth = (pose.depth || 0) - (last.depth || 0);
+    var delta = (-dSize * 2.8) + (dy * 0.35) + (dDepth * 0.85);
+    delta = clamp(delta, -0.035 * dt, 0.035 * dt);
+    if (Math.abs(delta) < 0.0012) { return; }
+    applyZoom(delta);
+    engine.vel.zoom = delta * sensScale() * 7;
   }
 
   function applyDrag(dx, dy, dz, depth) {
@@ -659,6 +719,17 @@ var GestureEngine = (function() {
     }
   }
 
+  function clearSkeleton() {
+    if (engine.skeletonCtx && engine.skeletonCanvas) {
+      engine.skeletonCtx.clearRect(0, 0, engine.skeletonCanvas.width, engine.skeletonCanvas.height);
+    }
+    var pill = document.getElementById('ge-preview-pill');
+    if (pill) {
+      pill.textContent = 'NO HAND';
+      pill.style.color = '#8899aa';
+    }
+  }
+
   function processSingleHand(lm, handedness) {
     var fingers = classifyFingers(lm);
     var cx = fingers.palmCenter.x;
@@ -696,6 +767,7 @@ var GestureEngine = (function() {
 
     if (mode !== engine._prevMode) {
       engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPose = null;
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
       resetSmoothTrack();
@@ -710,13 +782,13 @@ var GestureEngine = (function() {
     dy = sm.dy;
     dz = sm.dz;
 
+    var pose = handPose(lm, fingers);
+
     if (mode === 'Open_Palm') {
-      applyOrbit(dx, dy);
+      applyPoseOrbit(pose, dx, dy, dt);
     } else if (mode === 'Pinch') {
-      var pinchRaw = dist3(lm[4], lm[8]);
-      var dp = engine.lastPinch == null ? 0 : pinchRaw - engine.lastPinch;
-      if (Math.abs(dp) >= 0.001) { applyZoom(dp); }
-      engine.lastPinch = pinchRaw;
+      applyPinchZoom(pose, dy, dt);
+      engine.lastPinch = pinchDistance(lm, fingers.palmWidth);
     } else if (mode === 'Closed_Fist') {
       applyDrag(dx, dy, dz, clamp(1 / Math.max(fingers.palmWidth, 0.05), 1, 4));
     } else if (mode === 'Pointing_Up') {
@@ -728,10 +800,11 @@ var GestureEngine = (function() {
     engine.lastTrack = {
       x: cx, y: cy, z: cz,
       pinch: engine.lastPinch,
-      roll: null,
+      roll: pose.roll,
       spread: spreadDistance(lm)
     };
     engine.lastPos = { x: cx, y: cy, z: cz };
+    engine.lastPose = pose;
     drawSkeleton(lm, mode);
   }
 
@@ -754,6 +827,7 @@ var GestureEngine = (function() {
     engine.machineState = 'TRACKING';
     if (mode !== engine._prevMode) {
       engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPose = null;
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
       resetSmoothTrack();
@@ -800,6 +874,7 @@ var GestureEngine = (function() {
       engine._momentumActive = true;
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
       engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPose = null;
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
       engine._lastFrameTime = null;
@@ -814,6 +889,7 @@ var GestureEngine = (function() {
       }
       updateHud('None', 0);
       updatePanelStatus('None', 0);
+      clearSkeleton();
       if (engine.ui.hud) {
         clearTimeout(engine.hudHideTimer);
         engine.hudHideTimer = setTimeout(function() {
@@ -1149,6 +1225,7 @@ var GestureEngine = (function() {
 
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
       engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPose = null;
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
       engine.frameBuffer = [];
@@ -1180,10 +1257,11 @@ var GestureEngine = (function() {
         }
       });
       engine.hands.setOptions({
+        selfieMode: true,
         maxNumHands: 2,
         modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
+        minDetectionConfidence: 0.35,
+        minTrackingConfidence: 0.45
       });
       engine.hands.onResults(onResults);
 
@@ -1249,6 +1327,7 @@ var GestureEngine = (function() {
     engine.handPresent = false;
     engine.activeMode = 'None';
     engine.lastPos = { x: null, y: null, z: null };
+    engine.lastPose = null;
     engine.lastPinch = null;
     engine.lastTwoHandDistance = null;
     engine._lastFrameTime = null;

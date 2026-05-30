@@ -1582,6 +1582,40 @@ def validate_glb(path):
         return False, str(e)
 
 
+def inspect_glb_metrics(path):
+    """Return lightweight geometry metrics from a GLB JSON chunk."""
+    metrics = {
+        "mesh_count": 0,
+        "primitive_count": 0,
+        "node_count": 0,
+        "vertex_count": 0,
+        "index_count": 0,
+    }
+    try:
+        with open(path, "rb") as f:
+            f.read(12)
+            chunk_len = struct.unpack("<I", f.read(4))[0]
+            chunk_type = f.read(4)
+            if chunk_type != b"JSON":
+                return metrics
+            json_data = f.read(chunk_len)
+        gltf = json.loads(json_data.decode("utf-8", errors="ignore"))
+        meshes = gltf.get("meshes", [])
+        metrics["mesh_count"] = len(meshes)
+        metrics["node_count"] = len(gltf.get("nodes", []))
+        metrics["primitive_count"] = sum(len(m.get("primitives", []) or []) for m in meshes)
+        for acc in gltf.get("accessors", []):
+            acc_count = int(acc.get("count") or 0)
+            acc_type = acc.get("type")
+            if acc_type == "VEC3":
+                metrics["vertex_count"] = max(metrics["vertex_count"], acc_count)
+            elif acc_type == "SCALAR":
+                metrics["index_count"] = max(metrics["index_count"], acc_count)
+    except Exception:
+        pass
+    return metrics
+
+
 def score_glb_quality(path, source_type="unknown"):
     """Score a GLB 0-10 by generation source first, then geometry density."""
     global _last_quality_score
@@ -1617,28 +1651,27 @@ def score_glb_quality(path, source_type="unknown"):
             return 0, "invalid magic"
     except Exception:
         return 0, "read error"
+    metrics = inspect_glb_metrics(path)
     try:
-        with open(path, "rb") as f:
-            f.read(12)
-            chunk_len = struct.unpack("<I", f.read(4))[0]
-            f.read(4)
-            json_data = f.read(chunk_len)
-            gltf = json.loads(json_data.decode("utf-8", errors="ignore"))
-            mesh_count = len(gltf.get("meshes", []))
-            vertex_count = 0
-            for acc in gltf.get("accessors", []):
-                if acc.get("type") == "VEC3" and acc.get("count"):
-                    vertex_count = max(vertex_count, int(acc.get("count") or 0))
-            if vertex_count >= 20000:
-                score += 3
-            elif vertex_count >= 8000:
-                score += 2
-            elif vertex_count >= 1500:
-                score += 1
-            elif vertex_count < 300:
-                score -= 1
-            details.append("meshes:" + str(mesh_count))
-            details.append("vertices:" + str(vertex_count))
+        mesh_count = metrics["mesh_count"]
+        primitive_count = metrics["primitive_count"]
+        vertex_count = metrics["vertex_count"]
+        if vertex_count >= 20000:
+            score += 3
+        elif vertex_count >= 8000:
+            score += 2
+        elif vertex_count >= 1500:
+            score += 1
+        elif vertex_count < 300:
+            score -= 1
+        if mesh_count >= 25 or primitive_count >= 25:
+            score += 1
+        elif mesh_count <= 1 and primitive_count <= 1:
+            score -= 1
+        details.append("nodes:" + str(metrics["node_count"]))
+        details.append("meshes:" + str(mesh_count))
+        details.append("primitives:" + str(primitive_count))
+        details.append("vertices:" + str(vertex_count))
     except Exception:
         details.append("parse_skip")
     score = max(0, min(10, score))
@@ -1657,6 +1690,20 @@ def validate_glb_quality(path):
     min_size = int(get_setting("quality.min_glb_size_bytes", 8192))
     if os.path.getsize(path) < min_size:
         return False, "Quality too low: score=" + str(score) + " " + detail
+    metrics = inspect_glb_metrics(path)
+    min_vertices = int(get_setting("quality.min_blender_vertices", 300))
+    min_meshes = int(get_setting("quality.min_blender_meshes", 3))
+    min_primitives = int(get_setting("quality.min_blender_primitives", 3))
+    if metrics["vertex_count"] < min_vertices:
+        return False, "Underbuilt geometry: vertices=" + str(metrics["vertex_count"]) + " " + detail
+    low_part_count = (
+        metrics["mesh_count"] < min_meshes
+        and metrics["primitive_count"] < min_primitives
+        and metrics["node_count"] < min_meshes
+    )
+    low_detail_single_mesh = metrics["vertex_count"] < max(min_vertices * 5, 1500)
+    if low_part_count and low_detail_single_mesh:
+        return False, "Underbuilt geometry: meshes=" + str(metrics["mesh_count"]) + " primitives=" + str(metrics["primitive_count"]) + " " + detail
     return True, "OK score=" + str(score) + " " + detail
 
 
@@ -2831,9 +2878,16 @@ def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complex
 
     def _local_fallback():
         parts_list = interp.get("parts", []) if isinstance(interp, dict) else []
+        if not parts_list:
+            try:
+                hint = get_parts_hint(obj)
+                parts_list = [p.strip() for p in hint.split(",") if p.strip()]
+            except Exception:
+                parts_list = []
         preset = _infer_material_preset(obj, prompt)
         surface = "smooth" if style in ("realistic", "organic", "cartoon") else "faceted"
-        plan_parts = [{"name": str(p), "material": preset} for p in parts_list[:12]]
+        part_limit = 8 + max(0, int(complexity or 3)) * 4
+        plan_parts = [{"name": str(p), "material": preset} for p in parts_list[:part_limit]]
         c = int(complexity or 3)
         min_parts_map = {1: 1, 2: 2, 3: 3, 4: 5, 5: 8}
         return _enrich_geometry_plan({
@@ -2858,15 +2912,21 @@ def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complex
             log_gen("[PLANNER] JSON parse failed: " + str(e))
             return None
 
+    use_llm_planner = bool(get_setting("generation.use_llm_geometry_planner", int(complexity or 3) >= 4))
+    if not use_llm_planner:
+        log_gen("[PLANNER] Using deterministic geometry plan")
+        return _local_fallback()
+
     try:
+        planner_timeout = float(get_setting("generation.geometry_planner_timeout", 6))
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(_llm_plan)
-            result = future.result(timeout=12)
+            result = future.result(timeout=planner_timeout)
             if result:
                 log_gen("[PLANNER] LLM plan OK: " + str(result.get("object")) + " " + str(result.get("min_parts")) + " parts")
                 return result
     except concurrent.futures.TimeoutError:
-        log_gen("[PLANNER] LLM timed out 12s — using local fallback")
+        log_gen("[PLANNER] LLM timed out — using local fallback")
     except Exception as e:
         log_gen("[PLANNER] LLM error: " + str(e))
     log_gen("[PLANNER] Using local geometry plan")
@@ -4670,21 +4730,10 @@ def build_fallback_glb(color_hex="#888888"):
         idx_offset += len(base_verts)
 
     # Pack geometry
-    pos_bytes = bytearray()
-    for (x, y, z) in all_positions:
-        pos_bytes += struct.pack("<fff", x, y, z)
-
-    norm_bytes = bytearray()
-    for (nx, ny, nz) in all_normals:
-        norm_bytes += struct.pack("<fff", nx, ny, nz)
-
-    color_bytes = bytearray()
-    for (cr, cg, cb2) in all_colors:
-        color_bytes += struct.pack("<fff", cr, cg, cb2)
-
-    idx_bytes = bytearray()
-    for (a, b2, c2) in all_indices:
-        idx_bytes += struct.pack("<HHH", a, b2, c2)
+    pos_bytes = b"".join(struct.pack("<fff", x, y, z) for (x, y, z) in all_positions)
+    norm_bytes = b"".join(struct.pack("<fff", nx, ny, nz) for (nx, ny, nz) in all_normals)
+    color_bytes = b"".join(struct.pack("<fff", cr, cg, cb2) for (cr, cg, cb2) in all_colors)
+    idx_bytes = b"".join(struct.pack("<HHH", a, b2, c2) for (a, b2, c2) in all_indices)
 
     # Pad each buffer view to 4-byte alignment
     def pad4(b):

@@ -860,6 +860,45 @@ def _strip_think_blocks(content):
 #  Core reusable engine: takes a key pool, model ID, and calls OpenRouter
 #  with automatic failover across all keys in that pool.
 # ---------------------------------------------------------------------------
+def _is_openrouter_token_budget_error(status_code, body):
+    """Detect low-credit/max token reservation errors from OpenRouter."""
+    text = str(body or "").lower()
+    if status_code not in (400, 402, 403, 429):
+        return False
+    budget_terms = (
+        "max_tokens",
+        "max tokens",
+        "max output",
+        "token",
+        "credit",
+        "credits",
+        "insufficient",
+        "reservation",
+        "budget",
+    )
+    return any(term in text for term in budget_terms) and any(
+        term in text for term in ("credit", "reservation", "budget", "max_tokens", "max tokens")
+    )
+
+
+def _token_budget_attempts(max_tokens):
+    """Try the requested size first, then smaller reservations for low-credit accounts."""
+    try:
+        requested = int(max_tokens or 4000)
+    except Exception:
+        requested = 4000
+    requested = max(256, requested)
+    caps = [requested]
+    for cap in (8192, 6000, 4096, 3072, 2048, 1536, 1024):
+        if requested > cap:
+            caps.append(cap)
+    out = []
+    for cap in caps:
+        if cap not in out:
+            out.append(cap)
+    return out
+
+
 def _call_openrouter_with_pool(key_pool, model_id, system_msg, user_msg,
                                max_tokens=4000, temperature=0.2, timeout=90,
                                tag="OR"):
@@ -870,57 +909,66 @@ def _call_openrouter_with_pool(key_pool, model_id, system_msg, user_msg,
     if not alive:
         log_srv(f"[{tag}] No alive keys - returning None")
         return None
+    token_attempts = _token_budget_attempts(max_tokens)
     for k in alive:
         try:
             log_srv(f"[{tag}] Trying key {k['name']}...")
-            r = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization":  "Bearer " + k["key"],
-                    "Content-Type":   "application/json",
-                    "HTTP-Referer":   "https://aurexs3d.up.railway.app/app",
-                    "X-Title":        "Aurex 3D"
-                },
-                json={
-                    "model":       model_id,
-                    "messages":    [
-                        {"role": "system", "content": system_msg},
-                        {"role": "user",   "content": user_msg}
-                    ],
-                    "max_tokens":  max_tokens,
-                    "temperature": temperature
-                },
-                timeout=timeout,
-                verify=False
-            )
-            log_srv(f"[{tag}] Key {k['name']} status: {r.status_code}")
-            if r.status_code == 200:
-                choices = r.json().get("choices", [])
-                if choices:
-                    msg = choices[0].get("message", {})
-                    content = (msg.get("content") or "").strip()
-                    # DeepSeek R1 may return reasoning_content instead
-                    if not content and msg.get("reasoning_content"):
-                        content = str(msg.get("reasoning_content") or "").strip()
-                    content = _strip_think_blocks(content)
-                    if content:
-                        k["fails"]     = 0
-                        k["last_used"] = time.time()
-                        log_srv(f"[{tag}] Success model={model_id} — {len(content)} chars")
-                        return content
-            elif r.status_code in (401, 403):
-                k["dead"]  = True
-                k["fails"] = 99
-                log_srv(f"[{tag}] Key {k['name']} auth error — marked dead")
-            elif r.status_code == 429:
-                k["fails"] += 1
-                log_srv(f"[{tag}] Key {k['name']} rate limited — rotating")
-                time.sleep(3)
-            else:
-                k["fails"] += 1
-                log_srv(f"[{tag}] status {r.status_code}: {(r.text or '')[:300]}")
-                if r.status_code == 404:
-                    log_srv(f"[{tag}] Model '{model_id}' may be unavailable on OpenRouter")
+            for token_cap in token_attempts:
+                r = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization":  "Bearer " + k["key"],
+                        "Content-Type":   "application/json",
+                        "HTTP-Referer":   "https://aurexs3d.up.railway.app/app",
+                        "X-Title":        "Aurex 3D"
+                    },
+                    json={
+                        "model":       model_id,
+                        "messages":    [
+                            {"role": "system", "content": system_msg},
+                            {"role": "user",   "content": user_msg}
+                        ],
+                        "max_tokens":  token_cap,
+                        "temperature": temperature
+                    },
+                    timeout=timeout,
+                    verify=False
+                )
+                log_srv(f"[{tag}] Key {k['name']} status: {r.status_code} max_tokens={token_cap}")
+                if r.status_code == 200:
+                    choices = r.json().get("choices", [])
+                    if choices:
+                        msg = choices[0].get("message", {})
+                        content = (msg.get("content") or "").strip()
+                        # DeepSeek R1 may return reasoning_content instead
+                        if not content and msg.get("reasoning_content"):
+                            content = str(msg.get("reasoning_content") or "").strip()
+                        content = _strip_think_blocks(content)
+                        if content:
+                            k["fails"]     = 0
+                            k["last_used"] = time.time()
+                            log_srv(f"[{tag}] Success model={model_id} tokens={token_cap} chars={len(content)}")
+                            return content
+                elif _is_openrouter_token_budget_error(r.status_code, r.text):
+                    k["fails"] += 1
+                    log_srv(f"[{tag}] Token reservation failed at {token_cap}; retrying smaller budget")
+                    continue
+                elif r.status_code in (401, 403):
+                    k["dead"]  = True
+                    k["fails"] = 99
+                    log_srv(f"[{tag}] Key {k['name']} auth error — marked dead")
+                    break
+                elif r.status_code == 429:
+                    k["fails"] += 1
+                    log_srv(f"[{tag}] Key {k['name']} rate limited — rotating")
+                    time.sleep(3)
+                    break
+                else:
+                    k["fails"] += 1
+                    log_srv(f"[{tag}] status {r.status_code}: {(r.text or '')[:300]}")
+                    if r.status_code == 404:
+                        log_srv(f"[{tag}] Model '{model_id}' may be unavailable on OpenRouter")
+                    break
         except requests.exceptions.Timeout:
             k["fails"] += 1
             log_srv(f"[{tag}] Timeout for key {k['name']}")
@@ -1080,6 +1128,68 @@ def call_llm(system_msg, user_msg=None, max_tokens=4000, temperature=0.2,
     result, _provider = call_llm_router(llm_model, system_msg, user_msg,
                                         max_tokens, temperature)
     return result
+
+
+def _script_needs_continuation(script_text):
+    """Return True when an LLM response looks truncated before a valid export."""
+    text = strip_md_fences(_strip_think_blocks(script_text or "")).strip()
+    if not text:
+        return True
+    if "bpy.ops.export_scene.gltf" not in text:
+        return True
+    try:
+        compile(text, "<llm_blender_script>", "exec")
+        return False
+    except SyntaxError as e:
+        msg = str(e).lower()
+        return any(k in msg for k in (
+            "unexpected eof",
+            "was never closed",
+            "eof while scanning",
+            "unterminated string",
+            "expected an indented block",
+        ))
+    except Exception:
+        return False
+
+
+def call_llm_blender_script(system_msg, user_msg, max_tokens=6000, temperature=0.0,
+                            llm_model="auto", continuation_rounds=2):
+    """Generate Blender code in smaller chunks to avoid OpenRouter max-token reservation failures."""
+    first_budget = min(int(max_tokens or 6000), 5200)
+    text = call_llm(system_msg, user_msg, max_tokens=first_budget,
+                    temperature=temperature, llm_model=llm_model)
+    if not text:
+        return text
+    text = strip_md_fences(_strip_think_blocks(text))
+    if not _script_needs_continuation(text):
+        return text
+
+    for round_idx in range(max(0, int(continuation_rounds or 0))):
+        tail = text[-5000:]
+        continue_msg = (
+            user_msg
+            + "\n\nThe previous Blender script was truncated. Continue from the exact next line only. "
+            + "Do not repeat imports, helper functions, or already-written objects unless needed for syntax. "
+            + "End with the required bpy.ops.export_scene.gltf line if this completes the script.\n\n"
+            + "CURRENT SCRIPT TAIL:\n" + tail
+        )
+        more = call_llm(system_msg, continue_msg, max_tokens=3200,
+                        temperature=temperature, llm_model=llm_model)
+        if not more:
+            break
+        more = strip_md_fences(_strip_think_blocks(more)).strip()
+        if not more:
+            break
+        if more.lstrip().startswith("import bpy") and len(more) > len(text):
+            text = more
+        else:
+            text = text.rstrip() + "\n" + more
+        log_gen("[LLM-CHUNK] continuation " + str(round_idx + 1)
+                + " chars=" + str(len(text)))
+        if not _script_needs_continuation(text):
+            break
+    return text
 
 
 def call_deepseek_r1(system_msg, user_msg, max_tokens=16000):
@@ -1715,7 +1825,7 @@ def score_glb_quality(path, source_type="unknown"):
     return score, detail_str
 
 
-def validate_glb_quality(path):
+def validate_glb_quality(path, quality_mode="standard"):
     """Extended validation using quality scorer."""
     valid, msg = validate_glb(path)
     if not valid:
@@ -1725,9 +1835,14 @@ def validate_glb_quality(path):
     if os.path.getsize(path) < min_size:
         return False, "Quality too low: score=" + str(score) + " " + detail
     metrics = inspect_glb_metrics(path)
+    cinematic = str(quality_mode or "").lower() == "cinematic"
     min_vertices = int(get_setting("quality.min_blender_vertices", 300))
     min_meshes = int(get_setting("quality.min_blender_meshes", 3))
     min_primitives = int(get_setting("quality.min_blender_primitives", 3))
+    if cinematic:
+        min_vertices = max(min_vertices, 900)
+        min_meshes = max(min_meshes, 12)
+        min_primitives = max(min_primitives, 12)
     if metrics["vertex_count"] < min_vertices:
         return False, "Underbuilt geometry: vertices=" + str(metrics["vertex_count"]) + " " + detail
     low_part_count = (
@@ -1741,7 +1856,7 @@ def validate_glb_quality(path):
     return True, "OK score=" + str(score) + " " + detail
 
 
-def _blender_quality_repair(output_path, color_hex):
+def _blender_quality_repair(output_path, color_hex, quality_mode="standard"):
     """Best-effort post-export smoothing/material pass. Never blocks generation success."""
     try:
         if not output_path or not os.path.exists(output_path) or not os.path.isfile(BLENDER_EXE):
@@ -1750,6 +1865,22 @@ def _blender_quality_repair(output_path, color_hex):
         r, g, b = hex_to_rgb_float(color_hex)
         import_path = repr(output_path.replace("\\", "/"))
         export_path = repr(repaired_path.replace("\\", "/"))
+        cinematic = str(quality_mode or "").lower() == "cinematic"
+        modifier_block = ""
+        if cinematic:
+            modifier_block = (
+                "        try:\n"
+                "            if len(obj.data.vertices) > 12 and not obj.modifiers.get('CinematicBevel'):\n"
+                "                bevel = obj.modifiers.new(name='CinematicBevel', type='BEVEL')\n"
+                "                bevel.width = 0.012 if len(obj.data.vertices) < 80 else 0.018\n"
+                "                bevel.segments = 2\n"
+                "                bevel.affect = 'EDGES'\n"
+                "            if not obj.modifiers.get('CinematicWeightedNormals'):\n"
+                "                wn = obj.modifiers.new(name='CinematicWeightedNormals', type='WEIGHTED_NORMAL')\n"
+                "                wn.keep_sharp = True\n"
+                "        except Exception:\n"
+                "            pass\n"
+            )
         script = (
             "import bpy\n"
             "bpy.ops.object.select_all(action='SELECT')\n"
@@ -1763,6 +1894,7 @@ def _blender_quality_repair(output_path, color_hex):
             "            bpy.ops.object.shade_smooth()\n"
             "        except Exception:\n"
             "            pass\n"
+            + modifier_block +
             "        if hasattr(obj.data, 'materials') and len(obj.data.materials) == 0:\n"
             "            mat = bpy.data.materials.new(name=obj.name + '_repair_mat')\n"
             "            mat.use_nodes = True\n"
@@ -1777,9 +1909,10 @@ def _blender_quality_repair(output_path, color_hex):
         script_path = os.path.join(BASE_DIR, "_temp_quality_repair.py")
         with open(script_path, "w", encoding="ascii", errors="replace") as f:
             f.write(script)
+        repair_timeout = 180 if cinematic else 90
         result = subprocess.run(
             [BLENDER_EXE, "--background", "--python", script_path],
-            capture_output=True, text=True, timeout=90,
+            capture_output=True, text=True, timeout=repair_timeout,
             encoding="utf-8", errors="replace"
         )
         if result.returncode == 0:
@@ -2466,7 +2599,8 @@ def extract_key_error(stderr):
     return "Script execution failed"
 
 
-def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2, llm_model="auto"):
+def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2,
+                           llm_model="auto", quality_mode="standard"):
     """Run a Blender script with up to max_retries Gemini-powered auto-fix attempts."""
     
     # Force inject OUTPUT_PATH - runs before every attempt
@@ -2487,6 +2621,8 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
     current_script = _inject(script)
     script_path     = os.path.join(BASE_DIR, "_temp_blender_script.py")
     blender_timeout = int(get_setting("generation.blender_timeout", 120))
+    if str(quality_mode or "").lower() == "cinematic":
+        blender_timeout = max(blender_timeout, 240)
 
     for attempt in range(max_retries + 1):
         current_script = _inject(current_script)
@@ -2554,7 +2690,7 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                 return False, current_script
 
         if exit_code == 0 and fixes != -1:
-            valid, msg = validate_glb_quality(output_path)
+            valid, msg = validate_glb_quality(output_path, quality_mode)
             if valid:
                 log_gen("[MODEL_B] Blender success attempt "
                         + str(attempt + 1) + ": " + msg)
@@ -2575,7 +2711,8 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
                 "6. Return raw Python only. No markdown. No f-strings. No class definitions.\n"
                 "\nOriginal request: " + prompt + "\n\nCurrent script:\n" + fixed_script
             )
-            fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05, llm_model=llm_model)
+            fix_tokens = 4500 if str(quality_mode or "").lower() == "cinematic" else 3000
+            fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=fix_tokens, temperature=0.05, llm_model=llm_model)
             if fixed and len(fixed.strip()) > 100:
                 current_script = fixed
                 log_gen("[BLENDER] Got Gemini fix ("
@@ -2681,6 +2818,11 @@ Technical requirements (Blender 4.2 Linux, these are absolute):
 - Last line must be exactly: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB', export_apply=True)
 - Minimum 15 primitives for a recognizable model
 - Each material uses: bsdf.inputs['Base Color'].default_value = (R, G, B, 1.0)
+- For high quality hard-surface parts, add bevel and weighted normal modifiers directly:
+  bevel = obj.modifiers.new(name='Bevel', type='BEVEL'); bevel.width = 0.025; bevel.segments = 2
+  obj.modifiers.new(name='WeightedNormals', type='WEIGHTED_NORMAL')
+- For organic main masses only, use subdivision level 1:
+  sub = obj.modifiers.new(name='SoftSubdivision', type='SUBSURF'); sub.levels = 1; sub.render_levels = 1
 
 Correct primitive syntax:
   bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0))
@@ -2847,6 +2989,20 @@ COMPLEXITY_DIRECTIVES = {
     5: "50-80+ primitives. Every feature plus implied features. Maximum realism.",
 }
 
+CINEMATIC_QUALITY_DIRECTIVE = """
+DESKTOP GPU CINEMATIC QUALITY MODE:
+- Target 90-160 named mesh objects when the object complexity supports it.
+- Build every major, secondary, and tertiary visible part as a separate named mesh.
+- Add bevel modifiers to hard-surface parts: width 0.015 to 0.045, segments 2 to 4.
+- Add weighted normal modifiers to hard-surface parts after bevels.
+- Use subdivision surface only for organic body masses, level 1, never more.
+- Use torus/cylinders/spheres for rims, bolts, hinges, joints, lenses, vents, seams, handles, and panel borders.
+- Use thin raised geometry for panel lines instead of texture-only detail.
+- Use multiple PBR materials: main body, secondary trim, dark cavities, metallic hardware, glass/screen, emissive accents where relevant.
+- Preserve a 4x4x4 meter bounding box and readable silhouette from front, side, and top.
+- Do not optimize away detail. This mode is intended for local desktop hardware.
+"""
+
 
 GEOMETRY_PLANNER_SYSTEM = """You are a senior 3D geometry planner.
 Return strict JSON only, with:
@@ -2887,7 +3043,7 @@ def _enrich_geometry_plan(plan, complexity):
     plan.setdefault("object", "object")
     plan.setdefault("material_preset", "plastic")
     plan.setdefault("surface_detail", "smooth")
-    min_parts_map = {1: 1, 2: 2, 3: 3, 4: 5, 5: 8}
+    min_parts_map = {1: 1, 2: 2, 3: 4, 4: 7, 5: 14}
     plan["min_parts"] = max(int(plan.get("min_parts") or 0), min_parts_map.get(c, 3))
     raw_parts = plan.get("parts") or []
     norm_parts = []
@@ -2923,7 +3079,7 @@ def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complex
         part_limit = 8 + max(0, int(complexity or 3)) * 4
         plan_parts = [{"name": str(p), "material": preset} for p in parts_list[:part_limit]]
         c = int(complexity or 3)
-        min_parts_map = {1: 1, 2: 2, 3: 3, 4: 5, 5: 8}
+        min_parts_map = {1: 1, 2: 2, 3: 4, 4: 7, 5: 14}
         return _enrich_geometry_plan({
             "object": obj, "material_preset": preset, "surface_detail": surface,
             "min_parts": min_parts_map.get(c, 3), "parts": plan_parts,
@@ -3237,7 +3393,7 @@ def get_parts_hint(obj_name, parts_override=None):
     )
 
 
-def build_blender_user_prompt(interp, color_hex, style="realistic", complexity=3):
+def build_blender_user_prompt(interp, color_hex, style="realistic", complexity=3, quality_mode="standard"):
     # Parse color
     try:
         r = int(color_hex[1:3], 16) / 255.0
@@ -3272,6 +3428,8 @@ def build_blender_user_prompt(interp, color_hex, style="realistic", complexity=3
         prompt_text = "recognizable detailed 3D object"
     style_dir = STYLE_DIRECTIVES.get(style, STYLE_DIRECTIVES["realistic"])
     complexity_dir = COMPLEXITY_DIRECTIVES.get(complexity, COMPLEXITY_DIRECTIVES[3])
+    if str(quality_mode).lower() == "cinematic":
+        complexity_dir = complexity_dir + " " + CINEMATIC_QUALITY_DIRECTIVE
 
     # Get object-specific parts hint (avoid picking adjectives like "futuristic")
     if isinstance(interp, dict) and interp.get("object"):
@@ -3304,16 +3462,17 @@ def build_blender_user_prompt(interp, color_hex, style="realistic", complexity=3
     return user_msg
 
 
-def build_blender_prompt(interp, color_hex, raw_prompt="", style="realistic", complexity=3):
+def build_blender_prompt(interp, color_hex, raw_prompt="", style="realistic", complexity=3, quality_mode="standard"):
     """Backward-compat wrapper around build_blender_user_prompt."""
     if raw_prompt:
         interp = dict(interp)
         interp["notes"] = raw_prompt
-    return build_blender_user_prompt(interp, color_hex, style, complexity)
+    return build_blender_user_prompt(interp, color_hex, style, complexity, quality_mode)
 
 
 def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
-                            style="realistic", complexity=3, llm_model="auto"):
+                            style="realistic", complexity=3, llm_model="auto",
+                            quality_mode="standard"):
     """Stage B: Gemini writes a Blender script, validator cleans it, retry on failure."""
     log_gen("[MODEL_B] Starting Gemini+Blender (style=" + style
             + " complexity=" + str(complexity) + ")")
@@ -3325,18 +3484,29 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
         if fixes_saved != -1 and "import bpy" in fixed_saved and "export_scene.gltf" in fixed_saved:
             log_gen("[MODEL_B] Reusing saved script from library")
             save_blender_script(fixed_saved)
-            ok, final_script = run_blender_with_retry(fixed_saved, prompt, color_hex, output_path, llm_model=llm_model)
+            retry_count = 3 if str(quality_mode or "").lower() == "cinematic" else 2
+            ok, final_script = run_blender_with_retry(
+                fixed_saved, prompt, color_hex, output_path,
+                max_retries=retry_count, llm_model=llm_model,
+                quality_mode=quality_mode
+            )
             if ok:
                 return True
         else:
             log_gen("[MODEL_B] Saved script invalid — regenerating")
 
-    user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
+    user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity, quality_mode)
     plan = generate_geometry_plan(prompt, interp, color_hex, style, complexity, llm_model=llm_model)
     if plan:
         user_msg += "\n\nGEOMETRY PLAN:\n" + json.dumps(plan, separators=(",", ":"))
     log_gen(f"[MODEL_B] Requesting script generation (model={llm_model})...")
-    script_raw = call_llm(BLENDER_SYSTEM_R1, user_msg, max_tokens=6000, temperature=0.0, llm_model=llm_model)
+    cinematic = str(quality_mode).lower() == "cinematic"
+    script_tokens = 7000 if cinematic else 6000
+    script_raw = call_llm_blender_script(
+        BLENDER_SYSTEM_R1, user_msg, max_tokens=script_tokens,
+        temperature=0.0, llm_model=llm_model,
+        continuation_rounds=2 if cinematic else 1
+    )
     if not script_raw:
         log_gen("[MODEL_B] LLM returned no script")
         return False
@@ -3364,7 +3534,12 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
         log_gen("[MODEL_B] REJECT: script too short (" + str(len(fixed_script)) + " chars)")
         return False
 
-    ok, final_script = run_blender_with_retry(fixed_script, prompt, color_hex, output_path, llm_model=llm_model)
+    retry_count = 3 if str(quality_mode or "").lower() == "cinematic" else 2
+    ok, final_script = run_blender_with_retry(
+        fixed_script, prompt, color_hex, output_path,
+        max_retries=retry_count, llm_model=llm_model,
+        quality_mode=quality_mode
+    )
     if ok:
         log_gen("[MODEL_B] Success")
         save_successful_script(prompt, final_script)
@@ -5123,10 +5298,14 @@ def _model_url_for_path(path):
 
 
 def _finalize_generation(src_path, output_path, original_prompt, gen_prompt, color_hex,
-                         folder, service, sub_id, cached=False, error=""):
+                         folder, service, sub_id, cached=False, error="",
+                         quality_mode="standard"):
     """Validate, cache, upload, save history, and publish success state once."""
     if src_path != output_path:
         shutil.copy2(src_path, output_path)
+    if str(quality_mode or "").lower() == "cinematic" and os.path.isfile(BLENDER_EXE):
+        set_state(progress=76, step="cinematic_postprocess")
+        _blender_quality_repair(output_path, color_hex, quality_mode="cinematic")
     ok, msg = validate_glb(output_path)
     if not ok:
         log_gen(f"[FINALIZE] invalid output from {service}: {msg}")
@@ -5160,13 +5339,16 @@ def _finalize_generation(src_path, output_path, original_prompt, gen_prompt, col
         _blender_quality_repair(_repair_path, _repair_color)
         log_gen("[REPAIR] Background quality repair complete")
 
-    import threading as _threading
-    _threading.Thread(target=_bg_repair, daemon=True).start()
+    if str(quality_mode or "").lower() != "cinematic":
+        import threading as _threading
+        _threading.Thread(target=_bg_repair, daemon=True).start()
     log_stage("done", "ok")
     return True
 
 
-def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode, style="realistic", complexity=3, sub_id="anonymous", history_prompt=None, llm_model="auto"):
+def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode,
+                   style="realistic", complexity=3, sub_id="anonymous",
+                   history_prompt=None, llm_model="auto", quality_mode="standard"):
     """Full generation pipeline. Called in background thread."""
     global _generating
     _gen_start_time = time.time()
@@ -5178,7 +5360,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
     try:
         cleanup_old_generated_models()
         reset_stage_log()
-        log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id}")
+        log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id} quality={quality_mode}")
         print(f"[PIPELINE] Generation thread alive for '{prompt}'", flush=True)
         set_state(status="generating", prompt=original_prompt, progress=5,
                   step="enhance_interpret", error="", cached=False, service="", glb_size=0,
@@ -5201,7 +5383,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             set_state(progress=15, step="cache_hit")
             log_gen("[CACHE] served from cache")
             if _finalize_generation(cached, output_path, original_prompt, gen_prompt,
-                                    color_hex, folder, "Cache", sub_id, cached=True):
+                                    color_hex, folder, "Cache", sub_id, cached=True,
+                                    quality_mode=quality_mode):
                 return
         set_state(progress=15, step="cache_miss")
         log_gen("[CACHE] miss - proceeding to generation")
@@ -5229,7 +5412,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     if ok:
                         log_gen(f"[LIBRARY] success: {msg}")
                         if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
-                                                color_hex, folder, "Library", sub_id):
+                                                color_hex, folder, "Library", sub_id,
+                                                quality_mode=quality_mode):
                             return
             log_gen("[LIBRARY] library search failed, continuing")
 
@@ -5240,11 +5424,17 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         set_state(progress=20, step="stage_b_gemini_blender")
         if os.path.exists(BLENDER_EXE):
             log_gen("[MODEL_B] attempting Gemini+Blender...")
-            ok = stage_b_gemini_blender(gen_prompt, interp, color_hex, temp_path, style=style, complexity=complexity, llm_model=llm_model)
+            ok = stage_b_gemini_blender(
+                gen_prompt, interp, color_hex, temp_path,
+                style=style, complexity=complexity, llm_model=llm_model,
+                quality_mode=quality_mode
+            )
             if ok:
                 log_gen("[MODEL_B] Gemini+Blender success")
                 if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
-                                        color_hex, folder, "Gemini+Blender", sub_id):
+                                        color_hex, folder,
+                                        "Cinematic Blender" if str(quality_mode).lower() == "cinematic" else "Gemini+Blender",
+                                        sub_id, quality_mode=quality_mode):
                     return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through")
 
@@ -5259,7 +5449,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             if ok:
                 log_gen("[SHAPEE] [MODEL_A] Shap-E success")
                 if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
-                                        color_hex, folder, "Shap-E", sub_id):
+                                        color_hex, folder, "Shap-E", sub_id,
+                                        quality_mode=quality_mode):
                     return
             log_gen("[SHAPEE] Shap-E failed, falling through")
         else:
@@ -5274,7 +5465,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         if ok:
             log_gen(f"[PRESET] [MODEL_C] preset success: {matched_kw}")
             if _finalize_generation(temp_path, output_path, original_prompt, gen_prompt,
-                                    color_hex, folder, "Preset", sub_id):
+                                    color_hex, folder, "Preset", sub_id,
+                                    quality_mode=quality_mode):
                 return
 
         # ------------------------------------------------------------------
@@ -5293,7 +5485,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     log_gen(f"[FALLBACK] Shaped fallback success: {obj_keyword}")
                     if _finalize_generation(output_path, output_path, original_prompt, gen_prompt,
                                             color_hex, folder, "Fallback-Shaped", sub_id,
-                                            error="AI generation fell back to a shaped local model."):
+                                            error="AI generation fell back to a shaped local model.",
+                                            quality_mode=quality_mode):
                         return
         except Exception as e:
             log_gen(f"[FALLBACK] Shaped fallback failed: {e}")
@@ -5308,7 +5501,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         if ok:
             _finalize_generation(output_path, output_path, original_prompt, gen_prompt,
                                  color_hex, folder, "Fallback", sub_id,
-                                 error="Could not generate the requested 3D model. Showing placeholder shape.")
+                                 error="Could not generate the requested 3D model. Showing placeholder shape.",
+                                 quality_mode=quality_mode)
 
     except Exception as e:
         import traceback
@@ -5324,7 +5518,8 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             write_fallback_glb(output_path, "#888888")
             _finalize_generation(output_path, output_path, original_prompt, prompt,
                                  color_hex, folder, "Fallback", sub_id,
-                                 error=f"Generation failed: {e}. Showing placeholder.")
+                                 error=f"Generation failed: {e}. Showing placeholder.",
+                                 quality_mode=quality_mode)
         except Exception as e2:
             log_error(f"[ERROR] Emergency fallback failed: {e2}")
             print(f"[PIPELINE-FATAL] Emergency fallback also failed: {e2}", flush=True)
@@ -5495,9 +5690,13 @@ def generate():
     complexity     = int(data.get("complexity", 3))
     llm_model      = str(data.get("llm_model", "auto"))
     engine         = str(data.get("engine", "cloud")).strip().lower()
+    quality_mode   = str(data.get("quality_profile", "") or data.get("quality_mode", "")).strip().lower()
     
     if engine == "desktop":
         complexity = 5
+        quality_mode = "cinematic"
+    if quality_mode not in ("cinematic", "standard"):
+        quality_mode = "standard"
         
     if style not in STYLE_DIRECTIVES:
         style = "realistic"
@@ -5523,11 +5722,11 @@ def generate():
             return jsonify({"status": "busy"})
         _generating = True
 
-    log_srv(f"[generate] starting: '{prompt}' color={color_hex} folder={folder} style={style} complexity={complexity}")
+    log_srv(f"[generate] starting: '{prompt}' color={color_hex} folder={folder} style={style} complexity={complexity} quality={quality_mode}")
 
     t = threading.Thread(
         target=run_generation,
-        args=(prompt, color_hex, folder, add_list, remove_list, library_mode, style, complexity, sub_id, history_prompt, llm_model),
+        args=(prompt, color_hex, folder, add_list, remove_list, library_mode, style, complexity, sub_id, history_prompt, llm_model, quality_mode),
         daemon=True
     )
     t.start()

@@ -4890,11 +4890,13 @@ function buildGenerationPrompt(prompt, style, complexity, color) {
     stage3 = '[COMPLEXITY: Simple forms, 3–5 parts, no micro-detail geometry.]';
   } else if (comp === 3) {
     stage3 = '[COMPLEXITY: Medium detail, 6–10 distinct parts, clean topology.]';
+  } else if (comp === 5) {
+    stage3 = '[COMPLEXITY: Cinematic detail, 40+ distinct named parts, bevels, weighted normals, panels, bolts, seams, vents, separate hardware, proportional realism.]';
   } else {
     stage3 = '[COMPLEXITY: High detail, 10–20 distinct parts, secondary detail (bolts, panels, seams, trim), proportional realism. Each part named in Blender.]';
   }
 
-  var minParts = comp * 2;
+  var minParts = comp === 5 ? 40 : comp * 2;
   var stage4 = '[IMPORTANT: Create at minimum ' + minParts + ' named mesh objects in the Blender scene so part-focus cycling works correctly. Label each with a descriptive name.]';
 
   return clean + ' ' + stage1 + ' ' + stage2 + ' ' + stage3 + ' ' + stage4;
@@ -5114,6 +5116,10 @@ function generate() {
   var llm_model = llmSel ? llmSel.value : 'auto';
   body.engine = engine;
   body.llm_model = llm_model;
+  body.quality_profile = engine === 'desktop' ? 'cinematic' : 'standard';
+  if (engine === 'desktop') {
+    body.complexity = 5;
+  }
 
   if (engine === 'browser') {
     generateInBrowser(body);

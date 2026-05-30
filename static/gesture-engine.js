@@ -16,6 +16,7 @@ function _partsCollectMeshes() {
   currentObject.traverse(function(node) {
     if (!node || !node.isMesh || !node.material) { return; }
     if (!node.userData._baseMaterial) { node.userData._baseMaterial = node.material; }
+    if (!node.userData._originalScale) { node.userData._originalScale = node.scale.clone(); }
     PARTS.meshes.push(node);
   });
 }
@@ -74,7 +75,7 @@ function _partsClearFocus() {
 var GestureEngine = (function() {
   /* ── One Euro Filter (Casiez et al. 2012) ── */
   var OEF_MIN_CUTOFF = 0.8;
-  var OEF_BETA       = 0.007;
+  var OEF_BETA       = 0.004; /* Smoother for slow movements */
   var OEF_D_CUTOFF   = 1.0;
 
   function OneEuroFilter(mincutoff, beta, dcutoff) {
@@ -135,9 +136,9 @@ var GestureEngine = (function() {
   var BUFFER_SIZE = 10;
   var LOCK_AGREEMENT = 0.72;
   var ONE_SHOT_COOLDOWN = 1200;
-  var LOST_HAND_GRACE_MS = 350;
+  var LOST_HAND_GRACE_MS = 600; /* Increased to prevent jitter on brief occlusion */
   var DEAD_ZONE = 0.003;
-  var MOMENTUM_DECAY = 0.88;
+  var MOMENTUM_DECAY = 0.90; /* Make momentum feel a bit more floaty and premium */
   var MOMENTUM_MIN = 0.0001;
 
   var GESTURE_LABELS = {
@@ -540,10 +541,11 @@ var GestureEngine = (function() {
     var zoomDelta = -dd * sph.tRadius * 2.7 * sensScale();
     sph.tRadius = clamp(sph.tRadius + zoomDelta, 1.0, 24);
     if (currentObject) {
-      var currentScale = currentObject.scale && currentObject.scale.x ? currentObject.scale.x : 1;
+      var targetNode = (PARTS && PARTS.meshes && PARTS.index >= 0) ? PARTS.meshes[PARTS.index] : currentObject;
+      var currentScale = targetNode.scale && targetNode.scale.x ? targetNode.scale.x : 1;
       var scaleFactor = clamp(1 + dd * 4.2 * sensScale(), 0.88, 1.14);
       var nextScale = clamp(currentScale * scaleFactor, 0.18, 6.0);
-      currentObject.scale.setScalar(nextScale);
+      targetNode.scale.setScalar(nextScale);
     }
   }
 
@@ -607,9 +609,22 @@ var GestureEngine = (function() {
     logGestureEvent(name);
     if (name === 'Pointing_Up' && typeof resetCamera === 'function') {
       resetCamera();
+      if (typeof currentObject !== 'undefined' && currentObject) {
+         currentObject.scale.setScalar(1.0);
+         currentObject.position.set(0,0,0);
+         if (typeof PARTS !== 'undefined' && PARTS.meshes) {
+            PARTS.meshes.forEach(function(m) { 
+                if(m.userData && m.userData._originalScale) {
+                    m.scale.copy(m.userData._originalScale);
+                } else {
+                    m.scale.setScalar(1.0); 
+                }
+            });
+         }
+      }
     }
     if (name === 'Pointing_Up' && typeof toast === 'function') {
-      toast('Camera reset', 'default');
+      toast('Camera & object reset', 'default');
     }
     flashHudOneShot();
   }
@@ -715,6 +730,23 @@ var GestureEngine = (function() {
     hud.querySelector('.ge-hud-name').style.color = meta.color;
     hud.querySelector('.ge-hud-bar-fill').style.width = Math.round(confidence * 100) + '%';
     hud.querySelector('.ge-hud-bar-fill').style.background = meta.color;
+    
+    // Add a premium lock glow for active gestures
+    if (gesture && gesture !== 'None' && confidence > 0.6) {
+      var glowColor = 'rgba(0,212,255,0.25)';
+      var c = meta.color;
+      if (c && c.charAt(0) === '#' && c.length === 7) {
+        var r = parseInt(c.slice(1,3),16), g = parseInt(c.slice(3,5),16), b = parseInt(c.slice(5,7),16);
+        glowColor = 'rgba(' + r + ',' + g + ',' + b + ',0.25)';
+      } else if (c && c.indexOf('rgb') === 0) {
+        glowColor = c.replace('rgb', 'rgba').replace(')', ',0.25)');
+      }
+      hud.style.boxShadow = '0 8px 32px ' + glowColor;
+      hud.style.borderColor = meta.color;
+    } else {
+      hud.style.boxShadow = '';
+      hud.style.borderColor = 'rgba(255,255,255,0.08)';
+    }
   }
 
   function flashHudOneShot() {
@@ -986,9 +1018,11 @@ var GestureEngine = (function() {
     st.id = 'ge-styles';
     st.textContent = [
       '#gesture-hud{position:absolute;left:14px;bottom:72px;z-index:4;opacity:0;pointer-events:none;',
-      'transition:opacity .2s ease,transform .2s ease;transform:translateY(8px);}',
+      'transition:all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);transform:translateY(8px);',
+      'background:rgba(10,14,23,0.85);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);',
+      'border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;align-items:center;width:140px;}',
       '#gesture-hud.visible{opacity:1;transform:translateY(0);}',
-      '#gesture-hud.oneshot{filter:drop-shadow(0 0 12px rgba(74,222,128,.8));}',
+      '#gesture-hud.oneshot{filter:drop-shadow(0 0 16px rgba(74,222,128,1));transform:scale(1.05);}',
       '.ge-hud-emoji{font-size:42px;line-height:1;margin-bottom:4px;}',
       '.ge-hud-name{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;font-weight:600;}',
       '.ge-hud-bar{width:120px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:8px;overflow:hidden;}',

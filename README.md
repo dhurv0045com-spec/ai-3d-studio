@@ -361,15 +361,16 @@ See [`USAGE.md`](USAGE.md) for a complete product-style guide covering:
 
 ---
 
-## What's New in V8.0
+## What's New in V8.0 (Final Production Release)
 
+- **Investor-Grade UI/UX** — Ultra-premium glassmorphism, Aurora backgrounds, and refined micro-animations.
 - **DeepSeek R1 Reasoning Model** — Primary LLM via OpenRouter with `<think>` block stripping for clean script output.
 - **AI Prompt Enhancer** — Automatic structural, material, and complexity hints injected before generation.
 - **Image-to-3D** — Gemini Vision analyzes reference photos and converts them to modeling prompts.
 - **Multi-Variant Generation** — 3 parallel interpretations with mini-viewer cards and keyboard selection.
 - **Public Community Gallery** — Browse recent creations from all users at `/api/community`.
 - **Live Pipeline Visualizer** — Real-time stage progress with ETA during Blender execution.
-- **Hand Gesture Engine v2** — One Euro filter smoothing, momentum/inertia, part-level focus, two-hand zoom.
+- **Hand Gesture Engine v2** — Ultra-smooth One Euro filter, momentum/inertia, premium HUD, part-level focus, and two-hand zoom.
 - **Per-User Supabase Isolation** — History and folders are fully scoped to authenticated users.
 - **Background Quality Repair** — Post-generation Blender pass to fix common mesh issues.
 - **Smart Key Resurrection** — Background thread periodically revives transiently-failed API keys.
@@ -385,7 +386,7 @@ See [`USAGE.md`](USAGE.md) for a complete product-style guide covering:
 | **AI Models** | DeepSeek R1, Gemini 2.0 Flash, LLaMA 3.3 70B |
 | **AI Providers** | OpenRouter, Google AI, Groq |
 | **Frontend** | Vanilla HTML/CSS/JS, Three.js (GLB viewer) |
-| **Hand Tracking** | MediaPipe Hands + custom gesture engine |
+| **Hand Tracking** | MediaPipe Hands + Aurex Custom Gesture Engine v2 |
 | **Database** | Supabase (PostgreSQL via REST API) |
 | **CDN** | Cloudinary (signed raw uploads) |
 | **Auth** | Google OAuth 2.0 (JWT decode) |
@@ -403,5 +404,6 @@ This project is provided as-is for educational and personal use.
 <div align="center">
   <sub>Built with obsessive attention to detail for 3D enthusiasts everywhere.</sub>
   <br/>
-  <sub>Aurex AI 3D Studio V8.0 — <em>From words to worlds.</em></sub>
+  <sub>Aurex AI 3D Studio V8.0 Final — <em>From words to worlds.</em></sub>
 </div>
+

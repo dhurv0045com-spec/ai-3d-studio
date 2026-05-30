@@ -2568,7 +2568,21 @@ def validate_and_fix_script(script_text):
         return fixed_script, -1
 
     try:
-        compile(fixed_script, '<string>', 'exec')
+        import ast
+        tree = ast.parse(fixed_script)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.While):
+                log_gen("[VALIDATOR] REJECT: While loops are not allowed (infinite loop risk)")
+                return fixed_script, -1
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name in ['os', 'subprocess', 'sys', 'pathlib']:
+                        log_gen(f"[VALIDATOR] REJECT: Forbidden import '{alias.name}' detected")
+                        return fixed_script, -1
+            if isinstance(node, ast.ImportFrom):
+                if node.module in ['os', 'subprocess', 'sys', 'pathlib']:
+                    log_gen(f"[VALIDATOR] REJECT: Forbidden import from '{node.module}' detected")
+                    return fixed_script, -1
     except SyntaxError as e:
         log_gen(f"[VALIDATOR] SyntaxError detected: {e} - requesting Gemini fix")
         return fixed_script, -1
@@ -2991,16 +3005,17 @@ COMPLEXITY_DIRECTIVES = {
 
 CINEMATIC_QUALITY_DIRECTIVE = """
 DESKTOP GPU CINEMATIC QUALITY MODE:
-- Target 90-160 named mesh objects when the object complexity supports it.
-- Build every major, secondary, and tertiary visible part as a separate named mesh.
-- Add bevel modifiers to hard-surface parts: width 0.015 to 0.045, segments 2 to 4.
-- Add weighted normal modifiers to hard-surface parts after bevels.
-- Use subdivision surface only for organic body masses, level 1, never more.
-- Use torus/cylinders/spheres for rims, bolts, hinges, joints, lenses, vents, seams, handles, and panel borders.
-- Use thin raised geometry for panel lines instead of texture-only detail.
+- ABSOLUTE MAXIMUM DETAIL REQUIRED. This is for high-end offline rendering.
+- Target 120-200 named mesh objects when the object complexity supports it. DO NOT generate simple low-poly boxes.
+- Build EVERY major, secondary, and tertiary visible part as a separate named mesh. 
+- You MUST add bevel modifiers to ALL hard-surface parts: width 0.015 to 0.045, segments 3 to 5.
+- You MUST add weighted normal modifiers to ALL hard-surface parts after bevels to perfect shading.
+- Use subdivision surface only for organic body masses, level 1 or 2, never more.
+- Use torus/cylinders/spheres for rims, bolts, hinges, joints, lenses, vents, seams, handles, and panel borders. Real objects have these micro-details.
+- Use thin raised geometry for panel lines instead of texture-only detail. Build physical depth.
 - Use multiple PBR materials: main body, secondary trim, dark cavities, metallic hardware, glass/screen, emissive accents where relevant.
 - Preserve a 4x4x4 meter bounding box and readable silhouette from front, side, and top.
-- Do not optimize away detail. This mode is intended for local desktop hardware.
+- DO NOT OPTIMIZE AWAY DETAIL. This mode is intended for local desktop hardware. Performance is not a concern, geometry realism is the ONLY goal.
 """
 
 

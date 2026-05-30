@@ -72,9 +72,6 @@ function _partsClearFocus() {
 }
 
 var GestureEngine = (function() {
-  var MP_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35';
-  var MP_WASM = MP_CDN + '/wasm';
-
   /* ── One Euro Filter (Casiez et al. 2012) ── */
   var OEF_MIN_CUTOFF = 0.8;
   var OEF_BETA       = 0.007;
@@ -359,6 +356,12 @@ var GestureEngine = (function() {
     return engine._stableMode;
   }
 
+  function clearModeStabilizer() {
+    engine._modeBuffer = [];
+    engine._stableMode = 'None';
+    engine._prevMode = 'None';
+  }
+
   function pushBuffer(gesture) {
     engine.frameBuffer.push(gesture);
     if (engine.frameBuffer.length > BUFFER_SIZE) { engine.frameBuffer.shift(); }
@@ -487,7 +490,8 @@ var GestureEngine = (function() {
     logGestureEvent(name);
     if (name === 'Pointing_Up' && typeof resetCamera === 'function') {
       resetCamera();
-    } else if (name === 'Pointing_Up' && typeof toast === 'function') {
+    }
+    if (name === 'Pointing_Up' && typeof toast === 'function') {
       toast('Camera reset', 'default');
     }
     flashHudOneShot();
@@ -800,6 +804,7 @@ var GestureEngine = (function() {
       engine.lastTwoHandDistance = null;
       engine._lastFrameTime = null;
       engine.twoHandZoomActive = false;
+      clearModeStabilizer();
       resetSmoothTrack();
       _oefResetHand(0);
       _oefResetHand(1);
@@ -1147,9 +1152,7 @@ var GestureEngine = (function() {
       engine.lastPinch = null;
       engine.lastTwoHandDistance = null;
       engine.frameBuffer = [];
-      engine._modeBuffer = [];
-      engine._stableMode = 'None';
-      engine._prevMode = 'None';
+      clearModeStabilizer();
       engine._lastFrameTime = null;
       engine._momentumActive = false;
       engine._momentum = { theta: 0, phi: 0, targetX: 0, targetY: 0 };
@@ -1251,6 +1254,7 @@ var GestureEngine = (function() {
     engine._lastFrameTime = null;
     engine._momentumActive = false;
     engine._momentum = { theta: 0, phi: 0, targetX: 0, targetY: 0 };
+    clearModeStabilizer();
     resetSmoothTrack();
     zeroVel();
     hideInspectTooltip();

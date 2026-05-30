@@ -98,6 +98,19 @@ GEN_LOG         = os.path.join(LOGS_DIR, "generation.log")
 ERR_LOG         = os.path.join(LOGS_DIR, "error.log")
 SHAPEE_FLAG     = os.path.join(BASE_DIR, "shapee_installed.flag")
 LAST_SCRIPT_PATH = os.path.join(BASE_DIR, "_last_gemini_script.py")
+
+def _is_path_within(path, base_dir):
+    """Return True only when path resolves inside base_dir."""
+    try:
+        resolved = os.path.realpath(path)
+        base_real = os.path.realpath(base_dir)
+        return os.path.commonpath([resolved, base_real]) == base_real
+    except (OSError, ValueError):
+        return False
+
+def _is_path_within_any(path, base_dirs):
+    return any(_is_path_within(path, base_dir) for base_dir in base_dirs)
+
 def _find_blender_exe():
     """Auto-detect Blender. Works on Windows local AND Railway Linux cloud."""
     import glob
@@ -5022,9 +5035,10 @@ def cleanup_old_generated_models(max_age_seconds=86400):
 
 def _model_url_for_path(path):
     try:
+        if not _is_path_within(path, MODELS_DIR):
+            return "/rocket.glb"
         rel = os.path.relpath(path, MODELS_DIR).replace("\\", "/")
-        if not rel.startswith(".."):
-            return "/models/" + rel
+        return "/models/" + rel
     except Exception:
         pass
     return "/rocket.glb"
@@ -5917,13 +5931,11 @@ def rocket_glb():
 @app.route("/models/<path:filename>", methods=["GET"])
 def serve_model(filename):
     """Serve model files from models/ or storage/ with path traversal protection."""
-    # Try models dir first
-    candidate_m = os.path.join(MODELS_DIR, filename)
-    candidate_s = os.path.join(BASE_DIR, "storage", filename)
-    for candidate in (candidate_m, candidate_s):
+    storage_base = os.path.join(BASE_DIR, "storage")
+    for base_dir in (MODELS_DIR, storage_base):
+        candidate = os.path.join(base_dir, filename)
         resolved = os.path.realpath(candidate)
-        base_real = os.path.realpath(BASE_DIR)
-        if not resolved.startswith(base_real):
+        if not _is_path_within(resolved, base_dir):
             abort(403)
         if os.path.isfile(resolved):
             mime = "model/gltf-binary" if resolved.endswith(".glb") else "application/octet-stream"
@@ -6152,8 +6164,7 @@ def delete_model():
     if not target_entry and model_path:
         full = os.path.join(BASE_DIR, model_path)
         resolved = os.path.realpath(full)
-        base_real = os.path.realpath(BASE_DIR)
-        if not resolved.startswith(base_real):
+        if not _is_path_within_any(resolved, (MODELS_DIR, os.path.join(BASE_DIR, "storage"))):
             return jsonify({"success": False, "error": "path traversal"}), 403
         try:
             if os.path.exists(resolved):
@@ -6168,8 +6179,7 @@ def delete_model():
         if file_path:
             full = os.path.join(BASE_DIR, file_path)
             resolved = os.path.realpath(full)
-            base_real = os.path.realpath(BASE_DIR)
-            if resolved.startswith(base_real) and os.path.exists(resolved):
+            if _is_path_within_any(resolved, (MODELS_DIR, os.path.join(BASE_DIR, "storage"))) and os.path.exists(resolved):
                 try:
                     os.remove(resolved)
                     log_srv("[delete_model] removed: " + resolved)
@@ -6443,8 +6453,7 @@ def serve_static(filename):
     """Serve files from the static directory."""
     safe_path = os.path.join(STATIC_DIR, filename)
     resolved  = os.path.realpath(safe_path)
-    base_real = os.path.realpath(STATIC_DIR)
-    if not resolved.startswith(base_real):
+    if not _is_path_within(resolved, STATIC_DIR):
         abort(403)
     if os.path.isfile(resolved):
         return send_file(resolved)
@@ -6457,8 +6466,7 @@ def serve_storage(filename):
     storage_base = os.path.join(BASE_DIR, "storage")
     full = os.path.join(storage_base, filename)
     resolved = os.path.realpath(full)
-    base_real = os.path.realpath(storage_base)
-    if not resolved.startswith(base_real):
+    if not _is_path_within(resolved, storage_base):
         abort(403)
     if os.path.isfile(resolved):
         mime = "model/gltf-binary" if resolved.endswith(".glb") else "application/octet-stream"
@@ -7127,12 +7135,16 @@ def color_preview():
 
 @app.route("/api/history/clear", methods=["POST"])
 def clear_history():
-    """Clear all history entries."""
-    with open(HISTORY_FILE, "w") as f:
-        json.dump([], f)
-    with open(INDEX_FILE, "w") as f:
-        json.dump([], f)
-    log_srv("[history] cleared all entries")
+    """Clear history entries for the current user."""
+    user_id = _get_user_id()
+    if SUPABASE_ENABLED:
+        try:
+            supabase_request("DELETE", f"models?user_id=eq.{user_id}")
+        except Exception as e:
+            log_error(f"[history] Supabase clear failed for {user_id}: {e}")
+    save_history([], user_id=user_id)
+    save_index([])
+    log_srv(f"[history] cleared entries for {user_id}")
     return jsonify({"success": True})
 
 
@@ -7177,8 +7189,7 @@ def validate_file(filepath):
     """Validate a GLB file at the given relative path."""
     full = os.path.join(BASE_DIR, filepath)
     resolved = os.path.realpath(full)
-    base_real = os.path.realpath(BASE_DIR)
-    if not resolved.startswith(base_real):
+    if not _is_path_within_any(resolved, (MODELS_DIR, os.path.join(BASE_DIR, "storage"))):
         return jsonify({"valid": False, "error": "path traversal"}), 403
     ok, msg = validate_glb(resolved)
     return jsonify({"valid": ok, "message": msg, "path": filepath})

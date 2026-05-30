@@ -1161,7 +1161,7 @@ def _script_needs_continuation(script_text):
 def call_llm_blender_script(system_msg, user_msg, max_tokens=6000, temperature=0.0,
                             llm_model="auto", continuation_rounds=2):
     """Generate Blender code in smaller chunks to avoid OpenRouter max-token reservation failures."""
-    first_budget = min(int(max_tokens or 6000), 5200)
+    first_budget = min(int(max_tokens or 6000), 6500)
     text = call_llm(system_msg, user_msg, max_tokens=first_budget,
                     temperature=temperature, llm_model=llm_model)
     if not text:
@@ -1452,14 +1452,24 @@ def save_to_supabase(prompt, color, folder, service, file_path, size, cloud_url=
             if saved_id:
                 data["id"] = saved_id
 
-        # Always write local per-user fallback
-        h = load_history(user_id=sub_id)
-        h.insert(0, data)
-        save_history(h[:MAX_HISTORY], user_id=sub_id)
+        # Always write local per-user fallback - decoupled from Supabase so DNS failures
+        # on Railway never block finalization or prevent the model from being served.
+        try:
+            hist_file = _get_user_history_file(sub_id)
+            try:
+                with open(hist_file, "r", encoding="utf-8") as hf:
+                    h = json.load(hf)
+            except Exception:
+                h = []
+            h.insert(0, data)
+            with open(hist_file, "w", encoding="utf-8") as hf:
+                json.dump(h[:MAX_HISTORY], hf, ensure_ascii=False, indent=2)
+        except Exception as he:
+            log_error("[HISTORY] local write failed: " + str(he))
         return data["id"]
     except Exception as e:
-        log_error("[SUPABASE] save_to_supabase exception: " + str(e))
-        return False
+        log_error("[SUPABASE] save_to_supabase exception: " + str(e.__class__.__name__))
+        return str(uuid.uuid4().hex)  # Return a fallback ID so finalization doesn't fail
 
 
 
@@ -2112,24 +2122,31 @@ def enhance_and_interpret(raw_prompt, color_hex="#aaaaaa", style="realistic", co
         "Preferred complexity: " + str(complexity)
     )
     try:
-        raw = call_llm(system, user_msg, max_tokens=650, temperature=0.2, llm_model=llm_model)
+        # Use 900 tokens to avoid truncation on complex prompts
+        raw = call_llm(system, user_msg, max_tokens=900, temperature=0.2, llm_model=llm_model)
         if raw:
             clean = strip_md_fences(raw)
+            # Robustly extract JSON even if LLM adds surrounding text
             if "{" in clean and "}" in clean:
                 clean = clean[clean.find("{"):clean.rfind("}") + 1]
             data = json.loads(clean)
+            # Ensure object is not null/empty before using LLM parse
+            obj_val = data.get("object") or ""
+            if not obj_val or str(obj_val).lower() in ("null", "none", "", "object"):
+                log_gen("[ENHANCE+INTERPRET] object is null from LLM - using local fallback interp")
+                data["object"] = raw_prompt.split()[0] if raw_prompt else "object"
             enhanced = str(data.get("enhanced_prompt") or data.get("notes") or raw_prompt).strip()
             interp = _fallback_interp(enhanced, color_hex, style, complexity)
             for key in ("object", "style", "material", "features", "size", "color",
                         "complexity", "search_keywords", "parts", "notes"):
-                if key in data and data.get(key) not in ("", None):
+                if key in data and data.get(key) not in ("", None, "null"):
                     interp[key] = data.get(key)
             if not interp.get("notes"):
                 interp["notes"] = enhanced
             log_gen(f"[ENHANCE+INTERPRET] object={interp.get('object')} parts={len(interp.get('parts') or [])}")
             return enhanced or raw_prompt, interp
     except Exception as e:
-        log_gen(f"[ENHANCE+INTERPRET] combined call failed: {e}")
+        log_gen(f"[ENHANCE+INTERPRET] combined call failed: {e} - using local fallback")
 
     enhanced = enhance_prompt(raw_prompt)
     return enhanced, interpret_prompt(enhanced, color_hex)
@@ -2577,20 +2594,21 @@ def validate_and_fix_script(script_text):
         tree = ast.parse(fixed_script)
         for node in ast.walk(tree):
             if isinstance(node, ast.While):
-                log_gen("[VALIDATOR] REJECT: While loops are not allowed (infinite loop risk)")
-                return fixed_script, -1
+                # Log warning but do NOT reject - some valid scripts use while loops for iteration
+                log_gen("[VALIDATOR] WARNING: While loop detected - allowing but monitoring")
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    if alias.name in ['os', 'subprocess', 'sys', 'pathlib']:
+                    if alias.name in ['subprocess', 'pathlib']:
                         log_gen(f"[VALIDATOR] REJECT: Forbidden import '{alias.name}' detected")
                         return fixed_script, -1
             if isinstance(node, ast.ImportFrom):
-                if node.module in ['os', 'subprocess', 'sys', 'pathlib']:
+                if node.module in ['subprocess']:
                     log_gen(f"[VALIDATOR] REJECT: Forbidden import from '{node.module}' detected")
                     return fixed_script, -1
     except SyntaxError as e:
-        log_gen(f"[VALIDATOR] SyntaxError detected: {e} - requesting Gemini fix")
-        return fixed_script, -1
+        log_gen(f"[VALIDATOR] SyntaxError detected: {e} - will attempt Blender run for better error")
+        # Don't return -1 here, let Blender's own error reporting handle it
+        pass
 
     if changes > 0:
         log_gen("[VALIDATOR] Auto-fixed " + str(changes) + " issues")

@@ -1646,6 +1646,63 @@ def validate_glb_quality(path):
         return False, "Quality too low: score=" + str(score) + " " + detail
     return True, "OK score=" + str(score) + " " + detail
 
+
+def _blender_quality_repair(output_path, color_hex):
+    """Best-effort post-export smoothing/material pass. Never blocks generation success."""
+    try:
+        if not output_path or not os.path.exists(output_path) or not os.path.isfile(BLENDER_EXE):
+            return output_path
+        repaired_path = output_path + ".repair.glb"
+        r, g, b = hex_to_rgb_float(color_hex)
+        import_path = repr(output_path.replace("\\", "/"))
+        export_path = repr(repaired_path.replace("\\", "/"))
+        script = (
+            "import bpy\n"
+            "bpy.ops.object.select_all(action='SELECT')\n"
+            "bpy.ops.object.delete(use_global=False)\n"
+            "bpy.ops.import_scene.gltf(filepath=" + import_path + ")\n"
+            "for obj in bpy.context.scene.objects:\n"
+            "    if getattr(obj, 'type', '') == 'MESH':\n"
+            "        bpy.context.view_layer.objects.active = obj\n"
+            "        obj.select_set(True)\n"
+            "        try:\n"
+            "            bpy.ops.object.shade_smooth()\n"
+            "        except Exception:\n"
+            "            pass\n"
+            "        if hasattr(obj.data, 'materials') and len(obj.data.materials) == 0:\n"
+            "            mat = bpy.data.materials.new(name=obj.name + '_repair_mat')\n"
+            "            mat.use_nodes = True\n"
+            "            bsdf = mat.node_tree.nodes.get('Principled BSDF')\n"
+            "            if bsdf:\n"
+            "                bsdf.inputs['Base Color'].default_value = (" + str(r) + ", " + str(g) + ", " + str(b) + ", 1.0)\n"
+            "                bsdf.inputs['Roughness'].default_value = 0.45\n"
+            "            obj.data.materials.append(mat)\n"
+            "        obj.select_set(False)\n"
+            "bpy.ops.export_scene.gltf(filepath=" + export_path + ", export_format='GLB', export_apply=True)\n"
+        )
+        script_path = os.path.join(BASE_DIR, "_temp_quality_repair.py")
+        with open(script_path, "w", encoding="ascii", errors="replace") as f:
+            f.write(script)
+        result = subprocess.run(
+            [BLENDER_EXE, "--background", "--python", script_path],
+            capture_output=True, text=True, timeout=90,
+            encoding="utf-8", errors="replace"
+        )
+        if result.returncode == 0:
+            ok, _msg = validate_glb(repaired_path)
+            if ok:
+                os.replace(repaired_path, output_path)
+                return output_path
+        try:
+            if os.path.exists(repaired_path):
+                os.remove(repaired_path)
+        except Exception:
+            pass
+    except Exception as e:
+        log_gen("[REPAIR] Background quality repair skipped: " + str(e))
+    return output_path
+
+
 def hex_to_rgb_float(hexstr):
     """Convert #RRGGBB to (r, g, b) floats 0..1."""
     h = hexstr.lstrip("#")
@@ -2188,6 +2245,12 @@ FORBIDDEN_VALUE_PATTERNS = [
     "value=(",
 ]
 
+FORBIDDEN_LINE_PATTERNS = [
+    r"use_auto_smooth",
+    r"auto_smooth_angle",
+    r"smart_project",
+]
+
 
 def strip_md_fences(text):
     """Extract code between first and last fence pair, ignoring preamble text."""
@@ -2227,6 +2290,14 @@ def validate_and_fix_script(script_text):
                 log_gen("[VALIDATOR] Removed forbidden: " + forbidden.strip())
                 break
         if not was_fixed:
+            for pattern in FORBIDDEN_LINE_PATTERNS:
+                if re.search(pattern, line):
+                    fixed = "# AUTOFIXED-FORBIDDEN-LINE: " + line
+                    changes += 1
+                    was_fixed = True
+                    log_gen("[VALIDATOR] Removed forbidden line pattern: " + pattern)
+                    break
+        if not was_fixed:
             for pattern in FORBIDDEN_VALUE_PATTERNS:
                 if (pattern in line
                         and "location" not in line
@@ -2264,6 +2335,10 @@ def validate_and_fix_script(script_text):
         fixed_script += "\nbpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB', export_apply=True)\n"
         changes += 1
         log_gen("[VALIDATOR] Added missing export line")
+
+    if re.search(r"^\s*class\s+\w+", fixed_script, re.MULTILINE):
+        log_gen("[VALIDATOR] REJECT: class definitions not allowed in generation scripts")
+        return fixed_script, -1
 
     try:
         compile(fixed_script, '<string>', 'exec')
@@ -2394,21 +2469,17 @@ def run_blender_with_retry(script, prompt, color_hex, output_path, max_retries=2
         if attempt < max_retries:
             key_error = extract_key_error(stderr)
             log_gen("[BLENDER] Failed: " + key_error + " - requesting Gemini fix...")
-            
-            # BUG 2 FIX - New strict fix request
+
             fix_msg = (
-                "Blender 4.2 script failed: " + key_error + "\n"
-                "REWRITE ENTIRE SCRIPT FROM SCRATCH.\n"
-                "RULES:\n"
-                "- Never use align= parameter\n"
-                "- Keyword arguments only for all primitives\n"  
-                "- Every ( closes on same line\n"
-                "- No f-strings\n"
-                "- OUTPUT_PATH already defined, never redefine\n"
-                "- Last line: bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH,export_format='GLB',export_apply=True)\n"
-                "- Raw Python only\n"
-                "Correct sphere syntax: bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0,0,0))\n"
-                "Generate script for: " + prompt
+                "Blender 4.2 script failed with this exact error:\n\nERROR: " + key_error +
+                "\n\nFIX RULES:\n"
+                "1. Fix only the lines causing this error. Do not rewrite the whole script.\n"
+                "2. AttributeError on input name: check the exact spelling of the input on the Principled BSDF node.\n"
+                "3. Context error: add bpy.context.view_layer.objects.active = obj before the failing line.\n"
+                "4. TypeError on primitive: all bpy.ops.mesh.primitive_* calls require keyword arguments.\n"
+                "5. OUTPUT_PATH is already defined. Do not redefine it.\n"
+                "6. Return raw Python only. No markdown. No f-strings. No class definitions.\n"
+                "\nOriginal request: " + prompt + "\n\nCurrent script:\n" + fixed_script
             )
             fixed = call_llm(BLENDER_SYSTEM, fix_msg, max_tokens=3000, temperature=0.05)
             if fixed and len(fixed.strip()) > 100:
@@ -2533,7 +2604,7 @@ Write the most detailed, geometrically accurate Blender script you can produce.
 """
 
 BLENDER_SYSTEM = """You are an expert Blender 4.2 Python scripter on Linux.
-Your job: write a complete Python script that builds a detailed, recognizable 3D model.
+Write a complete Python script that builds a recognizable 3D model. Use a def helper function for material setup - this produces better results. Use try/except around material node assignments only. No class definitions. No f-strings.
 
 GEOMETRY PLAN:
 - The user prompt may include a GEOMETRY PLAN section.
@@ -2555,9 +2626,10 @@ STRICT SYNTAX RULES (violation = broken script):
 4. NEVER use ring_count= parameter
 5. ALL primitive arguments must be keyword arguments
 6. Every opening ( closes on the SAME line — no line continuation
-7. No f-strings. No try/except. No def functions. No classes.
-8. OUTPUT_PATH is pre-defined — NEVER redefine it
-9. After EVERY primitive: obj=bpy.context.active_object then set obj.location and obj.scale
+7. No class definitions.
+8. No f-strings (use "Name_" + str(i) instead of f"Name_{i}")
+9. OUTPUT_PATH is pre-defined — NEVER redefine it
+10. After EVERY primitive: obj=bpy.context.active_object then set obj.location and obj.scale
 
 CORRECT PRIMITIVE SYNTAX:
 bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
@@ -2568,15 +2640,31 @@ bpy.ops.mesh.primitive_torus_add(major_radius=1.0, minor_radius=0.25, location=(
 bpy.ops.mesh.primitive_plane_add(size=1.0, location=(0, 0, 0))
 bpy.ops.mesh.primitive_circle_add(radius=0.5, location=(0, 0, 0))
 
-MATERIAL CREATION (use for EVERY object):
-mat = bpy.data.materials.new(name="M1")
-mat.use_nodes = True
-bsdf = mat.node_tree.nodes.get("Principled BSDF")
-bsdf.inputs['Base Color'].default_value = (R, G, B, 1.0)
-bsdf.inputs['Roughness'].default_value = 0.4
-bsdf.inputs['Metallic'].default_value = 0.0
-obj.data.materials.clear()
-obj.data.materials.append(mat)
+RECOMMENDED STRUCTURE - define apply_pbr once at the top then call it per part:
+def apply_pbr(obj, r, g, b, metallic=0.0, roughness=0.5):
+    mat = bpy.data.materials.new(name=obj.name + "_mat")
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    nodes.clear()
+    bsdf = nodes.new(type='ShaderNodeBsdfPrincipled')
+    output = nodes.new(type='ShaderNodeOutputMaterial')
+    links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
+    bsdf.inputs['Base Color'].default_value = (r, g, b, 1.0)
+    bsdf.inputs['Metallic'].default_value = metallic
+    try:
+        bsdf.inputs['Roughness'].default_value = roughness
+    except Exception:
+        pass
+    obj.data.materials.append(mat)
+
+Per part pattern:
+bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, 0.0))
+obj = bpy.context.active_object
+obj.name = "PartName"
+obj.scale = (1.0, 1.0, 1.0)
+bpy.ops.object.shade_smooth()
+apply_pbr(obj, R, G, B, metallic=0.9, roughness=0.2)
 
 SHAPE CONSTRUCTION PHILOSOPHY:
 - Build from the LARGEST structural element first, then add details
@@ -2602,6 +2690,49 @@ REALISM REQUIREMENTS:
 - Use varied colors: main color for body, grey/dark for details, metallic for hardware
 
 SCALE REFERENCE: Model should fit in a 4x4x4 unit bounding box centered at origin.
+
+REAL-WORLD SCALE REFERENCE - fit all parts within a 4 meter bounding box:
+Human 1.8m tall. Car 4.0m long 1.3m tall. Dragon 3.5m long 1.5m at shoulder. Robot 2.0m tall. Sword 1.2m long. Castle tower 3m tall. Chair 0.9m tall. Tree 3m tall. Apply these proportions to all primitive scales.
+
+TOPOLOGY RULES - always follow:
+Call shade_smooth() on every mesh after creation. UV spheres use minimum 16 segments at complexity 3 or higher. Every mesh must have at least one material before export. Bevel modifier: width=0.02 segments=2. Subdivision Surface: levels=1 only for organic shapes.
+
+FEW-SHOT EXAMPLE - robot at complexity 3 using the correct helper pattern:
+import bpy
+import math
+bpy.context.scene.unit_settings.system = 'METRIC'
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.object.delete(use_global=False)
+def apply_pbr(obj, r, g, b, metallic=0.0, roughness=0.5):
+    mat = bpy.data.materials.new(name=obj.name + "_mat")
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    nodes.clear()
+    bsdf = nodes.new(type='ShaderNodeBsdfPrincipled')
+    output = nodes.new(type='ShaderNodeOutputMaterial')
+    links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
+    bsdf.inputs['Base Color'].default_value = (r, g, b, 1.0)
+    bsdf.inputs['Metallic'].default_value = metallic
+    bsdf.inputs['Roughness'].default_value = roughness
+    obj.data.materials.append(mat)
+bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 1.0))
+torso = bpy.context.active_object
+torso.name = "Torso"
+torso.scale = (0.6, 0.4, 0.7)
+bpy.ops.object.shade_smooth()
+apply_pbr(torso, 0.3, 0.35, 0.4, metallic=0.9, roughness=0.2)
+bpy.ops.mesh.primitive_uv_sphere_add(radius=0.28, location=(0, 0, 1.95))
+head = bpy.context.active_object
+head.name = "Head"
+bpy.ops.object.shade_smooth()
+apply_pbr(head, 0.25, 0.3, 0.35, metallic=0.85, roughness=0.15)
+bpy.ops.mesh.primitive_cylinder_add(radius=0.1, depth=0.7, location=(-0.55, 0, 1.0))
+arm_l = bpy.context.active_object
+arm_l.name = "ArmLeft"
+bpy.ops.object.shade_smooth()
+apply_pbr(arm_l, 0.28, 0.32, 0.38, metallic=0.9, roughness=0.25)
+bpy.ops.export_scene.gltf(filepath=OUTPUT_PATH, export_format='GLB', export_apply=True)
 """
 
 STYLE_DIRECTIVES = {
@@ -2632,33 +2763,101 @@ build_order: array of part names from largest structural forms to fine details
 Do not write Blender code. Plan concrete visible geometry only."""
 
 
+def _infer_material_preset(obj, prompt):
+    """Infer a compact material preset label for geometry planning."""
+    text = (str(obj or "") + " " + str(prompt or "")).lower()
+    if any(k in text for k in ("robot", "car", "spaceship", "rocket", "sword", "tank", "engine", "metal")):
+        return "metal"
+    if any(k in text for k in ("tree", "chair", "table", "wood")):
+        return "wood"
+    if any(k in text for k in ("castle", "tower", "mountain", "stone")):
+        return "stone"
+    if any(k in text for k in ("dragon", "horse", "dog", "cat", "snake", "organic", "creature")):
+        return "organic"
+    if any(k in text for k in ("glass", "crystal", "diamond")):
+        return "glass"
+    if any(k in text for k in ("cloth", "fabric", "sofa")):
+        return "fabric"
+    return "plastic"
+
+
+def _enrich_geometry_plan(plan, complexity):
+    """Normalize planner output so downstream prompt builders can rely on core keys."""
+    if not isinstance(plan, dict):
+        plan = {}
+    try:
+        c = int(complexity or 3)
+    except Exception:
+        c = 3
+    c = max(1, min(5, c))
+    plan.setdefault("object", "object")
+    plan.setdefault("material_preset", "plastic")
+    plan.setdefault("surface_detail", "smooth")
+    min_parts_map = {1: 1, 2: 2, 3: 3, 4: 5, 5: 8}
+    plan["min_parts"] = max(int(plan.get("min_parts") or 0), min_parts_map.get(c, 3))
+    raw_parts = plan.get("parts") or []
+    norm_parts = []
+    for i, part in enumerate(raw_parts):
+        if isinstance(part, dict):
+            item = dict(part)
+            item["name"] = str(item.get("name") or ("part_" + str(i + 1)))
+            item.setdefault("material", plan.get("material_preset", "plastic"))
+            norm_parts.append(item)
+        else:
+            norm_parts.append({"name": str(part), "material": plan.get("material_preset", "plastic")})
+    plan["parts"] = norm_parts
+    if not plan.get("build_order"):
+        plan["build_order"] = [p.get("name", "") for p in norm_parts if p.get("name")]
+    return plan
+
+
 def generate_geometry_plan(prompt, interp, color_hex, style="realistic", complexity=3):
     """Create a parts-first geometry plan before Blender script generation."""
-    try:
-        obj = interp.get("object", "") if isinstance(interp, dict) else ""
-        parts = interp.get("parts", []) if isinstance(interp, dict) else []
-        user_msg = (
-            "Prompt: " + str(prompt or "") + "\n"
-            "Object: " + str(obj or "") + "\n"
-            "Known parts: " + json.dumps(parts) + "\n"
-            "Color: " + str(color_hex) + "\n"
-            "Style: " + str(style) + "\n"
-            "Complexity: " + str(complexity)
-        )
-        raw = call_llm(GEOMETRY_PLANNER_SYSTEM, user_msg, max_tokens=1200, temperature=0.15)
+    import concurrent.futures
+    obj = interp.get("object", "object") if isinstance(interp, dict) else "object"
+
+    def _local_fallback():
+        parts_list = interp.get("parts", []) if isinstance(interp, dict) else []
+        preset = _infer_material_preset(obj, prompt)
+        surface = "smooth" if style in ("realistic", "organic", "cartoon") else "faceted"
+        plan_parts = [{"name": str(p), "material": preset} for p in parts_list[:12]]
+        c = int(complexity or 3)
+        min_parts_map = {1: 1, 2: 2, 3: 3, 4: 5, 5: 8}
+        return _enrich_geometry_plan({
+            "object": obj, "material_preset": preset, "surface_detail": surface,
+            "min_parts": min_parts_map.get(c, 3), "parts": plan_parts,
+            "build_order": [p["name"] for p in plan_parts],
+        }, complexity)
+
+    def _llm_plan():
+        user_msg = ("Object: " + obj + "\nDescription: " + prompt + "\nStyle: " + style +
+                    "\nComplexity: " + str(complexity) + "/5\nPrimary color: " + color_hex +
+                    "\nReturn JSON plan only.")
+        raw = call_llm(GEOMETRY_PLANNER_SYSTEM, user_msg, max_tokens=800, temperature=0.1)
         if not raw:
             return None
-        clean = strip_md_fences(raw)
-        if "{" in clean and "}" in clean:
-            clean = clean[clean.find("{"):clean.rfind("}") + 1]
-        plan = json.loads(clean)
-        if not isinstance(plan, dict) or not plan.get("parts"):
+        try:
+            import json as _json, re as _re
+            clean = _re.sub(r"```(?:json)?", "", raw).strip().strip("`").strip()
+            plan = _json.loads(clean)
+            return _enrich_geometry_plan(plan, complexity)
+        except Exception as e:
+            log_gen("[PLANNER] JSON parse failed: " + str(e))
             return None
-        log_gen("[GEOMETRY_PLAN] " + json.dumps(plan)[:1200])
-        return plan
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_llm_plan)
+            result = future.result(timeout=12)
+            if result:
+                log_gen("[PLANNER] LLM plan OK: " + str(result.get("object")) + " " + str(result.get("min_parts")) + " parts")
+                return result
+    except concurrent.futures.TimeoutError:
+        log_gen("[PLANNER] LLM timed out 12s — using local fallback")
     except Exception as e:
-        log_gen("[GEOMETRY_PLAN] failed: " + str(e))
-        return None
+        log_gen("[PLANNER] LLM error: " + str(e))
+    log_gen("[PLANNER] Using local geometry plan")
+    return _local_fallback()
 
 
 def get_parts_hint(obj_name, parts_override=None):
@@ -3012,7 +3211,23 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     log_gen("[MODEL_B] Starting Gemini+Blender (style=" + style
             + " complexity=" + str(complexity) + ")")
 
+    saved = load_saved_script(prompt)
+    if saved:
+        saved = inject_output_path(saved, output_path)
+        fixed_saved, fixes_saved = validate_and_fix_script(saved)
+        if fixes_saved != -1 and "import bpy" in fixed_saved and "export_scene.gltf" in fixed_saved:
+            log_gen("[MODEL_B] Reusing saved script from library")
+            save_blender_script(fixed_saved)
+            ok, final_script = run_blender_with_retry(fixed_saved, prompt, color_hex, output_path)
+            if ok:
+                return True
+        else:
+            log_gen("[MODEL_B] Saved script invalid — regenerating")
+
     user_msg   = build_blender_user_prompt(interp, color_hex, style, complexity)
+    plan = generate_geometry_plan(prompt, interp, color_hex, style, complexity)
+    if plan:
+        user_msg += "\n\nGEOMETRY PLAN:\n" + json.dumps(plan, separators=(",", ":"))
     log_gen("[MODEL_B] Trying DeepSeek R1 for Blender script...")
     script_raw = call_deepseek_r1(BLENDER_SYSTEM_R1, user_msg, max_tokens=16000)
     if script_raw:
@@ -3050,6 +3265,7 @@ def stage_b_gemini_blender(prompt, interp, color_hex, output_path,
     ok, final_script = run_blender_with_retry(fixed_script, prompt, color_hex, output_path)
     if ok:
         log_gen("[MODEL_B] Success")
+        save_successful_script(prompt, final_script)
     else:
         log_gen("[MODEL_B] All retries failed")
     return ok
@@ -4843,6 +5059,17 @@ def _finalize_generation(src_path, output_path, original_prompt, gen_prompt, col
               share_url=f"/share/{saved_id}" if saved_id else "",
               quality_score=quality_score,
               error=error)
+    _repair_path = output_path
+    _repair_color = color_hex
+
+    def _bg_repair():
+        import time as _time
+        _time.sleep(0.8)
+        _blender_quality_repair(_repair_path, _repair_color)
+        log_gen("[REPAIR] Background quality repair complete")
+
+    import threading as _threading
+    _threading.Thread(target=_bg_repair, daemon=True).start()
     log_stage("done", "ok")
     return True
 

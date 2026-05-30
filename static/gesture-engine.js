@@ -72,12 +72,18 @@ function _partsClearFocus() {
 }
 
 var GestureEngine = (function() {
+  var MP_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35';
+  var MP_WASM = MP_CDN + '/wasm';
+
   /* ── One Euro Filter (Casiez et al. 2012) ── */
-  var OEF_MIN_CUTOFF = 0.9;
-  var OEF_BETA       = 0.010;
+  var OEF_MIN_CUTOFF = 0.8;
+  var OEF_BETA       = 0.007;
   var OEF_D_CUTOFF   = 1.0;
 
-  function OneEuroFilter() {
+  function OneEuroFilter(mincutoff, beta, dcutoff) {
+    this.minCutoff = mincutoff || 0.8;
+    this.beta = beta || 0.007;
+    this.dCutoff = dcutoff || 1.0;
     this.xPrev  = null;
     this.dxPrev = 0;
     this.tPrev  = null;
@@ -87,10 +93,10 @@ var GestureEngine = (function() {
     var Te = Math.max((ts - this.tPrev) / 1000, 0.001);
     this.tPrev = ts;
     var dx     = (x - this.xPrev) / Te;
-    var alphaD = _oefAlpha(Te, OEF_D_CUTOFF);
+    var alphaD = _oefAlpha(Te, this.dCutoff);
     var dxHat  = alphaD * dx + (1 - alphaD) * this.dxPrev;
     this.dxPrev = dxHat;
-    var cutoff = OEF_MIN_CUTOFF + OEF_BETA * Math.abs(dxHat);
+    var cutoff = this.minCutoff + this.beta * Math.abs(dxHat);
     var alpha  = _oefAlpha(Te, cutoff);
     var xHat   = alpha * x + (1 - alpha) * this.xPrev;
     this.xPrev = xHat;
@@ -103,7 +109,7 @@ var GestureEngine = (function() {
   var _oefFilters = {};
   function _oefGet(handIdx, lmIdx, axis) {
     var k = handIdx + '_' + lmIdx + '_' + axis;
-    if (!_oefFilters[k]) { _oefFilters[k] = new OneEuroFilter(); }
+    if (!_oefFilters[k]) { _oefFilters[k] = new OneEuroFilter(0.8, 0.007, 1.0); }
     return _oefFilters[k];
   }
   function _oefFilterLandmarks(landmarks, handIdx) {
@@ -121,7 +127,7 @@ var GestureEngine = (function() {
     for (var i = 0; i < 21; i++) {
       ['x','y','z'].forEach(function(ax) {
         var k = handIdx + '_' + i + '_' + ax;
-        if (_oefFilters[k]) { _oefFilters[k] = new OneEuroFilter(); }
+        if (_oefFilters[k]) { _oefFilters[k] = new OneEuroFilter(0.8, 0.007, 1.0); }
       });
     }
   }
@@ -132,22 +138,20 @@ var GestureEngine = (function() {
   var BUFFER_SIZE = 10;
   var LOCK_AGREEMENT = 0.72;
   var ONE_SHOT_COOLDOWN = 1200;
-  var RELEASE_INERTIA_FRAMES = 18;
   var LOST_HAND_GRACE_MS = 350;
+  var DEAD_ZONE = 0.003;
+  var MOMENTUM_DECAY = 0.88;
+  var MOMENTUM_MIN = 0.0001;
 
-  var GESTURES = {
-    ORBIT:       { emoji: '✊', label: 'ROTATE',      color: '#00d4ff', continuous: true },
-    ZOOM:        { emoji: '🤏', label: 'ZOOM',        color: '#f0c040', continuous: true },
-    TWO_ZOOM:    { emoji: '🙌', label: 'PINCH ZOOM',  color: '#f0c040', continuous: true },
-    PAN:         { emoji: '🖐️', label: 'MOVE',        color: '#f59e0b', continuous: true },
-    PART_CYCLE:  { emoji: '✌️', label: 'PART CYCLE',  color: '#c084fc', continuous: false },
-    INSPECT:     { emoji: '☝️', label: 'INSPECT',     color: '#c084fc', continuous: true },
-    WIREFRAME:   { emoji: '🤘', label: 'WIREFRAME',   color: '#4ade80', continuous: false },
-    SAVE:        { emoji: '👍', label: 'SAVE',        color: '#4ade80', continuous: false },
-    FIT:         { emoji: '🖐️', label: 'FIT',         color: '#4ade80', continuous: false },
-    RESET:       { emoji: '🌊', label: 'RESET',       color: '#4ade80', continuous: false },
-    ROLL_ORBIT:  { emoji: '🔄', label: 'ROLL',        color: '#00d4ff', continuous: true }
+  var GESTURE_LABELS = {
+    Open_Palm:    { emoji: '🖐️', label: 'ORBIT',        color: '#00d4ff' },
+    Closed_Fist:  { emoji: '✊',  label: 'PAN',          color: '#f59e0b' },
+    Pinch:        { emoji: '🤏', label: 'ZOOM',         color: '#f0c040' },
+    Pointing_Up:  { emoji: '☝️', label: 'RESET VIEW',   color: '#c084fc' },
+    TwoHandScale: { emoji: '🙌', label: 'SCALE OBJECT', color: '#4ade80' },
+    None:         { emoji: '✋', label: 'SHOW HAND',    color: '#8899aa' }
   };
+  var GESTURES = GESTURE_LABELS;
 
   var engine = {
     enabled: false,
@@ -163,8 +167,20 @@ var GestureEngine = (function() {
     previewExpanded: false,
     frameBuffer: [],
     lastTrack: { x: null, y: null, z: null, pinch: null, roll: null, spread: null },
+    lastPos: { x: null, y: null, z: null },
+    lastPinch: null,
+    lastTwoHandDistance: null,
     smoothTrack: { dx: 0, dy: 0, dz: 0 },
     twoHandZoomActive: false,
+    handPresent: false,
+    activeMode: 'None',
+    _modeBuffer: [],
+    _modeBufferSize: 3,
+    _stableMode: 'None',
+    _prevMode: 'None',
+    _lastFrameTime: null,
+    _momentum: { theta: 0, phi: 0, targetX: 0, targetY: 0 },
+    _momentumActive: false,
     _gracePeriodStart: null,
     waveHistory: [],
     calSamples: [],
@@ -275,9 +291,9 @@ var GestureEngine = (function() {
     return dist3(lm[8], lm[20]);
   }
 
-  /** Closed fist — slow orbit / rotate */
+  /** Closed fist - no fingers extended. */
   function isFist(fingers, lm) {
-    if (fingers.count >= 3) { return false; }
+    if (fingers.count > 0) { return false; }
     var c = fingers.palmCenter;
     var pw = fingers.palmWidth;
     var tips = [4, 8, 12, 16, 20];
@@ -288,25 +304,13 @@ var GestureEngine = (function() {
     return curled >= 4;
   }
 
-  /** Open palm — pan / move in 3D */
+  /** Open palm - four or five extended fingers with visible spread. */
   function isOpenPalm(fingers, lm) {
     if (fingers.count < 4) { return false; }
-    var pinchNorm = pinchDistance(lm, fingers.palmWidth);
-    if (pinchNorm < 0.34 && fingers.thumb && fingers.index) { return false; }
+    var pinchRaw = dist3(lm[4], lm[8]);
+    if (pinchRaw < 0.065) { return false; }
     var spread = spreadDistance(lm) / Math.max(fingers.palmWidth, 0.05);
     return spread > 0.65;
-  }
-
-  /** Both hands framing — zoom by palm distance only */
-  function isTwoHandCapture(fa, fb, a, b) {
-    if (fa.count < 3 || fb.count < 3) { return false; }
-    if (isFist(fa, a) || isFist(fb, b)) { return false; }
-    var spreadA = spreadDistance(a) / Math.max(fa.palmWidth, 0.05);
-    var spreadB = spreadDistance(b) / Math.max(fb.palmWidth, 0.05);
-    if (spreadA < 0.55 || spreadB < 0.55) { return false; }
-    var handDist = dist3(fa.palmCenter, fb.palmCenter);
-    var ref = (fa.palmWidth + fb.palmWidth) * 1.1;
-    return handDist > ref * 0.35 && handDist < ref * 5.5;
   }
 
   function resetSmoothTrack() {
@@ -330,47 +334,29 @@ var GestureEngine = (function() {
     };
   }
 
-  function classifyGesture(lm, fingers, ctx) {
-    var pinchNorm = pinchDistance(lm, fingers.palmWidth);
-    var spread = spreadDistance(lm) / Math.max(fingers.palmWidth, 0.05);
-
-    if (fingers.count >= 5 && spread > 1.2) { return 'FIT'; }
-
-    if (fingers.index && fingers.middle && !fingers.ring && !fingers.pinky) {
-      return 'PART_CYCLE';
+  function classifyFromLandmarks(lm) {
+    var fingers = classifyFingers(lm);
+    var pinchRaw = dist3(lm[4], lm[8]);
+    if (pinchRaw < 0.065) { return 'Pinch'; }
+    if (fingers.index && !fingers.thumb && !fingers.middle && !fingers.ring && !fingers.pinky) {
+      return 'Pointing_Up';
     }
+    if (isFist(fingers, lm)) { return 'Closed_Fist'; }
+    if (isOpenPalm(fingers, lm)) { return 'Open_Palm'; }
+    return 'None';
+  }
 
-    if (fingers.index && fingers.pinky && !fingers.middle && !fingers.ring) {
-      return 'WIREFRAME';
-    }
+  function mergeGesture(landmarkMode, mlMode, score) {
+    return landmarkMode || 'None';
+  }
 
-    if (fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
-      return 'INSPECT';
-    }
-
-    if (fingers.thumb && !fingers.index && !fingers.middle && fingers.count <= 2 &&
-        lm[4].y < lm[2].y &&
-        (fingers.wristPos.y - lm[4].y) > fingers.palmWidth * 0.35) {
-      return 'SAVE';
-    }
-
-    if (isFist(fingers, lm)) { return 'ORBIT'; }
-
-    if (isOpenPalm(fingers, lm)) { return 'PAN'; }
-
-    if (pinchNorm < 0.32 && fingers.thumb && fingers.index && fingers.count <= 2) {
-      return 'ZOOM';
-    }
-
-    if (ctx && ctx.waveDetected && fingers.count >= 4) { return 'RESET'; }
-
-    if (ctx && Math.abs(ctx.rollDelta || 0) > 0.10 && fingers.count >= 3) {
-      return 'ROLL_ORBIT';
-    }
-
-    if (fingers.count >= 3) { return 'PAN'; }
-
-    return 'ORBIT';
+  function stabilizeMode(rawMode) {
+    engine._modeBuffer.push(rawMode);
+    if (engine._modeBuffer.length > engine._modeBufferSize) { engine._modeBuffer.shift(); }
+    if (engine._modeBuffer.length < engine._modeBufferSize) { return engine._stableMode; }
+    var allSame = engine._modeBuffer.every(function(m) { return m === engine._modeBuffer[0]; });
+    if (allSame) { engine._stableMode = engine._modeBuffer[0]; }
+    return engine._stableMode;
   }
 
   function pushBuffer(gesture) {
@@ -413,37 +399,32 @@ var GestureEngine = (function() {
     return s * clamp(sph.tRadius / 6, 0.55, 1.25);
   }
 
-  function applyOrbit(dx, dy, slow) {
-    var s = sensScale() * (slow ? 0.38 : 0.85);
-    var blend = slow ? 0.11 : 0.14;
-    var gain = slow ? 1.35 : 1.75;
-    engine.vel.theta += (dx * gain * s - engine.vel.theta) * blend;
-    engine.vel.phi   += (dy * gain * s - engine.vel.phi)   * blend;
-    sph.tTheta -= engine.vel.theta;
-    sph.tPhi   -= engine.vel.phi;
-    sph.tPhi = clamp(sph.tPhi, 0.08, Math.PI - 0.08);
+  function applyOrbit(dx, dy) {
+    if (Math.abs(dx) < DEAD_ZONE && Math.abs(dy) < DEAD_ZONE) { return; }
+    var s = sensScale() * 4.2;
+    var dTheta = -dx * s;
+    var dPhi   = -dy * s;
+    sph.tTheta += dTheta;
+    sph.tPhi    = clamp(sph.tPhi + dPhi, 0.08, Math.PI - 0.08);
+    engine._momentum.theta = dTheta * 0.35;
+    engine._momentum.phi   = dPhi   * 0.35;
   }
 
   function applyZoom(delta) {
-    var s = sensScale() * 0.7;
-    engine.vel.zoom += (delta * 42 * s - engine.vel.zoom) * 0.28;
-    sph.tRadius = clamp(sph.tRadius - engine.vel.zoom, 1.2, 22);
+    var s = sensScale() * 18;
+    sph.tRadius = clamp(sph.tRadius + delta * s, 1.2, 22);
   }
 
-  function applyPan(dx, dy, dz) {
-    var s = sensScale() * 0.72;
-    engine.vel.panX += (dx * 4.8 * s - engine.vel.panX) * 0.13;
-    engine.vel.panY += (dy * 4.2 * s - engine.vel.panY) * 0.13;
-    engine.vel.panZ += ((dz || 0) * 3.8 * s - engine.vel.panZ) * 0.13;
-    sph.tTargetX -= engine.vel.panX;
-    sph.tTargetY += engine.vel.panY;
-    sph.tTargetZ -= engine.vel.panZ;
-  }
-
-  function applyRoll(dRoll) {
-    var s = sensScale() * 0.5;
-    engine.vel.roll += (dRoll * 0.7 * s - engine.vel.roll) * 0.12;
-    sph.tTheta -= engine.vel.roll;
+  function applyDrag(dx, dy, dz, depth) {
+    if (Math.abs(dx) < DEAD_ZONE && Math.abs(dy) < DEAD_ZONE) { return; }
+    var s = sensScale() * 3.6;
+    var dX = -dx * s;
+    var dY = -dy * s * 0.9;
+    sph.tTargetX += dX;
+    sph.tTargetY += dY;
+    sph.tTargetZ -= (dz || 0) * s * 0.8 * depth;
+    engine._momentum.targetX = dX * 0.35;
+    engine._momentum.targetY = dY * 0.35;
   }
 
   function tickInertia() {
@@ -494,30 +475,41 @@ var GestureEngine = (function() {
 
   function canFireOneShot(name) {
     var now = Date.now();
-    if ((name === 'PART_CYCLE' || name === 'INSPECT') &&
-        engine.oneShotFired.PART_INSPECT &&
-        now - engine.oneShotFired.PART_INSPECT < ONE_SHOT_COOLDOWN) {
-      return false;
-    }
     if (engine.oneShotFired[name] && now - engine.oneShotFired[name] < ONE_SHOT_COOLDOWN) {
       return false;
     }
     engine.oneShotFired[name] = now;
-    if (name === 'PART_CYCLE' || name === 'INSPECT') {
-      engine.oneShotFired.PART_INSPECT = now;
-    }
     return true;
   }
 
   function fireOneShot(name) {
     if (!canFireOneShot(name)) { return; }
     logGestureEvent(name);
-    if (name === 'PART_CYCLE') { _partsCycleFocus(); }
-    if (name === 'WIREFRAME' && typeof toggleWireframe === 'function') { toggleWireframe(); }
-    if (name === 'SAVE' && typeof showSaveModal === 'function') { showSaveModal(); }
-    if (name === 'FIT') { fitModelToView(); }
-    if (name === 'RESET' && typeof resetCamera === 'function') { resetCamera(); }
+    if (name === 'Pointing_Up' && typeof resetCamera === 'function') {
+      resetCamera();
+    } else if (name === 'Pointing_Up' && typeof toast === 'function') {
+      toast('Camera reset', 'default');
+    }
     flashHudOneShot();
+  }
+
+  function applyMomentum() {
+    if (!engine._momentumActive) { return; }
+    var m = engine._momentum;
+    var mag = Math.abs(m.theta) + Math.abs(m.phi) + Math.abs(m.targetX) + Math.abs(m.targetY);
+    if (mag < MOMENTUM_MIN) {
+      engine._momentumActive = false;
+      engine._momentum = { theta: 0, phi: 0, targetX: 0, targetY: 0 };
+      return;
+    }
+    sph.tTheta   += m.theta;
+    sph.tPhi      = clamp(sph.tPhi + m.phi, 0.08, Math.PI - 0.08);
+    sph.tTargetX += m.targetX;
+    sph.tTargetY += m.targetY;
+    m.theta   *= MOMENTUM_DECAY;
+    m.phi     *= MOMENTUM_DECAY;
+    m.targetX *= MOMENTUM_DECAY;
+    m.targetY *= MOMENTUM_DECAY;
   }
 
   function fitModelToView() {
@@ -669,48 +661,8 @@ var GestureEngine = (function() {
     var cy = fingers.palmCenter.y;
     var cz = fingers.palmCenter.z;
 
-    var dx = engine.lastTrack.x == null ? 0 : cx - engine.lastTrack.x;
-    var dy = engine.lastTrack.y == null ? 0 : cy - engine.lastTrack.y;
-    var dz = engine.lastTrack.z == null ? 0 : cz - engine.lastTrack.z;
-    var xyDead = Math.max(0.006, fingers.palmWidth * 0.12);
-    var zDead = Math.max(0.004, fingers.palmWidth * 0.08);
-    if (Math.abs(dx) < xyDead) { dx = 0; }
-    if (Math.abs(dy) < xyDead) { dy = 0; }
-    if (Math.abs(dz) < zDead) { dz = 0; }
-    var sm = smoothDelta(dx, dy, dz);
-    dx = sm.dx;
-    dy = sm.dy;
-    dz = sm.dz;
-
-    var waveNow = performance.now();
-    var waveSign = Math.abs(dx) >= 0.025 ? (dx > 0 ? 1 : -1) : 0;
-    if (waveSign !== 0) {
-      engine.waveHistory.push({ sign: waveSign, t: waveNow });
-    }
-    engine.waveHistory = engine.waveHistory.filter(function(entry) {
-      return waveNow - entry.t <= 1200;
-    });
-    var waveDetected = false;
-    if (engine.waveHistory.length >= 5) {
-      var reversals = 0;
-      for (var wi = 1; wi < engine.waveHistory.length; wi++) {
-        if (engine.waveHistory[wi].sign !== engine.waveHistory[wi - 1].sign) {
-          reversals += 1;
-        }
-      }
-      waveDetected = reversals >= 4 && fingers.count >= 4;
-    }
-
-    var rollNow = Math.atan2(fingers.palmNormal.y, fingers.palmNormal.x);
-    var rollDelta = engine.lastTrack.roll == null ? 0 : rollNow - engine.lastTrack.roll;
-    if (rollDelta > Math.PI) { rollDelta -= Math.PI * 2; }
-    if (rollDelta < -Math.PI) { rollDelta += Math.PI * 2; }
-
-    var gesture = classifyGesture(lm, fingers, { waveDetected: waveDetected, rollDelta: rollDelta });
-    pushBuffer(gesture);
-
     if (engine.machineState === 'CALIBRATING') {
-      drawSkeleton(lm, 'ORBIT');
+      drawSkeleton(lm, 'Open_Palm');
       var elapsed = Date.now() - engine.calStartedAt;
       if (fingers.count >= 2 || dist3(lm[0], lm[9]) > fingers.palmWidth * 0.5) {
         engine.calSamples.push(fingers.palmWidth);
@@ -723,95 +675,60 @@ var GestureEngine = (function() {
       } else if (elapsed > 12000) {
         skipCalibration();
       }
-      engine.lastTrack = { x: cx, y: cy, z: cz, pinch: null, roll: rollNow, spread: null };
+      engine.lastTrack = { x: cx, y: cy, z: cz, pinch: null, roll: null, spread: null };
+      engine.lastPos = { x: cx, y: cy, z: cz };
       return;
     }
 
-    var dom = dominantInBuffer();
-    var conf = dom.count / BUFFER_SIZE;
+    var now = performance.now();
+    engine.handPresent = true;
+    engine._momentumActive = false;
+    var dt = engine._lastFrameTime ? Math.max((now - engine._lastFrameTime) / 16.667, 0.5) : 1.0;
+    engine._lastFrameTime = now;
+    var rawMode = mergeGesture(classifyFromLandmarks(lm), null, 1);
+    var mode = stabilizeMode(rawMode);
+    engine.activeMode = mode;
+    engine.machineState = 'TRACKING';
 
-    var agree = dom.count / BUFFER_SIZE;
-    if (engine.machineState === 'TRACKING' || engine.machineState === 'IDLE') {
-      if (!engine.lockedGesture && dom.count >= LOCK_FRAMES && agree >= LOCK_AGREEMENT) {
-        engine.lockedGesture = dom.name;
-        engine.machineState = 'LOCKED';
-        logGestureEvent('lock:' + dom.name);
-        var gMeta = GESTURES[dom.name];
-        if (gMeta && !gMeta.continuous) { fireOneShot(dom.name); }
-      } else if (!engine.lockedGesture) {
-        engine.machineState = 'TRACKING';
-      }
+    if (mode !== engine._prevMode) {
+      engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPinch = null;
+      engine.lastTwoHandDistance = null;
+      resetSmoothTrack();
+      engine._prevMode = mode;
     }
 
-    if (engine.machineState === 'LOCKED' && engine.lockedGesture) {
-      if (bufferAgreement(engine.lockedGesture) < LOCK_AGREEMENT) {
-        engine.disagreeCount = (engine.disagreeCount || 0) + 1;
-      } else {
-        engine.disagreeCount = 0;
-      }
-      if ((engine.disagreeCount || 0) >= RELEASE_FRAMES) {
-        engine.machineState = 'RELEASING';
-        engine.releaseFramesLeft = RELEASE_INERTIA_FRAMES;
-        engine.lockedGesture = null;
-        engine.disagreeCount = 0;
-        resetSmoothTrack();
-      }
+    var dx = (engine.lastPos.x == null ? 0 : cx - engine.lastPos.x) / dt;
+    var dy = (engine.lastPos.y == null ? 0 : cy - engine.lastPos.y) / dt;
+    var dz = (engine.lastPos.z == null ? 0 : cz - engine.lastPos.z) / dt;
+    var sm = smoothDelta(dx, dy, dz);
+    dx = sm.dx;
+    dy = sm.dy;
+    dz = sm.dz;
+
+    if (mode === 'Open_Palm') {
+      applyOrbit(dx, dy);
+    } else if (mode === 'Pinch') {
+      var pinchRaw = dist3(lm[4], lm[8]);
+      var dp = engine.lastPinch == null ? 0 : pinchRaw - engine.lastPinch;
+      if (Math.abs(dp) >= 0.001) { applyZoom(dp); }
+      engine.lastPinch = pinchRaw;
+    } else if (mode === 'Closed_Fist') {
+      applyDrag(dx, dy, dz, clamp(1 / Math.max(fingers.palmWidth, 0.05), 1, 4));
+    } else if (mode === 'Pointing_Up') {
+      fireOneShot('Pointing_Up');
     }
 
-    var active = engine.lockedGesture || dom.name;
-    updateHud(active, conf);
-    updatePanelStatus(active, conf);
-
-    var pinchNorm = pinchDistance(lm, fingers.palmWidth);
-    var moveGesture = engine.lockedGesture;
-    var prelockScale = 1;
-    var domMeta = GESTURES[dom.name];
-    if (!moveGesture && domMeta && domMeta.continuous &&
-        dom.count >= PRELOCK_FRAMES && agree >= LOCK_AGREEMENT * 0.5) {
-      moveGesture = dom.name;
-      prelockScale = 0.5;
-    }
-    if (!moveGesture) {
-      engine.lastTrack = {
-        x: cx, y: cy, z: cz,
-        pinch: pinchNorm,
-        roll: rollNow,
-        spread: spreadDistance(lm)
-      };
-      drawSkeleton(lm, active);
-      return;
-    }
-
-    var fistRotate = moveGesture === 'ORBIT' && isFist(fingers, lm);
-
-    if (moveGesture === 'ORBIT') {
-      applyOrbit(dx * prelockScale, dy * prelockScale, fistRotate);
-      if (fistRotate && Math.abs(dx) + Math.abs(dy) < 0.006) {
-        applyOrbit(0.0022, 0.0008, true);
-      }
-    } else if (moveGesture === 'ZOOM') {
-      var dp = engine.lastTrack.pinch == null ? 0 : pinchNorm - engine.lastTrack.pinch;
-      if (Math.abs(dp) < 0.012) { dp = 0; }
-      applyZoom(dp * prelockScale);
-    } else if (moveGesture === 'PAN') {
-      applyPan(dx * prelockScale, dy * prelockScale, dz * prelockScale);
-    } else if (moveGesture === 'ROLL_ORBIT') {
-      applyRoll(rollDelta * prelockScale);
-    } else if (moveGesture === 'INSPECT') {
-      engine.oneShotFired.PART_INSPECT = Date.now();
-      inspectAtLandmark(lm);
-    } else if (moveGesture !== 'ORBIT') {
-      hideInspectTooltip();
-    }
-
+    updateHud(mode, mode === 'None' ? 0.35 : 1);
+    updatePanelStatus(mode, mode === 'None' ? 0.35 : 1);
     engine.lastTrack = {
       x: cx, y: cy, z: cz,
-      pinch: pinchNorm,
-      roll: rollNow,
+      pinch: engine.lastPinch,
+      roll: null,
       spread: spreadDistance(lm)
     };
-
-    drawSkeleton(lm, active);
+    engine.lastPos = { x: cx, y: cy, z: cz };
+    drawSkeleton(lm, mode);
   }
 
   function processTwoHands(a, b) {
@@ -824,59 +741,33 @@ var GestureEngine = (function() {
     var midX = (fa.palmCenter.x + fb.palmCenter.x) * 0.5;
     var midY = (fa.palmCenter.y + fb.palmCenter.y) * 0.5;
     var midZ = (fa.palmCenter.z + fb.palmCenter.z) * 0.5;
-
-    if (isTwoHandCapture(fa, fb, a, b)) {
-      engine.twoHandZoomActive = true;
-      var handDist = dist3(fa.palmCenter, fb.palmCenter);
-      var dd = engine.lastTrack.pinch == null ? 0 : handDist - engine.lastTrack.pinch;
-      if (Math.abs(dd) < 0.004) { dd = 0; }
-      pushBuffer('TWO_ZOOM');
-      engine.lockedGesture = 'TWO_ZOOM';
-      engine.machineState = 'LOCKED';
-      applyZoom(dd * 0.5);
-      updateHud('TWO_ZOOM', 1);
-      updatePanelStatus('TWO_ZOOM', 1);
-      engine.lastTrack = { x: midX, y: midY, z: midZ, pinch: handDist, roll: null, spread: null };
-      drawSkeleton(a, 'TWO_ZOOM');
-      return;
-    }
-
-    engine.twoHandZoomActive = false;
-    if (engine.lockedGesture === 'TWO_ZOOM') {
-      engine.lockedGesture = null;
-      engine.machineState = 'TRACKING';
+    var handDist = dist3(fa.palmCenter, fb.palmCenter);
+    var rawMode = mergeGesture('TwoHandScale', null, 1);
+    var mode = stabilizeMode(rawMode);
+    engine.handPresent = true;
+    engine._momentumActive = false;
+    engine.activeMode = mode;
+    engine.machineState = 'TRACKING';
+    if (mode !== engine._prevMode) {
+      engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPinch = null;
+      engine.lastTwoHandDistance = null;
       resetSmoothTrack();
+      engine._prevMode = mode;
     }
-
-    if (isOpenPalm(fa, a) && !isOpenPalm(fb, b)) {
-      processSingleHand(a);
-      return;
+    if (mode === 'TwoHandScale' && currentObject) {
+      var dd = engine.lastTwoHandDistance == null ? 0 : handDist - engine.lastTwoHandDistance;
+      if (Math.abs(dd) > 0.008) {
+        var nextScale = clamp((currentObject.scale.x || 1) + dd * 3.0, 0.2, 5.0);
+        currentObject.scale.setScalar(nextScale);
+      }
     }
-    if (isOpenPalm(fb, b) && !isOpenPalm(fa, a)) {
-      processSingleHand(b);
-      return;
-    }
-
-    if (isFist(fa, a) && isFist(fb, b)) {
-      var dx2 = engine.lastTrack.x == null ? 0 : midX - engine.lastTrack.x;
-      var dy2 = engine.lastTrack.y == null ? 0 : midY - engine.lastTrack.y;
-      if (Math.abs(dx2) < 0.018) { dx2 = 0; }
-      if (Math.abs(dy2) < 0.018) { dy2 = 0; }
-      var sm2 = smoothDelta(dx2, dy2, 0);
-      pushBuffer('ORBIT');
-      engine.lockedGesture = 'ORBIT';
-      applyOrbit(sm2.dx, sm2.dy, true);
-      updateHud('ORBIT', 1);
-      engine.lastTrack = { x: midX, y: midY, z: midZ, pinch: null, roll: null, spread: null };
-      drawSkeleton(a, 'ORBIT');
-      return;
-    }
-
-    if (fa.palmWidth >= fb.palmWidth) {
-      processSingleHand(a);
-    } else {
-      processSingleHand(b);
-    }
+    engine.lastTwoHandDistance = handDist;
+    engine.lastTrack = { x: midX, y: midY, z: midZ, pinch: handDist, roll: null, spread: null };
+    engine.lastPos = { x: midX, y: midY, z: midZ };
+    updateHud(mode, 1);
+    updatePanelStatus(mode, 1);
+    drawSkeleton(a, mode);
   }
 
   function onResults(res) {
@@ -901,7 +792,13 @@ var GestureEngine = (function() {
         return;
       }
       engine._gracePeriodStart = null;
+      engine.handPresent = false;
+      engine._momentumActive = true;
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
+      engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPinch = null;
+      engine.lastTwoHandDistance = null;
+      engine._lastFrameTime = null;
       engine.twoHandZoomActive = false;
       resetSmoothTrack();
       _oefResetHand(0);
@@ -910,16 +807,15 @@ var GestureEngine = (function() {
         engine.machineState = engine.enabled ? 'TRACKING' : 'IDLE';
         engine.lockedGesture = null;
       }
-      updateHud(null, 0);
-      updatePanelStatus(
-        engine.machineState === 'CALIBRATING' ? 'CALIBRATING' : null, 0
-      );
+      updateHud('None', 0);
+      updatePanelStatus('None', 0);
       if (engine.ui.hud) {
         clearTimeout(engine.hudHideTimer);
         engine.hudHideTimer = setTimeout(function() {
           if (engine.ui.hud) { engine.ui.hud.classList.remove('visible'); }
         }, 2000);
       }
+      applyMomentum();
       return;
     }
 
@@ -931,6 +827,7 @@ var GestureEngine = (function() {
     } else {
       processSingleHand(lmFiltered0);
     }
+    if (!engine.handPresent) { applyMomentum(); }
   }
 
   function loadCalibration() {
@@ -1100,14 +997,16 @@ var GestureEngine = (function() {
   }
 
   function buildGestureGrid() {
-    var html = '';
-    var keys = ['PAN', 'ORBIT', 'TWO_ZOOM', 'ZOOM', 'PART_CYCLE', 'INSPECT', 'WIREFRAME', 'SAVE', 'FIT', 'RESET'];
-    keys.forEach(function(k) {
-      var g = GESTURES[k];
-      var action = g.continuous ? 'Hold + move' : 'One-shot';
-      html += '<div class="ge-gchip"><b>' + g.emoji + ' ' + g.label + '</b>' + action + '</div>';
-    });
-    return html;
+    var chips = [
+      ['🖐️', 'Open palm', 'Orbit (rotate view)'],
+      ['🤏', 'Pinch thumb + index', 'Zoom in / out'],
+      ['✊', 'Closed fist', 'Pan (shift view)'],
+      ['🙌', 'Two hands', 'Scale object up / down'],
+      ['☝️', 'Index finger only', 'Reset camera']
+    ];
+    return chips.map(function(chip) {
+      return '<div class="ge-gchip"><b>' + chip[0] + ' ' + chip[1] + '</b>' + chip[2] + '</div>';
+    }).join('');
   }
 
   function ensurePanel() {
@@ -1244,7 +1143,18 @@ var GestureEngine = (function() {
       if (panel) { panel.classList.add('shown'); }
 
       engine.lastTrack = { x: null, y: null, z: null, pinch: null, roll: null, spread: null };
+      engine.lastPos = { x: null, y: null, z: null };
+      engine.lastPinch = null;
+      engine.lastTwoHandDistance = null;
       engine.frameBuffer = [];
+      engine._modeBuffer = [];
+      engine._stableMode = 'None';
+      engine._prevMode = 'None';
+      engine._lastFrameTime = null;
+      engine._momentumActive = false;
+      engine._momentum = { theta: 0, phi: 0, targetX: 0, targetY: 0 };
+      engine.handPresent = false;
+      engine.activeMode = 'None';
       engine.twoHandZoomActive = false;
       resetSmoothTrack();
       zeroVel();
@@ -1269,8 +1179,8 @@ var GestureEngine = (function() {
       engine.hands.setOptions({
         maxNumHands: 2,
         modelComplexity: 1,
-        minDetectionConfidence: 0.75,
-        minTrackingConfidence: 0.65
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
       });
       engine.hands.onResults(onResults);
 
@@ -1333,6 +1243,14 @@ var GestureEngine = (function() {
     engine.machineState = 'IDLE';
     engine.lockedGesture = null;
     engine.twoHandZoomActive = false;
+    engine.handPresent = false;
+    engine.activeMode = 'None';
+    engine.lastPos = { x: null, y: null, z: null };
+    engine.lastPinch = null;
+    engine.lastTwoHandDistance = null;
+    engine._lastFrameTime = null;
+    engine._momentumActive = false;
+    engine._momentum = { theta: 0, phi: 0, targetX: 0, targetY: 0 };
     resetSmoothTrack();
     zeroVel();
     hideInspectTooltip();

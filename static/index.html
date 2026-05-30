@@ -782,40 +782,22 @@ body:has(a:hover) #cursor-ring{
 .q-star{font-size:10px;color:var(--tx-4)}.q-star.on{color:var(--gold)}
 #vp-overlay{
   position:absolute;inset:0;
-  background:rgba(10,14,23,.85);backdrop-filter:blur(8px);
-  display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  background:rgba(10,14,23,.6);backdrop-filter:blur(4px);
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;
   z-index:9;
 }
 #vp-overlay.shown{display:flex}
-.vp-spinner-wrap{position:relative;width:64px;height:64px}
+.vp-spinner-wrap{position:relative;width:48px;height:48px}
 .vp-ring-outer{
   position:absolute;inset:0;border-radius:50%;
-  border:2px solid rgba(0,212,255,.1);border-top-color:var(--cyan);
-  border-left-color:var(--cyan);
-  animation:spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  border:2px solid var(--bd-2);border-top-color:var(--cyan);
+  animation:spin 1s linear infinite;
 }
 .vp-ring-inner{
-  position:absolute;inset:12px;border-radius:50%;
+  position:absolute;inset:8px;border-radius:50%;
   border:2px solid transparent;border-bottom-color:var(--gold);
-  border-right-color:var(--gold);
   animation:spin .7s linear infinite reverse;
 }
-#vp-terminal{
-  width:80%;max-width:500px;background:rgba(5,8,15,0.9);
-  border:1px solid rgba(0,212,255,0.2);border-radius:8px;
-  padding:16px;font-family:'JetBrains Mono',monospace;
-  font-size:11px;color:var(--cyan-dim);line-height:1.6;
-  text-align:left;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.5);
-  position:relative;
-}
-#vp-terminal::before{
-  content:'AUREX AI TERMINAL';position:absolute;top:0;left:0;right:0;
-  background:rgba(0,212,255,0.1);padding:4px 12px;font-size:9px;
-  letter-spacing:2px;color:var(--tx-2);border-bottom:1px solid rgba(0,212,255,0.2);
-}
-.vp-term-content{margin-top:20px;height:80px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;}
-.vp-term-line{animation:fadeUpIn 0.3s ease forwards;}
-@keyframes fadeUpIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .vp-step-txt{
   font-family:'JetBrains Mono',monospace;font-size:11px;
@@ -2769,12 +2751,7 @@ nav#nav { display: flex !important; }
             <div class="vp-ring-outer"></div>
             <div class="vp-ring-inner"></div>
           </div>
-          <div class="vp-step-txt" id="vp-step" style="font-family:'Orbitron',sans-serif;letter-spacing:4px;color:var(--gold);font-weight:700;">INITIALIZING...</div>
-          <div id="vp-terminal">
-            <div class="vp-term-content" id="vp-term-lines">
-               <div class="vp-term-line">> Booting AI Brain...</div>
-            </div>
-          </div>
+          <div class="vp-step-txt" id="vp-step">GENERATING...</div>
         </div>
 
         <!-- Control bar with SVG icons -->
@@ -3591,7 +3568,7 @@ function initThreeJS() {
     var renderPass = new THREE.RenderPass(scene, camera);
     composer.addPass(renderPass);
     var bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.threshold = 0.2; bloomPass.strength = 1.2; bloomPass.radius = 0.6;
+    bloomPass.threshold = 0.85; bloomPass.strength = 0.4; bloomPass.radius = 0.4;
     composer.addPass(bloomPass);
   } catch(e) { console.warn("Post-processing error (maybe scripts not loaded):", e); }
 
@@ -4387,7 +4364,6 @@ function getLogColor(line) {
 function appendNewLogLines(logArray, boxId, countProp) {
   if (!logArray) { return; }
   var box = document.getElementById(boxId || 'log-box');
-  var termBox = document.getElementById('vp-term-lines');
   if (!box) { return; }
   var newLines = logArray.slice(APP[countProp || 'logLineCount']);
   newLines.forEach(function(line) {
@@ -4398,17 +4374,6 @@ function appendNewLogLines(logArray, boxId, countProp) {
     }
     div.textContent = line;
     box.appendChild(div);
-
-    if (termBox && (countProp === 'logLineCount' || !countProp)) {
-      var termDiv = document.createElement('div');
-      termDiv.className = 'vp-term-line';
-      termDiv.style.color = getLogColor(line);
-      termDiv.textContent = '> ' + line.substring(0, 80) + (line.length > 80 ? '...' : '');
-      termBox.appendChild(termDiv);
-      if (termBox.children.length > 5) {
-        termBox.removeChild(termBox.firstChild);
-      }
-    }
   });
   APP[countProp || 'logLineCount'] = logArray.length;
   box.scrollTop = box.scrollHeight;
@@ -4657,7 +4622,6 @@ function setGenerating(val) {
   var btn      = document.getElementById('gen-btn');
   var applyBtn = document.getElementById('apply-edit-btn');
   var overlay  = document.getElementById('vp-overlay');
-  var termBox  = document.getElementById('vp-term-lines');
 
   if (btn) {
     btn.disabled = val;
@@ -4671,7 +4635,6 @@ function setGenerating(val) {
     setStatusBadge('generating', 'GENERATING');
     setConnectionBar('generating');
     startGenTimer();
-    if (termBox) { termBox.innerHTML = '<div class="vp-term-line">> Booting AI Brain...</div>'; }
   } else {
     setStatusBadge('idle', 'IDLE');
     setConnectionBar('live');

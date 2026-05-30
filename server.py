@@ -261,7 +261,9 @@ CLOUDINARY_ENABLED = bool(CLOUDINARY_CLOUD and CLOUDINARY_API_KEY and CLOUDINARY
 # ---------------------------------------------------------------------------
 #  SUPABASE - SCALABLE STORAGE
 # ---------------------------------------------------------------------------
-SUPABASE_URL     = os.environ.get("SUPABASE_URL", "").strip()
+SUPABASE_URL     = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+if SUPABASE_URL and not SUPABASE_URL.startswith("http"):
+    SUPABASE_URL = "https://" + SUPABASE_URL
 SUPABASE_KEY     = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or 
                     os.environ.get("SUPABASE_KEY") or 
                     os.environ.get("SUPABASE_ANON_KEY", "")).strip()
@@ -293,10 +295,13 @@ def supabase_request(method, endpoint, params=None, json_data=None):
                 return True
             return r.json()
         else:
-            log_error(f"[SUPABASE] {method} Error: {r.status_code} - {r.text}")
+            log_error(f"[SUPABASE] {method} Error: {r.status_code}")
             return None
+    except requests.exceptions.ConnectionError:
+        log_error("[SUPABASE] Connection/DNS error. Falling back to local.")
+        return None
     except Exception as e:
-        log_error(f"[SUPABASE] Request failed: {e}")
+        log_error(f"[SUPABASE] Request failed: {e.__class__.__name__}")
         return None
 
 

@@ -5495,6 +5495,11 @@ def generate():
     style          = str(data.get("style", "realistic"))
     complexity     = int(data.get("complexity", 3))
     llm_model      = str(data.get("llm_model", "auto"))
+    engine         = str(data.get("engine", "cloud")).strip().lower()
+    
+    if engine == "desktop":
+        complexity = 5
+        
     if style not in STYLE_DIRECTIVES:
         style = "realistic"
     complexity = max(1, min(5, complexity))

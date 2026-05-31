@@ -4290,12 +4290,32 @@ function setOnlineIndicator(online) {
 }
 
 function checkServerStatus() {
-  fetch('/ping')
+  fetch('/health')
     .then(function(r) { return r.json(); })
-    .then(function() {
+    .then(function(d) {
       setOnlineIndicator(true);
       if (APP.isOffline) { hideOfflineOverlay(); }
       if (!APP.isGenerating) { setConnectionBar('live'); }
+      
+      if (d.blender === false) {
+        var cloudOpt = document.querySelector('input[value="cloud"]');
+        var desktopOpt = document.querySelector('input[value="desktop"]');
+        var browserOpt = document.querySelector('input[value="browser"]');
+        
+        if (cloudOpt && !cloudOpt.disabled) {
+          cloudOpt.disabled = true;
+          cloudOpt.parentElement.style.opacity = '0.4';
+          cloudOpt.parentElement.title = 'Blender not installed locally. Disabled.';
+        }
+        if (desktopOpt && !desktopOpt.disabled) {
+          desktopOpt.disabled = true;
+          desktopOpt.parentElement.style.opacity = '0.4';
+          desktopOpt.parentElement.title = 'Blender not installed locally. Disabled.';
+        }
+        if (browserOpt && ((cloudOpt && cloudOpt.checked) || (desktopOpt && desktopOpt.checked))) {
+          browserOpt.checked = true;
+        }
+      }
     })
     .catch(function() {
       setOnlineIndicator(false);

@@ -45,24 +45,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ============================================================
 # RAILWAY ENVIRONMENT VARIABLES
-# Set these in Railway dashboard > Variables tab
-# ============================================================
-# GEMINI_KEY_1          = your first Gemini API key
-# GEMINI_KEY_2          = your second Gemini API key
-# GEMINI_KEY_3          = your third Gemini API key
-# GEMINI_KEY_4          = your fourth Gemini API key
-# GEMINI_KEY_5          = your fifth Gemini API key
-# GEMINI_KEY_6          = your sixth Gemini API key
-# GEMINI_KEY_7          = your seventh Gemini API key
-#
-# CLOUDINARY_CLOUD_NAME = your cloud name (e.g. root)
-# CLOUDINARY_API_KEY    = your cloudinary api key
-# CLOUDINARY_API_SECRET = your cloudinary api secret
-#
-# BLENDER_PATH  = /app/blender/blender  (auto-set by Dockerfile)
-# PORT          = auto-set by Railway
-# FLASK_DEBUG   = false (always false in production)
-# APP_BASE_DIR  = /app (auto-set by Dockerfile)
+# The backend dynamically reads all GEMINI_KEY_X, OPENROUTER_KEY_X, 
+# and GROQ_KEY_X variables directly from your Railway dashboard.
 # ============================================================
 
 

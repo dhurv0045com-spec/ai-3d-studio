@@ -5396,16 +5396,30 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
             log_gen(f"[KEY_HEALTH] Resurrected {resurrected} transient Gemini key(s) before pipeline start")
         log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id} quality={quality_mode}")
         print(f"[PIPELINE] Generation thread alive for '{prompt}'", flush=True)
+        # ------------------------------------------------------------------
+        # FAST-PATH: If Blender is not installed, skip all LLM calls
+        # (enhance, geometry plan, script gen) which only serve Blender.
+        # Go directly to local interpretation + preset. ~5s instead of 2min.
+        # ------------------------------------------------------------------
+        blender_available = os.path.exists(BLENDER_EXE)
+
         set_state(status="generating", prompt=original_prompt, progress=5,
                   step="enhance_interpret", error="", cached=False, service="", glb_size=0,
                   request_id=request_id, last_model="", model_url="", script_version=0,
                   cloud_url="", share_url="", quality_score=0)
 
-        log_stage("enhance_interpret")
-        log_gen("[enhance+interpret] expanding and parsing prompt...")
-        enhanced_prompt, interp = enhance_and_interpret(prompt, color_hex, style, complexity, llm_model)
-        log_gen(f"[enhance+interpret] '{prompt}' -> '{enhanced_prompt}'")
-        gen_prompt = enhanced_prompt
+        if blender_available:
+            log_stage("enhance_interpret")
+            log_gen("[enhance+interpret] expanding and parsing prompt (Blender present)...")
+            enhanced_prompt, interp = enhance_and_interpret(prompt, color_hex, style, complexity, llm_model)
+            log_gen(f"[enhance+interpret] '{prompt}' -> '{enhanced_prompt}'")
+            gen_prompt = enhanced_prompt
+        else:
+            log_gen("[FAST-PATH] Blender not installed — skipping LLM enhance+interpret to save time")
+            log_stage("enhance_interpret", "skipped")
+            gen_prompt = prompt
+            interp = _fallback_interp(prompt, color_hex, style, complexity)
+            log_gen(f"[FAST-PATH] local interp: obj={interp.get('object')} color={interp.get('color')}")
 
         # ------------------------------------------------------------------
         # STEP 0: Cache check
@@ -5460,7 +5474,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         log_stage("stage_b_gemini_blender", "start")
         set_state(progress=20, step="stage_b_gemini_blender")
-        if os.path.exists(BLENDER_EXE):
+        if blender_available:
             log_gen("[MODEL_B] attempting Gemini+Blender...")
             ok = stage_b_gemini_blender(
                 gen_prompt, interp, color_hex, temp_path,
@@ -5475,9 +5489,12 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                                         sub_id, quality_mode=quality_mode):
                     return
             log_gen("[MODEL_B] Gemini+Blender failed, falling through")
+        else:
+            log_gen("[FAST-PATH] Blender not installed — skipping Gemini+Blender stage instantly")
+            log_stage("stage_b_gemini_blender", "skipped")
 
         # ------------------------------------------------------------------
-        # STEP 4: Stage B - Shap-E
+        # STEP 4: Stage B - Shap-E (skip immediately if not available)
         # ------------------------------------------------------------------
         log_stage("stage_a_shapee", "fallback")
         set_state(progress=50, step="stage_a_shapee")
@@ -5492,7 +5509,7 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
                     return
             log_gen("[SHAPEE] Shap-E failed, falling through")
         else:
-            log_gen("[SHAPEE] not available - skipping Stage A")
+            log_gen("[FAST-PATH] Shap-E not installed — skipping instantly")
 
         # ------------------------------------------------------------------
         # STEP 5: Stage C - Preset

@@ -5118,6 +5118,7 @@ function generate() {
   body.engine = engine;
   body.llm_model = llm_model;
   body.quality_profile = engine === 'desktop' ? 'cinematic' : 'standard';
+  body.force_regenerate = true;
   if (engine === 'desktop') {
     body.complexity = 5;
   }

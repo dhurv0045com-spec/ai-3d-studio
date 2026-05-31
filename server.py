@@ -5140,9 +5140,13 @@ SCRIPTS_DIR = os.path.join(BASE_DIR, "models", "scripts")
 
 
 def _script_lib_key(prompt):
-    """Generate a filename-safe key from prompt."""
-    words = re.sub(r"[^a-z0-9 ]", "", prompt.lower().strip()).split()[:6]
-    return "_".join(words)[:60]
+    """Collision-resistant key using the same fuzzy hash as the GLB cache.
+    The old first-6-words approach mapped different prompts to the same
+    file, causing wrong saved scripts to be replayed."""
+    import hashlib as _hashlib
+    key_tokens = _fuzzy_key(prompt)
+    canonical  = " ".join(sorted(key_tokens))
+    return _hashlib.md5(canonical.encode("utf-8")).hexdigest()
 
 
 def load_saved_script(prompt):
@@ -5195,7 +5199,8 @@ def stage_c_preset(prompt, interp, color_hex, output_path):
     prompt_kw = match_preset_keyword(prompt)
     keyword = obj_kw or prompt_kw
     if not keyword:
-        keyword = "sphere"
+        log_gen("[PRESET] no preset keyword matched - skipping stage_c to preserve object intent")
+        return False, ""
     log_gen(f"[PRESET] matched keyword: {keyword}")
     # Check cache for preset
     color_key = (color_hex or "").strip().lower().replace("#", "") or "default"
@@ -5350,7 +5355,8 @@ def _finalize_generation(src_path, output_path, original_prompt, gen_prompt, col
         return False
     sz = os.path.getsize(output_path)
     log_gen(f"[FINALIZE] {service} output ready: {msg}")
-    if not cached and service != "Fallback":
+    _NON_CACHEABLE = ("Fallback", "Fallback-Shaped")
+    if not cached and service not in _NON_CACHEABLE:
         store_cache(output_path, gen_prompt, color_hex)
     set_state(progress=80, step="uploading_cloudinary")
     _cloud = upload_to_cloudinary(output_path)
@@ -5386,7 +5392,8 @@ def _finalize_generation(src_path, output_path, original_prompt, gen_prompt, col
 
 def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mode,
                    style="realistic", complexity=3, sub_id="anonymous",
-                   history_prompt=None, llm_model="auto", quality_mode="standard"):
+                   history_prompt=None, llm_model="auto", quality_mode="standard",
+                   force_regenerate=False):
     """Full generation pipeline. Called in background thread."""
     global _generating
     _gen_start_time = time.time()
@@ -5398,6 +5405,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
     try:
         cleanup_old_generated_models()
         reset_stage_log()
+        # Revive transiently-dead keys (rate limits, timeouts) before the
+        # pipeline starts. Keys killed by 401/403 auth errors stay dead.
+        resurrected = resurrect_transient_gemini_keys()
+        if resurrected:
+            log_gen(f"[KEY_HEALTH] Resurrected {resurrected} transient Gemini key(s) before pipeline start")
         log_gen(f"[START] Generation started: '{prompt}' color={color_hex} user={sub_id} quality={quality_mode}")
         print(f"[PIPELINE] Generation thread alive for '{prompt}'", flush=True)
         set_state(status="generating", prompt=original_prompt, progress=5,
@@ -5416,7 +5428,11 @@ def run_generation(prompt, color_hex, folder, add_list, remove_list, library_mod
         # ------------------------------------------------------------------
         log_stage("cache_check", "ok")
         set_state(progress=10, step="cache_check")
-        cached = check_cache(gen_prompt, color_hex)
+        if force_regenerate:
+            log_gen("[CACHE] force_regenerate=True - bypassing cache for fresh generation")
+            cached = None
+        else:
+            cached = check_cache(gen_prompt, color_hex)
         if cached:
             set_state(progress=15, step="cache_hit")
             log_gen("[CACHE] served from cache")
@@ -5725,9 +5741,10 @@ def generate():
     library_mode   = bool(data.get("library_mode", False))
     style          = str(data.get("style", "realistic"))
     complexity     = int(data.get("complexity", 3))
-    llm_model      = str(data.get("llm_model", "auto"))
-    engine         = str(data.get("engine", "cloud")).strip().lower()
-    quality_mode   = str(data.get("quality_profile", "") or data.get("quality_mode", "")).strip().lower()
+    llm_model        = str(data.get("llm_model", "auto"))
+    engine           = str(data.get("engine", "cloud")).strip().lower()
+    quality_mode     = str(data.get("quality_profile", "") or data.get("quality_mode", "")).strip().lower()
+    force_regenerate = bool(data.get("force_regenerate", False))
     
     if engine == "desktop":
         complexity = 5
@@ -5764,6 +5781,7 @@ def generate():
     t = threading.Thread(
         target=run_generation,
         args=(prompt, color_hex, folder, add_list, remove_list, library_mode, style, complexity, sub_id, history_prompt, llm_model, quality_mode),
+        kwargs={"force_regenerate": force_regenerate},
         daemon=True
     )
     t.start()
